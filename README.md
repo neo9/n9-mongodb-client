@@ -1,4 +1,5 @@
 # n9-mongo-client
+## [NPM latest published version](https://www.npmjs.com/package/@neo9/n9-mongo-client)
 
 A client to use easily MongoDB official driver.
 
