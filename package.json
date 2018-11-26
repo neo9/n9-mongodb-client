@@ -1,0 +1,73 @@
+{
+  "name": "@neo9/n9-mongo-client",
+  "version": "0.0.0",
+  "description": "Library to easily start app with routing-controllers",
+  "main": "dist/src/index.js",
+  "types": "dist/src/index.d.ts",
+  "files": [
+    "dist/src"
+  ],
+  "license": "MIT",
+  "scripts": {
+    "build": "rimraf dist/ && tsc",
+    "lint": "tslint --project tsconfig.json",
+    "test": "npm run lint  && npm run build && nyc ava --verbose --serial dist/test/ && nyc report --reporter=html",
+    "test:dev": "tslint --project tsconfig.json --force && npm run build && nyc ava --verbose --serial dist/test/ && nyc report --reporter=html",
+    "coverage": "nyc report --reporter=text-lcov > coverage.lcov && codecov -t b2eaf76a-9a9e-4190-aa8f-398a8ff33939",
+    "preversion": "npm test",
+    "prepublishOnly": "npm run build",
+    "release": "export BABEL_DISABLE_CACHE=1 && release-it",
+    "release:dry": "export BABEL_DISABLE_CACHE=1 && release-it --dry-run=true",
+    "build:changelog": "conventional-changelog -i CHANGELOG.md -s -p jscs -r 0",
+    "post:release": "echo Successfully released $npm_package_version",
+    "init": "./bin/setup-git-hooks"
+  },
+  "author": "Benjamin DANIEL <benjamin.daniel@neo9.fr>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/neo9/n9-mongo-client.git"
+  },
+  "homepage": "https://github.com/neo9/n9-mongo-client#n9-mongo-client",
+  "tags": [
+    "express",
+    "typescript-express",
+    "routing-controllers"
+  ],
+  "engines": {
+    "node": ">=8.0.0"
+  },
+  "dependencies": {
+    "@neo9/n9-node-log": "^2.6.0",
+    "@neo9/n9-node-utils": "^1.7.2",
+    "@types/deep-diff": "^1.0.0",
+    "@types/lodash": "^4.14.118",
+    "@types/mongodb": "^3.1.14",
+    "class-transformer": "^0.2.0",
+    "deep-diff": "^1.0.2",
+    "lodash": "^4.17.11",
+    "mongodb": "^3.1.10",
+    "tslint": "^5.11.0"
+  },
+  "devDependencies": {
+    "@types/node": "^7.0.22",
+    "@types/std-mocks": "^1.0.0",
+    "ava": "1.0.0-beta.4",
+    "nyc": "^11.6.0",
+    "std-mocks": "^1.0.1",
+    "typescript": "^2.3.3"
+  },
+  "bugs": {
+    "url": "https://github.com/neo9/n9-mongo-client/issues"
+  },
+  "directories": {
+    "test": "test"
+  },
+  "keywords": [
+    "mongo",
+    "mongodb",
+    "client",
+    "driver",
+    "Neo9",
+    "France"
+  ]
+}
