@@ -125,8 +125,9 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 	}
 
 	public async findOneByKey(keyValue: any, keyName: string = 'code'): Promise<U> {
-		const query: StringMap<any> = {};
-		query[keyName] = keyValue;
+		const query: StringMap<any> = {
+			[keyName]: keyValue
+		};
 
 		return await this.findOne(query);
 	}
@@ -140,6 +141,13 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 
 	public async findOneAndUpdateById(id: string, updateQuery: { [id: string]: object, $set?: object }, userId: string): Promise<U> {
 		return await this.findOneAndUpdate({ _id: MongoUtils.oid(id) }, updateQuery, userId);
+	}
+
+	public async findOneAndUpdateByKey(keyValue: any, updateQuery: { [id: string]: object, $set?: object }, userId: string, keyName: string = 'code'): Promise<U> {
+		const query: StringMap<any> = {
+			[keyName]: keyValue
+		};
+		return await this.findOneAndUpdate(query, updateQuery, userId);
 	}
 
 	public async findOneAndUpdate(query: FilterQuery<U>, updateQuery: { [id: string]: object, $set?: object }, userId: string): Promise<U> {
