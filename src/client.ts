@@ -1,3 +1,4 @@
+import { N9Log } from '@neo9/n9-node-log';
 import { N9Error } from '@neo9/n9-node-utils';
 import * as deepDiff from 'deep-diff';
 import * as _ from 'lodash';
@@ -8,6 +9,10 @@ import { MongoUtils } from './mongo';
 
 export interface MongoClientConfiguration {
 	keepHistoric?: boolean;
+	lockFields?: {
+		excludedFields?: string[],
+		arrayWithReferences?: StringMap<string>
+	};
 }
 
 const defaultConfiguration: MongoClientConfiguration = {
@@ -16,6 +21,17 @@ const defaultConfiguration: MongoClientConfiguration = {
 
 export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 
+	public static removeEmptyDeep<T>(obj: T): T {
+		Object.keys(obj).forEach((key) => {
+			// @ts-ignore
+			if (obj[key] && typeof obj[key] === 'object') this.removeEmptyDeep(obj[key]);
+			// @ts-ignore
+			else if (_.isNil(obj[key])) delete obj[key];
+		});
+		return obj;
+	}
+
+	private readonly logger: N9Log;
 	private readonly db: Db;
 
 	private readonly type: ClassType<U>;
@@ -26,6 +42,10 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 
 	constructor(collection: Collection<U> | string, type: ClassType<U>, typeList: ClassType<L>, conf: MongoClientConfiguration = {}) {
 		this.conf = _.merge(defaultConfiguration, conf);
+		if (this.conf.lockFields) {
+			this.conf.lockFields.excludedFields = _.union(this.conf.lockFields.excludedFields, ['objectInfos']);
+		}
+		this.logger = (global.log as N9Log).module('mongo-client');
 		this.db = global.db as Db;
 
 		if (!this.db) {
@@ -73,14 +93,34 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 	public async insertOne(newEntity: U, userId: string): Promise<U> {
 		if (!newEntity) return newEntity;
 
+		const date = new Date();
 		newEntity.objectInfos = {
 			creation: {
-				date: new Date(),
+				date,
 				userId,
 			},
 		};
 
-		newEntity = this.removeEmpty(newEntity);
+		if (this.conf.lockFields) {
+			const keys = this.generateAllLockFields(newEntity, '');
+			if (!_.isEmpty(keys)) {
+				if (!newEntity.objectInfos.lockFields) newEntity.objectInfos.lockFields = [];
+				for (const key of keys) {
+					newEntity.objectInfos.lockFields.push({
+						path: key,
+						metaDatas: {
+							date,
+							userId,
+						},
+					});
+				}
+			}
+			// for (const key of keys) {
+			// 	console.log('>> ' + key);
+			// }
+		}
+
+		newEntity = MongoClient.removeEmptyDeep(newEntity);
 		await this.collection.insertOne(newEntity);
 		return MongoUtils.mapObjectToClass(this.type, newEntity);
 	}
@@ -126,7 +166,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 
 	public async findOneByKey(keyValue: any, keyName: string = 'code'): Promise<U> {
 		const query: StringMap<any> = {
-			[keyName]: keyValue
+			[keyName]: keyValue,
 		};
 
 		return await this.findOne(query);
@@ -145,7 +185,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 
 	public async findOneAndUpdateByKey(keyValue: any, updateQuery: { [id: string]: object, $set?: object }, userId: string, keyName: string = 'code'): Promise<U> {
 		const query: StringMap<any> = {
-			[keyName]: keyValue
+			[keyName]: keyValue,
 		};
 		return await this.findOneAndUpdate(query, updateQuery, userId);
 	}
@@ -391,6 +431,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				if (!!mapFunction) {
 					entity = await mapFunction(entity);
 				}
+				MongoClient.removeEmptyDeep(entity);
 
 				const toSet = _.omit(entity, onlyInsertFieldsKey);
 				const toSetOnInsert = _.pick(entity, onlyInsertFieldsKey);
@@ -412,6 +453,8 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				if (!!mapFunction) {
 					entity = await mapFunction(entity);
 				}
+				MongoClient.removeEmptyDeep(entity);
+
 				const toSet = _.omit(entity, onlyInsertFieldsKey);
 				const toSetOnInsert = _.pick(entity, onlyInsertFieldsKey);
 
@@ -444,6 +487,52 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 
 	public async dropCollection(): Promise<void> {
 		await this.collection.drop();
+	}
+
+	private generateAllLockFields(newEntity: any, basePath: string): string[] {
+		const keys: string[] = [];
+		if (_.isNil(newEntity)) return keys;
+
+		for (const key of Object.keys(newEntity)) {
+			const joinedPaths = this.getJoinPaths(basePath, key);
+
+			// excluded fields
+			if (_.includes(this.conf.lockFields.excludedFields, joinedPaths)) {
+				continue;
+			}
+
+			if (_.isPlainObject(newEntity[key])) {
+				// generate a.b.c
+				keys.push(...this.generateAllLockFields(newEntity[key], joinedPaths));
+			} else if (_.isArray(newEntity[key])) {
+				// a[b=1]
+				if (_.keys(this.conf.lockFields.arrayWithReferences).includes(joinedPaths)) {
+					const arrayKey = this.conf.lockFields.arrayWithReferences[joinedPaths];
+					for (const element of newEntity[key]) {
+						const arrayPath = `${joinedPaths}[${arrayKey}=${element[arrayKey]}]`;
+						if (_.isPlainObject(newEntity[key])) {
+							keys.push(...this.generateAllLockFields(newEntity[key], joinedPaths));
+						} else { // TODO: if _.isArray(newEntity[key])
+							keys.push(arrayPath);
+						}
+					}
+				} else { // a[1]
+					for (const element of newEntity[key]) {
+						const arrayPath = `${joinedPaths}[${JSON.stringify(element)}]`;
+						keys.push(arrayPath);
+					}
+				}
+			} else {
+				// a
+				keys.push(joinedPaths);
+			}
+		}
+		return keys;
+	}
+
+	private getJoinPaths(basePath: string, key: string): string {
+		if (basePath) return basePath + '.' + key;
+		else return key;
 	}
 
 	private removeEmpty<T>(obj: T): T {

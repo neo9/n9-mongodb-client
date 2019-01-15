@@ -10,9 +10,11 @@
   "license": "MIT",
   "scripts": {
     "build": "rimraf dist/ && tsc",
+    "dev": "rimraf dist/ && tsc --watch",
     "lint": "tslint --project tsconfig.json",
-    "test": "npm run lint  && npm run build && nyc ava --verbose --serial dist/test/ && nyc report --reporter=html",
-    "test:dev": "tslint --project tsconfig.json --force && npm run build && nyc ava --verbose --serial dist/test/ && nyc report --reporter=html",
+    "test": "node test/run-tests.js dev",
+    "test:dev": "node test/run-tests.js dev",
+    "test:watch": "node test/run-tests.js watch",
     "coverage": "nyc report --reporter=text-lcov > coverage.lcov && codecov -t b2eaf76a-9a9e-4190-aa8f-398a8ff33939",
     "preversion": "npm test",
     "prepublishOnly": "npm run build",
@@ -53,10 +55,10 @@
   "devDependencies": {
     "@types/node": "^7.0.22",
     "@types/std-mocks": "^1.0.0",
-    "ava": "1.0.0-beta.4",
-    "nyc": "^11.6.0",
+    "ava": "^1.1.0",
+    "nyc": "^13.1.0",
     "std-mocks": "^1.0.1",
-    "typescript": "^2.3.3"
+    "typescript": "^3.2.2"
   },
   "bugs": {
     "url": "https://github.com/neo9/n9-mongo-client/issues"

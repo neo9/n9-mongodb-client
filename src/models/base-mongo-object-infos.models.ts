@@ -1,5 +1,6 @@
 import { Expose, Transform } from 'class-transformer';
 import * as DateParser from '../transformers/date-parser.transformer';
+import { LockField } from './lock-field.models';
 
 export class BaseMongoObjectInfosUpdate {
 	@Expose()
@@ -19,4 +20,7 @@ export class BaseMongoObjectInfos {
 
 	@Expose()
 	public lastUpdate?: BaseMongoObjectInfosUpdate;
+
+	@Expose()
+	public lockFields?: LockField[];
 }
