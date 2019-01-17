@@ -383,27 +383,22 @@
   integrity sha512-ENsJcujGbCU/oXhDfQ12mSo/mCBWodT2tpARZKmatoSrf8+cGRCPi0KVj3I0FORhYZfLXkewXu7AoIWqiBLkNw==
 
 "@types/lodash@^4.14.118":
-  version "4.14.118"
-  resolved "https://repo.neo9.pro/repository/npm-global/@types/lodash/-/lodash-4.14.118.tgz#247bab39bfcc6d910d4927c6e06cbc70ec376f27"
-  integrity sha512-iiJbKLZbhSa6FYRip/9ZDX6HXhayXLDGY2Fqws9cOkEQ6XeKfaxB0sC541mowZJueYyMnVUmmG+al5/4fCDrgw==
+  version "4.14.119"
+  resolved "https://repo.neo9.pro/repository/npm-global/@types/lodash/-/lodash-4.14.119.tgz#be847e5f4bc3e35e46d041c394ead8b603ad8b39"
+  integrity sha512-Z3TNyBL8Vd/M9D9Ms2S3LmFq2sSMzahodD6rCS9V2N44HUMINb75jNkSuwAx7eo2ufqTdfOdtGQpNbieUjPQmw==
 
 "@types/mongodb@^3.1.14":
-  version "3.1.14"
-  resolved "https://repo.neo9.pro/repository/npm-global/@types/mongodb/-/mongodb-3.1.14.tgz#979335f89725b30eeb2e6719562ee9173e7a9ad9"
-  integrity sha512-Hc9nhu9Z33Gq8SP2CZluNlhwbXBCEGAzLMQPEceZG0wUt/ZTzIGaeo8RXu7FWNXfUd6JHh6KHl0YjQlu6TgncQ==
+  version "3.1.18"
+  resolved "https://repo.neo9.pro/repository/npm-global/@types/mongodb/-/mongodb-3.1.18.tgz#24e847c15155226895ec9c79660ec0907005deff"
+  integrity sha512-8m8yvrDagesNNJdOIMk+g0b5z/sW48FwNp4GS1tRcHMKfQ/o40WsFXOXSfYY7y4xkutPFGQKGb4/GpzGFhpnqw==
   dependencies:
     "@types/bson" "*"
     "@types/node" "*"
 
-"@types/node@*":
-  version "10.12.10"
-  resolved "https://repo.neo9.pro/repository/npm-global/@types/node/-/node-10.12.10.tgz#4fa76e6598b7de3f0cb6ec3abacc4f59e5b3a2ce"
-  integrity sha512-8xZEYckCbUVgK8Eg7lf5Iy4COKJ5uXlnIOnePN0WUwSQggy9tolM+tDJf7wMOnT/JT/W9xDYIaYggt3mRV2O5w==
-
-"@types/node@^7.0.22":
-  version "7.10.2"
-  resolved "https://repo.neo9.pro/repository/npm-global/@types/node/-/node-7.10.2.tgz#a98845168012d7a63a84d50e738829da43bdb0de"
-  integrity sha512-RO4ig5taKmcrU4Rex8ojG1gpwFkjddzug9iPQSDvbewHN9vDpcFewevkaOK+KT+w1LeZnxbgOyfXwV4pxsQ4GQ==
+"@types/node@*", "@types/node@^10.12.18":
+  version "10.12.18"
+  resolved "https://repo.neo9.pro/repository/npm-global/@types/node/-/node-10.12.18.tgz#1d3ca764718915584fcd9f6344621b7672665c67"
+  integrity sha512-fh+pAqt4xRzPfqA6eh3Z2y6fyZavRIumvjhaCL753+TVkGKGhpPeyrJG2JftD0T9q4GF00KjefsQ+PQNDdWQaQ==
 
 "@types/std-mocks@^1.0.0":
   version "1.0.0"

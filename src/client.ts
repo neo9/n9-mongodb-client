@@ -3,7 +3,7 @@ import { N9Error } from '@neo9/n9-node-utils';
 import * as deepDiff from 'deep-diff';
 import * as _ from 'lodash';
 import { Collection, CollectionInsertManyOptions, Cursor, Db, FilterQuery, IndexOptions, ObjectId, UpdateQuery } from 'mongodb';
-import { BaseMongoObject, EntityHistoric, StringMap, UpdateManyQuery } from './models';
+import { BaseMongoObject, EntityHistoric, LockField, StringMap, UpdateManyQuery } from './models';
 import { ClassType } from './models/class-type.models';
 import { MongoUtils } from './mongo';
 
@@ -20,14 +20,19 @@ const defaultConfiguration: MongoClientConfiguration = {
 };
 
 export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
-
-	public static removeEmptyDeep<T>(obj: T): T {
-		Object.keys(obj).forEach((key) => {
+	public static removeEmptyDeep<T>(obj: T, compactArrays: boolean = false, removeEmptyObjects: boolean = false): T {
+		for (const key of Object.keys(obj)) {
+			if (compactArrays && _.isArray(obj[key])) {
+				obj[key] = _.compact(obj[key]);
+			}
+			if (removeEmptyObjects && _.isEmpty(obj[key])) {
+				delete obj[key];
+			}
 			// @ts-ignore
-			if (obj[key] && typeof obj[key] === 'object') this.removeEmptyDeep(obj[key]);
+			if (obj[key] && typeof obj[key] === 'object') MongoClient.removeEmptyDeep(obj[key]);
 			// @ts-ignore
 			else if (_.isNil(obj[key])) delete obj[key];
-		});
+		}
 		return obj;
 	}
 
@@ -90,7 +95,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		await this.createHistoricIndex(fieldOrSpec, { unique: true });
 	}
 
-	public async insertOne(newEntity: U, userId: string): Promise<U> {
+	public async insertOne(newEntity: U, userId: string, lockFields: boolean = true): Promise<U> {
 		if (!newEntity) return newEntity;
 
 		const date = new Date();
@@ -102,22 +107,10 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		};
 
 		if (this.conf.lockFields) {
-			const keys = this.generateAllLockFields(newEntity, '');
-			if (!_.isEmpty(keys)) {
-				if (!newEntity.objectInfos.lockFields) newEntity.objectInfos.lockFields = [];
-				for (const key of keys) {
-					newEntity.objectInfos.lockFields.push({
-						path: key,
-						metaDatas: {
-							date,
-							userId,
-						},
-					});
-				}
+			if (!newEntity.objectInfos.lockFields) newEntity.objectInfos.lockFields = [];
+			if (lockFields) {
+				newEntity.objectInfos.lockFields = this.getAllLockFieldsFromEntity(newEntity, date, userId);
 			}
-			// for (const key of keys) {
-			// 	console.log('>> ' + key);
-			// }
 		}
 
 		newEntity = MongoClient.removeEmptyDeep(newEntity);
@@ -179,18 +172,25 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		return MongoUtils.mapObjectToClass(this.type, entity);
 	}
 
-	public async findOneAndUpdateById(id: string, updateQuery: { [id: string]: object, $set?: object }, userId: string): Promise<U> {
-		return await this.findOneAndUpdate({ _id: MongoUtils.oid(id) }, updateQuery, userId);
+	public async findOneAndUpdateById(id: string, updateQuery: { [id: string]: object, $set?: object }, userId: string, internalCall: boolean = false): Promise<U> {
+		const query: StringMap<any> = {
+			_id: MongoUtils.oid(id),
+		};
+		return await this.findOneAndUpdate(query, updateQuery, userId, internalCall);
 	}
 
-	public async findOneAndUpdateByKey(keyValue: any, updateQuery: { [id: string]: object, $set?: object }, userId: string, keyName: string = 'code'): Promise<U> {
+	public async findOneAndUpdateByKey(keyValue: any, updateQuery: { [id: string]: object, $set?: object }, userId: string, keyName: string = 'code', internalCall: boolean = false): Promise<U> {
 		const query: StringMap<any> = {
 			[keyName]: keyValue,
 		};
-		return await this.findOneAndUpdate(query, updateQuery, userId);
+		return await this.findOneAndUpdate(query, updateQuery, userId, internalCall);
 	}
 
-	public async findOneAndUpdate(query: FilterQuery<U>, updateQuery: { [id: string]: object, $set?: object }, userId: string): Promise<U> {
+	public async findOneAndUpdate(query: FilterQuery<U>, updateQuery: { [id: string]: object, $set?: object }, userId: string, internalCall: boolean = false): Promise<U> {
+		if (!internalCall) {
+			this.ifHasLockFieldsThrow();
+		}
+
 		if (!updateQuery['$set']) {
 			updateQuery['$set'] = {};
 		}
@@ -232,7 +232,75 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		return newEntity;
 	}
 
+	public async findOneAndUpdateByIdWithLocks(id: string, newEntity: Partial<U>, userId: string, lockNewFields: boolean = true): Promise<U> {
+		if (this.conf.lockFields) {
+			const existingEntity = await this.findOneById(id);
+			if (!existingEntity) {
+				this.logger.warn(`Entity not found with id ${id} (${this.type.name})`, {
+					userId,
+					newEntity,
+					id,
+				});
+				return;
+			}
+			const newEntityWithOnlyDataToUpdate = this.pruneEntityWithLockFields(newEntity, existingEntity.objectInfos.lockFields);
+			const newEntityMerged = this.mergeOldEntityWithNewOne(newEntity, existingEntity, existingEntity.objectInfos.lockFields);
+			const updateQuery: StringMap<any> = {
+				$set: newEntityMerged,
+			};
+			if (lockNewFields) {
+				if (!newEntityMerged.objectInfos.lockFields) {
+					newEntityMerged.objectInfos.lockFields = [];
+				}
+				updateQuery.$push = {
+					'objectInfos.lockFields': {
+						$each: this.getAllLockFieldsFromEntity(newEntityWithOnlyDataToUpdate, new Date(), userId),
+					},
+				};
+			}
+			delete newEntityMerged.objectInfos;
+			delete newEntityMerged._id;
+			// console.log(`--   --    --   --    --   --    --   --`);
+			// console.log(JSON.stringify(newEntityMerged, null, 2));
+			// console.log(`--   --    --   --    --   --    --   --`);
+			// console.log(JSON.stringify(updateQuery, null, 2));
+			// console.log(`--   --    --   --    --   --    --   --`);
+
+			const updatedValue = await this.findOneAndUpdateById(id, updateQuery, userId, true);
+			// console.log(JSON.stringify(updatedValue, null, 2));
+			// console.log(`--   --    --   --    --   --    --   --`);
+
+			return updatedValue;
+		} else {
+			delete newEntity._id;
+			delete newEntity.objectInfos;
+			return await this.findOneAndUpdateById(id, { $set: newEntity }, userId, true);
+		}
+	}
+
+	public async updateManyAtOnce(
+			entities: Partial<U>[],
+			userId: string,
+			upsert: boolean = false,
+			lockNewFields: boolean = true,
+			query?: string | StringMap<(keyValue: any, entity: Partial<U>, key: string) => any>,
+			mapFunction?: (entity: Partial<U>) => Promise<Partial<U>>,
+			onlyInsertFieldsKey?: string[],
+	): Promise<Cursor<U>> {
+		const updateQueries = await this.buildUpdatesQueries(
+				entities,
+				userId,
+				lockNewFields,
+				query,
+				mapFunction,
+				onlyInsertFieldsKey,
+		);
+		return await this.updateMany(updateQueries, userId, upsert);
+	}
+
 	public async updateManyToSameValue(query: FilterQuery<U>, updateQuery: UpdateQuery<U>, userId: string): Promise<Cursor<U>> {
+		this.ifHasLockFieldsThrow();
+
 		if (!updateQuery['$set']) {
 			updateQuery['$set'] = {};
 		}
@@ -252,104 +320,6 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		}
 		const updateResult = await this.collection.updateMany(query, updateQuery);
 		return this.findWithType(query, this.type, 0, updateResult.matchedCount);
-	}
-
-	public async updateMany(newEntities: UpdateManyQuery[], userId: string, upsert?: boolean): Promise<Cursor<U>> {
-		if (_.isEmpty(newEntities)) {
-			return await this.getEmptyCursor<U>(this.type);
-		}
-
-		const bulkOperations: { updateOne: { filter: StringMap<any>, update: StringMap<any>, upsert?: boolean } } [] = [];
-		const now = new Date();
-		for (const newEnt of newEntities) {
-			const updateQuery = newEnt.updateQuery;
-			if (!updateQuery['$set']) {
-				updateQuery['$set'] = {};
-			}
-			if (!updateQuery['$setOnInsert']) {
-				updateQuery['$setOnInsert'] = {};
-			}
-
-			updateQuery['$set'] = {
-				...updateQuery['$set'] as object,
-				'objectInfos.lastUpdate': {
-					date: now,
-					userId: ObjectId.isValid(userId) ? MongoUtils.oid(userId) : userId,
-				},
-			};
-
-			if (upsert) {
-				updateQuery['$setOnInsert'] = {
-					...updateQuery['$setOnInsert'] as object,
-					'objectInfos.creation': {
-						date: new Date(),
-						userId,
-					},
-				};
-			}
-
-			let filter: StringMap<any> = {};
-
-			if (newEnt.id) {
-				filter._id = MongoUtils.oid(newEnt.id);
-			} else if (newEnt.key) {
-				filter[newEnt.key.name] = newEnt.key.value;
-			} else if (newEnt.query) {
-				filter = newEnt.query;
-			} else {
-				filter._id = {
-					$exists: false,
-				};
-			}
-
-			bulkOperations.push({
-				updateOne: {
-					filter,
-					update: updateQuery,
-					upsert,
-				},
-			});
-		}
-		let oldValuesSaved: StringMap<U>;
-		if (this.conf.keepHistoric) {
-			oldValuesSaved = _.keyBy(await (await this.findWithType({
-				_id: {
-					$in: MongoUtils.oids(_.map(newEntities, 'id')),
-				},
-			}, this.type)).toArray(), '_id');
-		}
-
-		const bulkResult = await this.collection.bulkWrite(bulkOperations);
-		const newValues: Cursor<U> = await this.findWithType({
-			_id: {
-				$in: MongoUtils.oids(_.concat(_.map(newEntities, 'id'), _.values(bulkResult.insertedIds), _.values(bulkResult.upsertedIds))),
-			},
-		}, this.type);
-
-		if (this.conf.keepHistoric) {
-			while (await newValues.hasNext()) {
-				const newEntity = await newValues.next();
-				const oldValueSaved: U = oldValuesSaved[newEntity._id];
-
-				if (oldValueSaved) {
-					const diffs = deepDiff.diff(oldValueSaved, newEntity, (path: string[], key: string) => {
-						return _.get(path, '0', key) === 'objectInfos';
-					});
-					if (diffs) {
-						const change: EntityHistoric<U> = {
-							entityId: MongoUtils.oid(newEntity._id) as any,
-							date: now,
-							userId: ObjectId.isValid(userId) ? MongoUtils.oid(userId) as any : userId,
-							dataEdited: diffs,
-							snapshot: oldValueSaved,
-						};
-						await this.collectionHistoric.insertOne(change);
-					}
-				}
-			}
-			newValues.rewind();
-		}
-		return newValues;
 	}
 
 	public async findHistoricByEntityId(id: string, page: number = 0, size: number = 10): Promise<Cursor<EntityHistoric<U>>> {
@@ -410,9 +380,14 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		return await this.collectionHistoric.countDocuments(query);
 	}
 
-	public async buildUpdatesQueries(
+	public async dropCollection(): Promise<void> {
+		await this.collection.drop();
+	}
+
+	private async buildUpdatesQueries(
 			entities: Partial<U>[],
 			userId: string,
+			lockNewFields: boolean,
 			query?: string | StringMap<(keyValue: any, entity: Partial<U>, key: string) => any>,
 			mapFunction?: (entity: Partial<U>) => Promise<Partial<U>>,
 			onlyInsertFieldsKey?: string[],
@@ -433,16 +408,43 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				}
 				MongoClient.removeEmptyDeep(entity);
 
+				if (this.conf.lockFields) {
+					if (lockNewFields) {
+						const newEntityWithOnlyDataToUpdate = this.pruneEntityWithLockFields(entity, currentValue.objectInfos.lockFields);
+						const newEntityMerged = _.cloneDeep(this.mergeOldEntityWithNewOne(entity, currentValue, currentValue.objectInfos.lockFields));
+						delete newEntityMerged.objectInfos;
+						delete newEntityMerged._id;
+
+						entity = newEntityMerged;
+
+						if (lockNewFields) {
+							const lockFields = currentValue.objectInfos.lockFields || [];
+							const newLockFields = this.getAllLockFieldsFromEntity(newEntityWithOnlyDataToUpdate, new Date(), userId);
+							if (!_.isEmpty(newLockFields)) {
+								lockFields.push(...newLockFields);
+								entity['objectInfos.lockFields'] = lockFields;
+							}
+						}
+					}
+				}
+
 				const toSet = _.omit(entity, onlyInsertFieldsKey);
 				const toSetOnInsert = _.pick(entity, onlyInsertFieldsKey);
+
+				let setOnInsert;
+				if (!_.isEmpty(toSetOnInsert)) {
+					setOnInsert = {
+						$setOnInsert: {
+							...toSetOnInsert as object,
+						},
+					};
+				}
 
 				const update = {
 					$set: {
 						...toSet as object,
 					},
-					$setOnInsert: {
-						...toSetOnInsert as object,
-					},
+					...setOnInsert,
 				};
 
 				updates.push({
@@ -458,14 +460,21 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				const toSet = _.omit(entity, onlyInsertFieldsKey);
 				const toSetOnInsert = _.pick(entity, onlyInsertFieldsKey);
 
+				let setOnInsert;
+				if (!_.isEmpty(toSetOnInsert)) {
+					setOnInsert = {
+						$setOnInsert: {
+							...toSetOnInsert as object,
+						},
+					};
+				}
+
 				const update: UpdateManyQuery = {
 					updateQuery: {
 						$set: {
 							...toSet as object,
 						},
-						$setOnInsert: {
-							...toSetOnInsert as object,
-						},
+						...setOnInsert,
 					},
 				};
 
@@ -485,8 +494,122 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		return updates;
 	}
 
-	public async dropCollection(): Promise<void> {
-		await this.collection.drop();
+	private async updateMany(newEntities: UpdateManyQuery[], userId: string, upsert?: boolean): Promise<Cursor<U>> {
+		if (_.isEmpty(newEntities)) {
+			return await this.getEmptyCursor<U>(this.type);
+		}
+
+		const bulkOperations: { updateOne: { filter: StringMap<any>, update: StringMap<any>, upsert?: boolean } } [] = [];
+		const now = new Date();
+		for (const newEnt of newEntities) {
+			const updateQuery = newEnt.updateQuery;
+			if (!updateQuery['$set']) {
+				updateQuery['$set'] = {};
+			}
+
+			updateQuery['$set'] = {
+				...updateQuery['$set'] as object,
+				'objectInfos.lastUpdate': {
+					date: now,
+					userId: ObjectId.isValid(userId) ? MongoUtils.oid(userId) : userId,
+				},
+			};
+
+			if (upsert) {
+				updateQuery['$setOnInsert'] = {
+					...updateQuery['$setOnInsert'] as object,
+					'objectInfos.creation': {
+						date: new Date(),
+						userId,
+					},
+				};
+			}
+
+			let filter: StringMap<any> = {};
+
+			if (newEnt.id) {
+				filter._id = MongoUtils.oid(newEnt.id);
+			} else if (newEnt.key) {
+				filter[newEnt.key.name] = newEnt.key.value;
+			} else if (newEnt.query) {
+				filter = newEnt.query;
+			} else {
+				filter._id = {
+					$exists: false,
+				};
+			}
+
+			bulkOperations.push({
+				updateOne: {
+					filter,
+					update: updateQuery,
+					upsert,
+				},
+			});
+		}
+		let oldValuesSaved: StringMap<U>;
+		if (this.conf.keepHistoric) {
+			oldValuesSaved = _.keyBy(await (await this.findWithType({
+				_id: {
+					$in: MongoUtils.oids(_.map(newEntities, 'id')),
+				},
+			}, this.type)).toArray(), '_id');
+		}
+
+		// for (const bulkOperation of bulkOperations) {
+		// 	console.log(`--  bulkOperation --`);
+		// 	console.log(JSON.stringify(bulkOperation, null, 2));
+		// 	console.log(`--                --`);
+		// }
+
+		const bulkResult = await this.collection.bulkWrite(bulkOperations);
+		const newValues: Cursor<U> = await this.findWithType({
+			_id: {
+				$in: MongoUtils.oids(_.concat(_.map(newEntities, 'id'), _.values(bulkResult.insertedIds), _.values(bulkResult.upsertedIds))),
+			},
+		}, this.type);
+
+		if (this.conf.keepHistoric) {
+			while (await newValues.hasNext()) {
+				const newEntity = await newValues.next();
+				const oldValueSaved: U = oldValuesSaved[newEntity._id];
+
+				if (oldValueSaved) {
+					const diffs = deepDiff.diff(oldValueSaved, newEntity, (path: string[], key: string) => {
+						return _.get(path, '0', key) === 'objectInfos';
+					});
+					if (diffs) {
+						const change: EntityHistoric<U> = {
+							entityId: MongoUtils.oid(newEntity._id) as any,
+							date: now,
+							userId: ObjectId.isValid(userId) ? MongoUtils.oid(userId) as any : userId,
+							dataEdited: diffs,
+							snapshot: oldValueSaved,
+						};
+						await this.collectionHistoric.insertOne(change);
+					}
+				}
+			}
+			newValues.rewind();
+		}
+		return newValues;
+	}
+
+	private getAllLockFieldsFromEntity(newEntity: Partial<U>, date: Date, userId: string): LockField[] {
+		const keys = this.generateAllLockFields(newEntity, '');
+		if (_.isEmpty(keys)) return;
+
+		const ret: LockField[] = [];
+		for (const key of keys) {
+			ret.push({
+				path: key,
+				metaDatas: {
+					date,
+					userId,
+				},
+			});
+		}
+		return ret;
 	}
 
 	private generateAllLockFields(newEntity: any, basePath: string): string[] {
@@ -494,37 +617,40 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		if (_.isNil(newEntity)) return keys;
 
 		for (const key of Object.keys(newEntity)) {
-			const joinedPaths = this.getJoinPaths(basePath, key);
+			const joinedPath = this.getJoinPaths(basePath, key);
 
+			if (joinedPath === '_id') {
+				continue;
+			}
 			// excluded fields
-			if (_.includes(this.conf.lockFields.excludedFields, joinedPaths)) {
+			if (_.includes(this.conf.lockFields.excludedFields, joinedPath)) {
 				continue;
 			}
 
 			if (_.isPlainObject(newEntity[key])) {
 				// generate a.b.c
-				keys.push(...this.generateAllLockFields(newEntity[key], joinedPaths));
+				keys.push(...this.generateAllLockFields(newEntity[key], joinedPath));
 			} else if (_.isArray(newEntity[key])) {
 				// a[b=1]
-				if (_.keys(this.conf.lockFields.arrayWithReferences).includes(joinedPaths)) {
-					const arrayKey = this.conf.lockFields.arrayWithReferences[joinedPaths];
+				if (_.keys(this.conf.lockFields.arrayWithReferences).includes(joinedPath)) {
+					const arrayKey = this.conf.lockFields.arrayWithReferences[joinedPath];
 					for (const element of newEntity[key]) {
-						const arrayPath = `${joinedPaths}[${arrayKey}=${element[arrayKey]}]`;
+						const arrayPath = `${joinedPath}[${arrayKey}=${element[arrayKey]}]`;
 						if (_.isPlainObject(newEntity[key])) {
-							keys.push(...this.generateAllLockFields(newEntity[key], joinedPaths));
+							keys.push(...this.generateAllLockFields(newEntity[key], joinedPath));
 						} else { // TODO: if _.isArray(newEntity[key])
 							keys.push(arrayPath);
 						}
 					}
 				} else { // a[1]
 					for (const element of newEntity[key]) {
-						const arrayPath = `${joinedPaths}[${JSON.stringify(element)}]`;
+						const arrayPath = `${joinedPath}[${JSON.stringify(element)}]`;
 						keys.push(arrayPath);
 					}
 				}
 			} else {
 				// a
-				keys.push(joinedPaths);
+				keys.push(joinedPath);
 			}
 		}
 		return keys;
@@ -535,17 +661,79 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		else return key;
 	}
 
-	private removeEmpty<T>(obj: T): T {
-		Object.keys(obj).forEach((key) => {
-			// @ts-ignore
-			if (obj[key] && typeof obj[key] === 'object') this.removeEmpty(obj[key]);
-			// @ts-ignore
-			else if (_.isNil(obj[key])) delete obj[key];
-		});
-		return obj;
+	private ifHasLockFieldsThrow(): void {
+		if (this.conf.lockFields) {
+			throw new N9Error('invalid-function-call', 401, { lockFields: this.conf.lockFields });
+		}
 	}
 
 	private async getEmptyCursor<X extends U>(type: ClassType<X>): Promise<Cursor<X>> {
 		return await this.findWithType<X>({ $and: [{ _id: false }, { _id: true }] }, type, -1, 0);
+	}
+
+	private pruneEntityWithLockFields(entity: Partial<U>, lockFields: LockField[]): Partial<U> {
+		for (const lockField of lockFields) {
+			let path = lockField.path;
+			if (path.includes('[')) { // path : a.b.c
+				path = this.translatePathToLodashPath(path, entity);
+			}
+			if (path) {
+				_.unset(entity, path);
+			}
+		}
+		MongoClient.removeEmptyDeep(entity, true, true);
+		return entity;
+	}
+
+	/**
+	 * Convert :
+	 * a[b=2]value to a[1].value
+	 * @param path
+	 * @param entity
+	 */
+	private translatePathToLodashPath(path: string, entity: Partial<U>): string {
+		const objectsArrayPathRegex = /(?<basePath>.*)\[(?<code>[^\]]+)=(?<value>[^\]]+)](?<pathLeft>.*)/;
+		const simpleArrayPathRegex = /(?<basePath>.*)\[(?<value>[^\]]+)](?<pathLeft>.*)/;
+		const match = path.match(objectsArrayPathRegex);
+		const matchSimpleArray = path.match(simpleArrayPathRegex);
+		let newPath;
+		if (match) {
+			const groups = match.groups;
+			const array: any[] = _.get(entity, groups.basePath);
+			if (!_.isEmpty(array)) {
+				const index = array.findIndex((item) => item && item[groups.code] === groups.value);
+				if (index !== -1) {
+					newPath = `${groups.basePath}[${index}]`;
+				}
+			}
+			if (groups.pathLeft) {
+				newPath += this.translatePathToLodashPath(groups.pathLeft, _.get(entity, groups.basePath));
+			}
+		} else if (matchSimpleArray) {
+			const groups = matchSimpleArray.groups;
+			const array: any[] = _.get(entity, groups.basePath);
+			if (!_.isEmpty(array)) {
+				const index = array.findIndex((item) => JSON.stringify(item) === groups.value);
+				if (index !== -1) {
+					newPath = `${groups.basePath}[${index}]`;
+				}
+			}
+			if (groups.pathLeft) {
+				newPath += this.translatePathToLodashPath(groups.pathLeft, _.get(entity, groups.basePath));
+			}
+		}
+		return newPath;
+	}
+
+	private mergeOldEntityWithNewOne(newEntity: Partial<U>, existingEntity: U, lockFields: LockField[]): U {
+		return _.mergeWith(existingEntity, newEntity, (objValue, srcValue, key) => {
+			if (_.isArray(objValue)) {
+				if (!_.isEmpty(lockFields) && lockFields.find((lockField) => lockField.path.includes(key))) {
+					return objValue.concat(srcValue);
+				} else {
+					return srcValue;
+				}
+			}
+		});
 	}
 }
