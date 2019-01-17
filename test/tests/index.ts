@@ -1,7 +1,7 @@
 import { N9Log } from '@neo9/n9-node-log';
 import test, { Assertions } from 'ava';
 import * as _ from 'lodash';
-import { Db } from 'mongodb';
+import * as mongodb from 'mongodb';
 
 import { MongoClient, MongoUtils } from '../../src';
 import { BaseMongoObject } from '../../src/models';
@@ -62,7 +62,8 @@ test.beforeEach(async (t) => {
 
 test.after(async (t) => {
 	global.log.info(`DROP DB after tests OK`);
-	await (global.db as Db).dropDatabase();
+	await (global.db as mongodb.Db).dropDatabase();
+	await MongoUtils.disconnect();
 });
 
 test('[CRUD] Insert one and find it', async (t: Assertions) => {
@@ -80,7 +81,7 @@ test('[CRUD] Insert one and find it', async (t: Assertions) => {
 	const sizeWithElementIn = await mongoClient.count();
 	const foundObject = await mongoClient.findOne({ field1String: 'string1' });
 	const foundObjectById = await mongoClient.findOneById(foundObject._id);
-	const foundObjectByKey = await mongoClient.findOneByKey('field1String', 'string1');
+	const foundObjectByKey = await mongoClient.findOneByKey('string1', 'field1String');
 
 	t.truthy(foundObject, 'found by query');
 	t.is(sizeWithElementIn, 1, 'nb element in collection');

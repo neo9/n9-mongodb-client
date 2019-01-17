@@ -1,5 +1,6 @@
 import { ClassTransformOptions, plainToClass } from 'class-transformer';
 import * as _ from 'lodash';
+import * as mongodb from 'mongodb';
 import { Db, MongoClient, ObjectID } from 'mongodb';
 import { ClassType } from './models/class-type.models';
 
@@ -12,6 +13,16 @@ export class MongoUtils {
 		global.db = db;
 		log.info(`Connected`);
 		return db;
+	}
+
+	public static async disconnect(): Promise<void> {
+		if (!global.dbClient) return;
+
+		const log = global.log.module('mongo');
+		log.info(`Diconnect from MongoDB.`);
+		await new Promise((resolve) => {
+			(global.dbClient as mongodb.MongoClient).logout(resolve);
+		});
 	}
 
 	public static oid(id: string | ObjectID): ObjectID | null {
