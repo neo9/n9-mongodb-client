@@ -48,7 +48,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 	constructor(collection: Collection<U> | string, type: ClassType<U>, typeList: ClassType<L>, conf: MongoClientConfiguration = {}) {
 		this.conf = _.merge(defaultConfiguration, conf);
 		if (this.conf.lockFields) {
-			this.conf.lockFields.excludedFields = _.union(this.conf.lockFields.excludedFields, ['objectInfos']);
+			this.conf.lockFields.excludedFields = _.union(this.conf.lockFields.excludedFields, ['objectInfos', '_id']);
 		}
 		this.logger = (global.log as N9Log).module('mongo-client');
 		this.db = global.db as Db;
@@ -619,9 +619,6 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		for (const key of Object.keys(newEntity)) {
 			const joinedPath = this.getJoinPaths(basePath, key);
 
-			if (joinedPath === '_id') {
-				continue;
-			}
 			// excluded fields
 			if (_.includes(this.conf.lockFields.excludedFields, joinedPath)) {
 				continue;

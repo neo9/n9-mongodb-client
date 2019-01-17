@@ -276,3 +276,6 @@ test('[LOCK-FIELDS] Update many with locks', async (t: Assertions) => {
 	t.is(listing[0].property.value, locksDataSample.property.value);
 	t.is(listing[0].excludedField, locksDataSample1.excludedField);
 });
+
+// TODO: Test inset object like { 'a.b': 'c' } for elasticsearch error
+// TODO: Test history in collection
