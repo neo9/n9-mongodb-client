@@ -4,7 +4,7 @@ import * as _ from 'lodash';
 import * as mongodb from 'mongodb';
 
 import { MongoClient, MongoUtils } from '../../src';
-import { BaseMongoObject } from '../../src/models';
+import { BaseMongoObject, EntityHistoric } from '../../src/models';
 
 class SampleTypeListing extends BaseMongoObject {
 	public field1String: string;
@@ -52,7 +52,19 @@ const locksDataSample: SampleComplexType = {
 
 global.log = new N9Log('tests');
 
-test.before(async (t) => {
+const getLockFieldsMongoClient = (keepHistoric: boolean = false) => {
+	return new MongoClient('test' + Date.now(), SampleComplexType, null, {
+		lockFields: {
+			excludedFields: ['excludedField', 'excludedArray'],
+			arrayWithReferences: {
+				objects: 'code',
+			},
+		},
+		keepHistoric,
+	});
+};
+
+test.before(async () => {
 	await MongoUtils.connect('mongodb://localhost:27017/test-n9-mongo-client');
 });
 
@@ -60,7 +72,7 @@ test.beforeEach(async (t) => {
 	global.log.info(`Start test >> ${t.title}`);
 });
 
-test.after(async (t) => {
+test.after(async () => {
 	global.log.info(`DROP DB after tests OK`);
 	await (global.db as mongodb.Db).dropDatabase();
 	await MongoUtils.disconnect();
@@ -95,14 +107,8 @@ test('[CRUD] Insert one and find it', async (t: Assertions) => {
 });
 
 test('[LOCK-FIELDS] Insert one and check locks', async (t: Assertions) => {
-	const mongoClient = new MongoClient('test' + Date.now(), SampleComplexType, null, {
-		lockFields: {
-			excludedFields: ['excludedField', 'excludedArray'],
-			arrayWithReferences: {
-				objects: 'code',
-			},
-		},
-	});
+
+	const mongoClient = getLockFieldsMongoClient();
 
 	const insertedEntity = await mongoClient.insertOne(_.cloneDeep(locksDataSample), '');
 
@@ -121,14 +127,7 @@ test('[LOCK-FIELDS] Insert one and check locks', async (t: Assertions) => {
 });
 
 test('[LOCK-FIELDS] Insert&Update one and check locks', async (t: Assertions) => {
-	const mongoClient = new MongoClient('test' + Date.now(), SampleComplexType, null, {
-		lockFields: {
-			excludedFields: ['excludedField', 'excludedArray'],
-			arrayWithReferences: {
-				objects: 'code',
-			},
-		},
-	});
+	const mongoClient = getLockFieldsMongoClient();
 
 	const insertedEntity = await mongoClient.insertOne(_.cloneDeep(locksDataSample), '');
 	const entity = await mongoClient.findOneById(insertedEntity._id);
@@ -167,14 +166,7 @@ test('[LOCK-FIELDS] Insert&Update one and check locks', async (t: Assertions) =>
 });
 
 test('[LOCK-FIELDS] Insert&update one without saving locks', async (t: Assertions) => {
-	const mongoClient = new MongoClient('test' + Date.now(), SampleComplexType, null, {
-		lockFields: {
-			excludedFields: ['excludedField'],
-			arrayWithReferences: {
-				objects: 'code',
-			},
-		},
-	});
+	const mongoClient = getLockFieldsMongoClient();
 
 	const insertedEntity = await mongoClient.insertOne(_.cloneDeep(locksDataSample), 'userId', false);
 	const entity = await mongoClient.findOneById(insertedEntity._id);
@@ -211,9 +203,7 @@ test('[LOCK-FIELDS] Insert&update one without saving locks', async (t: Assertion
 });
 
 test('[LOCK-FIELDS] Forbide usage of some methods', async (t: Assertions) => {
-	const mongoClient = new MongoClient('test' + Date.now(), SampleComplexType, null, {
-		lockFields: {},
-	});
+	const mongoClient = getLockFieldsMongoClient();
 
 	await t.throwsAsync(async () => {
 		await mongoClient.findOneAndUpdateById('', {}, 'userId');
@@ -227,14 +217,7 @@ test('[LOCK-FIELDS] Forbide usage of some methods', async (t: Assertions) => {
 });
 
 test('[LOCK-FIELDS] Update many with locks', async (t: Assertions) => {
-	const mongoClient = new MongoClient('test' + Date.now(), SampleComplexType, null, {
-		lockFields: {
-			excludedFields: ['excludedField'],
-			arrayWithReferences: {
-				objects: 'code',
-			},
-		},
-	});
+	const mongoClient = getLockFieldsMongoClient();
 
 	const locksDataSample1: SampleComplexType = {
 		...locksDataSample,
@@ -275,6 +258,26 @@ test('[LOCK-FIELDS] Update many with locks', async (t: Assertions) => {
 	t.deepEqual(listing[0], listing[1]);
 	t.is(listing[0].property.value, locksDataSample.property.value);
 	t.is(listing[0].excludedField, locksDataSample1.excludedField);
+});
+
+test('[LOCK-FIELDS] Remove lock field', async (t: Assertions) => {
+	const mongoClient = getLockFieldsMongoClient(true);
+	const insertedEntity = await mongoClient.insertOne(_.cloneDeep(locksDataSample), 'userId', true);
+
+	t.is(insertedEntity.objectInfos.lockFields.length, 7, 'Nb lock fields after creation');
+	let newEntity = await mongoClient.findOneByIdAndRemoveLock(insertedEntity._id, 'strings["a"]', 'userId');
+
+	t.is(newEntity.objectInfos.lockFields.length, 6, 'Nb lock fields after 1 removed');
+	t.false(_.map(newEntity.objectInfos.lockFields, 'path').includes('strings["a"]'), 'Does not contains path removed');
+	newEntity = await mongoClient.findOneByKeyAndRemoveLock(newEntity.text, 'strings["b"]', 'userId', 'text');
+
+	t.is(newEntity.objectInfos.lockFields.length, 5, 'Nb lock fields after 2 removed');
+	t.false(_.map(newEntity.objectInfos.lockFields, 'path').includes('strings["b"]'), 'Does not contains path removed');
+
+	const allHistoric: EntityHistoric<SampleComplexType>[] = await (await mongoClient.findHistoricByEntityId(insertedEntity._id, 0, 0)).toArray();
+	console.log(`-- index.ts allHistoric --`, allHistoric);
+	t.is(allHistoric.length, 2, '2 historic entries');
+
 });
 
 // TODO: Test inset object like { 'a.b': 'c' } for elasticsearch error

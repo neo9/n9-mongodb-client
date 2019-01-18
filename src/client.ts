@@ -215,7 +215,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 
 		if (this.conf.keepHistoric) {
 			const diffs = deepDiff.diff(saveOldValue, newEntity, (path: string[], key: string) => {
-				return _.get(path, '0', key) === 'objectInfos';
+				return ['objectInfos.creation', 'objectInfos.lastUpdate'].includes([...path, key].join('.'));
 			});
 			if (diffs) {
 				const change: EntityHistoric<U> = {
@@ -230,6 +230,34 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		}
 
 		return newEntity;
+	}
+
+	public async findOneByIdAndRemoveLock(id: string, lockFieldPath: string, userId: string): Promise<U> {
+		const query: StringMap<any> = {
+			_id: MongoUtils.oid(id),
+		};
+		return await this.findOneAndRemoveLock(query, lockFieldPath, userId);
+	}
+
+	public async findOneByKeyAndRemoveLock(keyValue: any, lockFieldPath: string, userId: string,  keyName: string = 'code'): Promise<U> {
+		const query: StringMap<any> = {
+			[keyName]: keyValue,
+		};
+		return await this.findOneAndRemoveLock(query, lockFieldPath, userId);
+	}
+
+	public async findOneAndRemoveLock(query: FilterQuery<U>, lockFieldPath: string, userId: string): Promise<U> {
+		if (!this.conf.lockFields) {
+			throw new N9Error('invalid-function-call', 500, { name: 'findOneByIdAndRemoveLock', query, lockFieldPath });
+		}
+
+		return await this.findOneAndUpdate(query, {
+			$pull: {
+				'objectInfos.lockFields': {
+					path: lockFieldPath
+				}
+			}
+		}, userId, true)
 	}
 
 	public async findOneAndUpdateByIdWithLocks(id: string, newEntity: Partial<U>, userId: string, lockNewFields: boolean = true): Promise<U> {
@@ -576,7 +604,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 
 				if (oldValueSaved) {
 					const diffs = deepDiff.diff(oldValueSaved, newEntity, (path: string[], key: string) => {
-						return _.get(path, '0', key) === 'objectInfos';
+						return ['objectInfos.creation', 'objectInfos.lastUpdate'].includes([...path, key].join('.'));
 					});
 					if (diffs) {
 						const change: EntityHistoric<U> = {
