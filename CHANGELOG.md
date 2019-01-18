@@ -1,3 +1,12 @@
+## Version [0.1.1](https://github.com/neo9/n9-mongo-client/compare/0.1.0...0.1.1) (2019-01-18)
+
+
+### locks
+
+* Add function to remove one lock on one entity ([8df9474](https://github.com/neo9/n9-mongo-client/commit/8df9474)) (Benjamin Daniel)
+
+
+
 # Version [0.1.0](https://github.com/neo9/n9-mongo-client/compare/0.0.1...0.1.0) (2019-01-17)
 
 
@@ -11,6 +20,10 @@
 ### npm
 
 * Add link to repository ([412092c](https://github.com/neo9/n9-mongo-client/commit/412092c)) (Benjamin Daniel)
+
+### release
+
+* V 0.1.0 ([ba52283](https://github.com/neo9/n9-mongo-client/commit/ba52283)) (Benjamin Daniel)
 
 ### update
 
