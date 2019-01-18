@@ -1,9 +1,22 @@
+## Version [0.1.2](https://github.com/neo9/n9-mongo-client/compare/0.1.1...0.1.2) (2019-01-18)
+
+
+### locks
+
+* Add option to override locks ([c2022dd](https://github.com/neo9/n9-mongo-client/commit/c2022dd)) (Benjamin Daniel)
+
+
+
 ## Version [0.1.1](https://github.com/neo9/n9-mongo-client/compare/0.1.0...0.1.1) (2019-01-18)
 
 
 ### locks
 
 * Add function to remove one lock on one entity ([8df9474](https://github.com/neo9/n9-mongo-client/commit/8df9474)) (Benjamin Daniel)
+
+### release
+
+* V 0.1.1 ([1b1b5f3](https://github.com/neo9/n9-mongo-client/commit/1b1b5f3)) (Benjamin Daniel)
 
 
 
