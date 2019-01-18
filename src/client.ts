@@ -239,7 +239,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		return await this.findOneAndRemoveLock(query, lockFieldPath, userId);
 	}
 
-	public async findOneByKeyAndRemoveLock(keyValue: any, lockFieldPath: string, userId: string,  keyName: string = 'code'): Promise<U> {
+	public async findOneByKeyAndRemoveLock(keyValue: any, lockFieldPath: string, userId: string, keyName: string = 'code'): Promise<U> {
 		const query: StringMap<any> = {
 			[keyName]: keyValue,
 		};
@@ -254,14 +254,14 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		return await this.findOneAndUpdate(query, {
 			$pull: {
 				'objectInfos.lockFields': {
-					path: lockFieldPath
-				}
-			}
-		}, userId, true)
+					path: lockFieldPath,
+				},
+			},
+		}, userId, true);
 	}
 
 	public async findOneAndUpdateByIdWithLocks(id: string, newEntity: Partial<U>, userId: string, lockNewFields: boolean = true, forceEditLockFields: boolean = false): Promise<U> {
-		if (this.conf.lockFields && !forceEditLockFields) {
+		if (this.conf.lockFields) {
 			const existingEntity = await this.findOneById(id);
 			if (!existingEntity) {
 				this.logger.warn(`Entity not found with id ${id} (${this.type.name})`, {
@@ -272,22 +272,35 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				return;
 			}
 			const newEntityWithOnlyDataToUpdate = this.pruneEntityWithLockFields(newEntity, existingEntity.objectInfos.lockFields);
-			const newEntityMerged = this.mergeOldEntityWithNewOne(newEntity, existingEntity, existingEntity.objectInfos.lockFields);
+
+			let newEntityToSave;
+			if (forceEditLockFields) {
+				const newEntityMerged = this.mergeOldEntityWithNewOne(newEntity, existingEntity, existingEntity.objectInfos.lockFields);
+				newEntityToSave = newEntityMerged;
+				// TODO : add function parameter to allow validation here
+			} else {
+				newEntityToSave = newEntity;
+			}
+
 			const updateQuery: StringMap<any> = {
-				$set: newEntityMerged,
+				$set: newEntityToSave,
 			};
 			if (lockNewFields) {
-				if (!newEntityMerged.objectInfos.lockFields) {
-					newEntityMerged.objectInfos.lockFields = [];
+				if (!newEntityToSave.objectInfos.lockFields) {
+					newEntityToSave.objectInfos.lockFields = [];
 				}
-				updateQuery.$push = {
-					'objectInfos.lockFields': {
-						$each: this.getAllLockFieldsFromEntity(newEntityWithOnlyDataToUpdate, new Date(), userId),
-					},
-				};
+				let allLockFieldsFromEntity = this.getAllLockFieldsFromEntity(newEntityWithOnlyDataToUpdate, new Date(), userId);
+
+				if (!_.isEmpty(allLockFieldsFromEntity)) {
+					updateQuery.$push = {
+						'objectInfos.lockFields': {
+							$each: allLockFieldsFromEntity,
+						},
+					};
+				}
 			}
-			delete newEntityMerged.objectInfos;
-			delete newEntityMerged._id;
+			delete newEntityToSave.objectInfos;
+			delete newEntityToSave._id;
 			// console.log(`--   --    --   --    --   --    --   --`);
 			// console.log(JSON.stringify(newEntityMerged, null, 2));
 			// console.log(`--   --    --   --    --   --    --   --`);
@@ -314,6 +327,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			query?: string | StringMap<(keyValue: any, entity: Partial<U>, key: string) => any>,
 			mapFunction?: (entity: Partial<U>) => Promise<Partial<U>>,
 			onlyInsertFieldsKey?: string[],
+			forceEditLockFields: boolean = false,
 	): Promise<Cursor<U>> {
 		const updateQueries = await this.buildUpdatesQueries(
 				entities,
@@ -322,7 +336,9 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				query,
 				mapFunction,
 				onlyInsertFieldsKey,
+				forceEditLockFields,
 		);
+		console.log(`-- client.ts  --`, JSON.stringify(updateQueries, null, 2));
 		return await this.updateMany(updateQueries, userId, upsert);
 	}
 
@@ -419,6 +435,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			query?: string | StringMap<(keyValue: any, entity: Partial<U>, key: string) => any>,
 			mapFunction?: (entity: Partial<U>) => Promise<Partial<U>>,
 			onlyInsertFieldsKey?: string[],
+			forceEditLockFields?: boolean,
 	): Promise<UpdateManyQuery[]> {
 		const updates: UpdateManyQuery[] = [];
 		for (let entity of entities) {
@@ -436,22 +453,21 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				}
 				MongoClient.removeEmptyDeep(entity);
 
-				if (this.conf.lockFields) {
+				if (this.conf.lockFields && !forceEditLockFields) {
+					const newEntityWithOnlyDataToUpdate = this.pruneEntityWithLockFields(entity, currentValue.objectInfos.lockFields);
+					const newEntityMerged = _.cloneDeep(this.mergeOldEntityWithNewOne(entity, currentValue, currentValue.objectInfos.lockFields));
+					delete newEntityMerged.objectInfos;
+					delete newEntityMerged._id;
+
+					entity = newEntityMerged;
+					// TODO : add function parameter to allow validation here
+
 					if (lockNewFields) {
-						const newEntityWithOnlyDataToUpdate = this.pruneEntityWithLockFields(entity, currentValue.objectInfos.lockFields);
-						const newEntityMerged = _.cloneDeep(this.mergeOldEntityWithNewOne(entity, currentValue, currentValue.objectInfos.lockFields));
-						delete newEntityMerged.objectInfos;
-						delete newEntityMerged._id;
-
-						entity = newEntityMerged;
-
-						if (lockNewFields) {
-							const lockFields = currentValue.objectInfos.lockFields || [];
-							const newLockFields = this.getAllLockFieldsFromEntity(newEntityWithOnlyDataToUpdate, new Date(), userId);
-							if (!_.isEmpty(newLockFields)) {
-								lockFields.push(...newLockFields);
-								entity['objectInfos.lockFields'] = lockFields;
-							}
+						const lockFields = currentValue.objectInfos.lockFields || [];
+						const newLockFields = this.getAllLockFieldsFromEntity(newEntityWithOnlyDataToUpdate, new Date(), userId);
+						if (!_.isEmpty(newLockFields)) {
+							lockFields.push(...newLockFields);
+							entity['objectInfos.lockFields'] = lockFields;
 						}
 					}
 				}
@@ -697,13 +713,15 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 	}
 
 	private pruneEntityWithLockFields(entity: Partial<U>, lockFields: LockField[]): Partial<U> {
-		for (const lockField of lockFields) {
-			let path = lockField.path;
-			if (path.includes('[')) { // path : a.b.c
-				path = this.translatePathToLodashPath(path, entity);
-			}
-			if (path) {
-				_.unset(entity, path);
+		if (!_.isEmpty(lockFields)) {
+			for (const lockField of lockFields) {
+				let path = lockField.path;
+				if (path.includes('[')) { // path : a.b.c
+					path = this.translatePathToLodashPath(path, entity);
+				}
+				if (path) {
+					_.unset(entity, path);
+				}
 			}
 		}
 		MongoClient.removeEmptyDeep(entity, true, true);
