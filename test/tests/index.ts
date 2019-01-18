@@ -275,7 +275,6 @@ test('[LOCK-FIELDS] Remove lock field', async (t: Assertions) => {
 	t.false(_.map(newEntity.objectInfos.lockFields, 'path').includes('strings["b"]'), 'Does not contains path removed');
 
 	const allHistoric: EntityHistoric<SampleComplexType>[] = await (await mongoClient.findHistoricByEntityId(insertedEntity._id, 0, 0)).toArray();
-	console.log(`-- index.ts allHistoric --`, allHistoric);
 	t.is(allHistoric.length, 2, '2 historic entries');
 
 });

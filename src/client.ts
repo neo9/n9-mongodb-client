@@ -260,8 +260,8 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		}, userId, true)
 	}
 
-	public async findOneAndUpdateByIdWithLocks(id: string, newEntity: Partial<U>, userId: string, lockNewFields: boolean = true): Promise<U> {
-		if (this.conf.lockFields) {
+	public async findOneAndUpdateByIdWithLocks(id: string, newEntity: Partial<U>, userId: string, lockNewFields: boolean = true, forceEditLockFields: boolean = false): Promise<U> {
+		if (this.conf.lockFields && !forceEditLockFields) {
 			const existingEntity = await this.findOneById(id);
 			if (!existingEntity) {
 				this.logger.warn(`Entity not found with id ${id} (${this.type.name})`, {
