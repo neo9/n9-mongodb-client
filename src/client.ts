@@ -289,7 +289,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				if (!newEntityToSave.objectInfos.lockFields) {
 					newEntityToSave.objectInfos.lockFields = [];
 				}
-				let allLockFieldsFromEntity = this.getAllLockFieldsFromEntity(newEntityWithOnlyDataToUpdate, new Date(), userId);
+				const allLockFieldsFromEntity = this.getAllLockFieldsFromEntity(newEntityWithOnlyDataToUpdate, new Date(), userId);
 
 				if (!_.isEmpty(allLockFieldsFromEntity)) {
 					updateQuery.$push = {
@@ -338,7 +338,6 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				onlyInsertFieldsKey,
 				forceEditLockFields,
 		);
-		console.log(`-- client.ts  --`, JSON.stringify(updateQueries, null, 2));
 		return await this.updateMany(updateQueries, userId, upsert);
 	}
 
