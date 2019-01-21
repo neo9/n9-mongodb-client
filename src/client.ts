@@ -642,8 +642,9 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 	private getAllLockFieldsFromEntity(newEntity: Partial<U>, date: Date, userId: string, existingEntity?: U): LockField[] {
 		let keys: string[];
 		if (existingEntity) {
-			const entityWithOnlyNewValues = this.pîckOnlyNewValues(existingEntity, newEntity);
-			keys = this.generateAllLockFields(newEntity, '');
+			const entityWithOnlyNewValues = this.pickOnlyNewValues(existingEntity, newEntity);
+			// console.log(`-- entityWithOnlyNewValues  --`, JSON.stringify(entityWithOnlyNewValues));
+			keys = this.generateAllLockFields(entityWithOnlyNewValues, '');
 		} else {
 			keys = this.generateAllLockFields(newEntity, '');
 		}
@@ -666,11 +667,11 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		const keys: string[] = [];
 		if (_.isNil(newEntity)) return keys;
 
-		for (const key of Object.keys(newEntity)) {
+		for (const key of _.keys(newEntity)) {
 			const joinedPath = this.getJoinPaths(basePath, key);
 
 			// excluded fields
-			if (_.includes(this.conf.lockFields.excludedFields, joinedPath)) {
+			if (_.includes(this.conf.lockFields.excludedFields, joinedPath) || _.isNil(newEntity[key])) {
 				continue;
 			}
 
@@ -775,7 +776,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 	}
 
 	private mergeOldEntityWithNewOne(newEntity: Partial<U>, existingEntity: U, lockFields: LockField[]): U {
-		return _.mergeWith(existingEntity, newEntity, (objValue, srcValue, key) => {
+		return _.mergeWith({}, existingEntity, newEntity, (objValue, srcValue, key) => {
 			if (_.isArray(objValue)) {
 				if (!_.isEmpty(lockFields) && lockFields.find((lockField) => lockField.path.includes(key))) {
 					return objValue.concat(srcValue);
@@ -786,7 +787,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		});
 	}
 
-	private pîckOnlyNewValues(existingEntity: U | string | number, newEntity: Partial<U> | string | number): Partial<U> | string | number {
+	private pickOnlyNewValues(existingEntity: U | string | number, newEntity: Partial<U> | string | number): Partial<U> | string | number {
 		if (_.isEmpty(newEntity)) return;
 		const existingEntityKeys = _.keys(existingEntity);
 		if (!_.isObject(existingEntity)) {
@@ -801,12 +802,12 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		for (const key of existingEntityKeys) {
 			const existingEntityElement = existingEntity[key];
 			if (_.isObject(existingEntityElement) && !_.isArray(existingEntityElement)) {
-				ret[key] = this.pîckOnlyNewValues(existingEntityKeys[key], newEntity[key]);
+				ret[key] = this.pickOnlyNewValues(existingEntityElement, newEntity[key]);
 			} else if (_.isArray(existingEntityElement)) {
 				ret[key] = [];
 				for (let i = 0; i < existingEntityElement.length; i++) {
 					const existingEntityElementArrayElement = existingEntityElement[i];
-					const newValue = this.pîckOnlyNewValues(existingEntityElementArrayElement, _.get(newEntity, [key, i]));
+					const newValue = this.pickOnlyNewValues(existingEntityElementArrayElement, _.get(newEntity, [key, i]));
 					if (!_.isNil(newValue)) ret[key][i] = newValue;
 				}
 				if (_.isEmpty(ret[key])) delete ret[key];
@@ -816,7 +817,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				}
 			}
 		}
-		// console.log(`-- pîckOnlyNewValues  --`);
+		// console.log(`-- pickOnlyNewValues  --`);
 		// console.log(JSON.stringify(existingEntity));
 		// console.log(`-- -- -- -- -- -- -- -- -- --`);
 		// console.log(JSON.stringify(newEntity));

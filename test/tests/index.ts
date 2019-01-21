@@ -68,10 +68,6 @@ test.before(async () => {
 	await MongoUtils.connect('mongodb://localhost:27017/test-n9-mongo-client');
 });
 
-test.beforeEach(async (t) => {
-	global.log.info(`Start test >> ${t.title}`);
-});
-
 test.after(async () => {
 	global.log.info(`DROP DB after tests OK`);
 	await (global.db as mongodb.Db).dropDatabase();
@@ -149,7 +145,7 @@ test('[LOCK-FIELDS] Insert&Update one and check locks', async (t: Assertions) =>
 		excludedField: 'new excluded fields value',
 		excludedArray: ['excludeArrayValue1new'],
 		property: {
-			value: 'new proerty.value value',
+			value: 'new property.value value',
 		},
 	};
 
@@ -188,7 +184,7 @@ test('[LOCK-FIELDS] Insert&update one without saving locks', async (t: Assertion
 		],
 		excludedField: 'new excluded fields value',
 		property: {
-			value: 'new proerty.value value',
+			value: 'new property.value value',
 		},
 	};
 
@@ -302,7 +298,7 @@ test('[LOCK-FIELDS] Insert&update one without saving locks clear all locks and u
 		],
 		excludedField: 'new excluded fields value',
 		property: {
-			value: 'new proerty.value value',
+			value: 'new property.value value',
 		},
 	};
 
@@ -319,6 +315,7 @@ test('[LOCK-FIELDS] Insert&update one without saving locks clear all locks and u
 	t.is(lastNewEntityValue.objectInfos.lockFields.length, 0, 'Number of lock fields === 0');
 
 	const newValue2: Partial<SampleComplexType> = {
+		text: newValue.text, // should not be in lock fields
 		property: {
 			value: 'new property.value value 2'
 		}
