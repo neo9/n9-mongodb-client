@@ -1,3 +1,12 @@
+## Version [0.1.4](https://github.com/neo9/n9-mongo-client/compare/0.1.3...0.1.4) (2019-01-21)
+
+
+### locks
+
+* Fix lock fields on update ([c95bad1](https://github.com/neo9/n9-mongo-client/commit/c95bad1)) (Benjamin Daniel)
+
+
+
 ## Version [0.1.3](https://github.com/neo9/n9-mongo-client/compare/0.1.2...0.1.3) (2019-01-21)
 
 
@@ -10,6 +19,10 @@
 * Fix some bugs ([9fe19e8](https://github.com/neo9/n9-mongo-client/commit/9fe19e8)) (Benjamin Daniel)
 * Fix update with locks ([5e486f6](https://github.com/neo9/n9-mongo-client/commit/5e486f6)) (Benjamin Daniel)
 * Save only changed fields locks on update ([470e8ce](https://github.com/neo9/n9-mongo-client/commit/470e8ce)) (Benjamin Daniel)
+
+### release
+
+* V 0.1.3 ([1d85048](https://github.com/neo9/n9-mongo-client/commit/1d85048)) (Benjamin Daniel)
 
 
 
