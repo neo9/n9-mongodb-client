@@ -290,7 +290,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				if (!_.get(newEntityToSave, 'objectInfos.lockFields')) {
 					_.set(newEntityToSave, 'objectInfos.lockFields', []);
 				}
-				const allLockFieldsFromEntity = this.getAllLockFieldsFromEntity(newEntityWithOnlyDataToUpdate, new Date(), userId);
+				const allLockFieldsFromEntity = this.getAllLockFieldsFromEntity(newEntityWithOnlyDataToUpdate, new Date(), userId, existingEntity);
 
 				if (!_.isEmpty(allLockFieldsFromEntity)) {
 					updateQuery.$push = {
@@ -464,7 +464,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 
 					if (lockNewFields) {
 						const lockFields = currentValue.objectInfos.lockFields || [];
-						const newLockFields = this.getAllLockFieldsFromEntity(newEntityWithOnlyDataToUpdate, new Date(), userId);
+						const newLockFields = this.getAllLockFieldsFromEntity(newEntityWithOnlyDataToUpdate, new Date(), userId, currentValue);
 						if (!_.isEmpty(newLockFields)) {
 							lockFields.push(...newLockFields);
 							entity['objectInfos.lockFields'] = lockFields;
@@ -639,8 +639,14 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		return newValues;
 	}
 
-	private getAllLockFieldsFromEntity(newEntity: Partial<U>, date: Date, userId: string): LockField[] {
-		const keys = this.generateAllLockFields(newEntity, '');
+	private getAllLockFieldsFromEntity(newEntity: Partial<U>, date: Date, userId: string, existingEntity?: U): LockField[] {
+		let keys: string[];
+		if (existingEntity) {
+			const entityWithOnlyNewValues = this.pîckOnlyNewValues(existingEntity, newEntity);
+			keys = this.generateAllLockFields(newEntity, '');
+		} else {
+			keys = this.generateAllLockFields(newEntity, '');
+		}
 		if (_.isEmpty(keys)) return;
 
 		const ret: LockField[] = [];
@@ -778,5 +784,46 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				}
 			}
 		});
+	}
+
+	private pîckOnlyNewValues(existingEntity: U | string | number, newEntity: Partial<U> | string | number): Partial<U> | string | number {
+		if (_.isEmpty(newEntity)) return;
+		const existingEntityKeys = _.keys(existingEntity);
+		if (!_.isObject(existingEntity)) {
+			if (_.isArray(existingEntity)) {
+				throw new N9Error('invalid-type', 400, { existingEntity, newEntity });
+			}
+			if (existingEntity !== newEntity) return newEntity;
+			else return;
+		}
+
+		const ret = {};
+		for (const key of existingEntityKeys) {
+			const existingEntityElement = existingEntity[key];
+			if (_.isObject(existingEntityElement) && !_.isArray(existingEntityElement)) {
+				ret[key] = this.pîckOnlyNewValues(existingEntityKeys[key], newEntity[key]);
+			} else if (_.isArray(existingEntityElement)) {
+				ret[key] = [];
+				for (let i = 0; i < existingEntityElement.length; i++) {
+					const existingEntityElementArrayElement = existingEntityElement[i];
+					const newValue = this.pîckOnlyNewValues(existingEntityElementArrayElement, _.get(newEntity, [key, i]));
+					if (!_.isNil(newValue)) ret[key][i] = newValue;
+				}
+				if (_.isEmpty(ret[key])) delete ret[key];
+			} else {
+				if (existingEntityElement !== newEntity[key] && !_.isEmpty(newEntity[key])) {
+					ret[key] = newEntity[key];
+				}
+			}
+		}
+		// console.log(`-- pîckOnlyNewValues  --`);
+		// console.log(JSON.stringify(existingEntity));
+		// console.log(`-- -- -- -- -- -- -- -- -- --`);
+		// console.log(JSON.stringify(newEntity));
+		if (_.isEmpty(ret)) return;
+		// console.log(`-- -- -- -- -- == == == ====>`);
+		// console.log(JSON.stringify(ret));
+
+		return ret;
 	}
 }

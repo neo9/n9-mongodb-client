@@ -280,5 +280,55 @@ test('[LOCK-FIELDS] Remove lock field', async (t: Assertions) => {
 
 });
 
-// TODO: Test inset object like { 'a.b': 'c' } for elasticsearch error
+test('[LOCK-FIELDS] Insert&update one without saving locks clear all locks and update only one field', async (t: Assertions) => {
+	const mongoClient = getLockFieldsMongoClient();
+
+	const insertedEntity = await mongoClient.insertOne(_.cloneDeep(locksDataSample), 'userId', false);
+	const entity = await mongoClient.findOneById(insertedEntity._id);
+	t.true(_.isEmpty(entity.objectInfos.lockFields));
+
+	const newValue: SampleComplexType = {
+		text: 'new value',
+		objects: [{
+			code: 'k1',
+			value: 'new value for k1',
+		}, {
+			code: 'kNew',
+			value: 'new value for new key',
+		}],
+		strings: [
+			'a',
+			'c',
+		],
+		excludedField: 'new excluded fields value',
+		property: {
+			value: 'new proerty.value value',
+		},
+	};
+
+	const updatedData = await mongoClient.findOneAndUpdateByIdWithLocks(insertedEntity._id, newValue, 'userId', true);
+	t.is(updatedData.objectInfos.lockFields.length, 6, 'Number of lock fields');
+
+	let i = 1;
+	for (const lockField of updatedData.objectInfos.lockFields) {
+		const newEntityValue = await mongoClient.findOneByIdAndRemoveLock(updatedData._id, lockField.path, 'userId');
+		t.is(newEntityValue.objectInfos.lockFields.length, 6 - i, 'Number of fields decreased');
+		i++;
+	}
+	const lastNewEntityValue = await mongoClient.findOneById(updatedData._id);
+	t.is(lastNewEntityValue.objectInfos.lockFields.length, 0, 'Number of lock fields === 0');
+
+	const newValue2: Partial<SampleComplexType> = {
+		property: {
+			value: 'new property.value value 2'
+		}
+	};
+
+	const updatedData2 = await mongoClient.findOneAndUpdateByIdWithLocks(updatedData._id, newValue2, 'userId');
+
+	t.is(updatedData2.objectInfos.lockFields.length, 1, `One field locked`);
+	t.is(updatedData2.property.value, newValue2.property.value, `Update one field OK`);
+});
+
+// TODO: Test insert object like { 'a.b': 'c' } for elasticsearch error
 // TODO: Test history in collection
