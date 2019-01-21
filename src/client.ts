@@ -122,7 +122,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		return await this.collection.countDocuments(query);
 	}
 
-	public async insertMany(newEntities: U[], userId: string, options?: CollectionInsertManyOptions): Promise<number> {
+	public async insertMany(newEntities: U[], userId: string, options?: CollectionInsertManyOptions): Promise<U[]> {
 		if (_.isEmpty(newEntities)) return;
 
 		const entitiesToInsert = newEntities.map((newEntity) => {
@@ -136,7 +136,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		});
 
 		const insertResult = await this.collection.insertMany(entitiesToInsert, options);
-		return insertResult.insertedCount;
+		return (insertResult.ops || []).map((newEntity) => MongoUtils.mapObjectToClass(this.type, newEntity));
 	}
 
 	public async findWithType<T extends U>(query: object, type: ClassType<T>, page: number = 0, size: number = 10, sort: object = {}): Promise<Cursor<T>> {
@@ -803,6 +803,9 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			const existingEntityElement = existingEntity[key];
 			if (_.isObject(existingEntityElement) && !_.isArray(existingEntityElement)) {
 				ret[key] = this.pickOnlyNewValues(existingEntityElement, newEntity[key]);
+				if (_.isNil(ret[key])) {
+					delete ret[key];
+				}
 			} else if (_.isArray(existingEntityElement)) {
 				ret[key] = [];
 				for (let i = 0; i < existingEntityElement.length; i++) {
