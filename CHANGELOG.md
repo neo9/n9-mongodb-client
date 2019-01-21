@@ -1,9 +1,27 @@
+## Version [0.1.5](https://github.com/neo9/n9-mongo-client/compare/0.1.4...0.1.5) (2019-01-21)
+
+
+### locks
+
+* Fix lock fields on update ([3501d5d](https://github.com/neo9/n9-mongo-client/commit/3501d5d)) (Benjamin Daniel)
+
+### tests
+
+* Add more tests for mongo utils and date transformer ([e56cc22](https://github.com/neo9/n9-mongo-client/commit/e56cc22)) (Benjamin Daniel)
+* Organise tests ([7e06f35](https://github.com/neo9/n9-mongo-client/commit/7e06f35)) (Benjamin Daniel)
+
+
+
 ## Version [0.1.4](https://github.com/neo9/n9-mongo-client/compare/0.1.3...0.1.4) (2019-01-21)
 
 
 ### locks
 
 * Fix lock fields on update ([c95bad1](https://github.com/neo9/n9-mongo-client/commit/c95bad1)) (Benjamin Daniel)
+
+### release
+
+* V 0.1.4 ([3cded51](https://github.com/neo9/n9-mongo-client/commit/3cded51)) (Benjamin Daniel)
 
 
 
