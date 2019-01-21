@@ -155,14 +155,15 @@ test('[LOCK-FIELDS] Insert&Update one and check locks', async (t: Assertions) =>
 
 	const updatedData = await mongoClient.findOneAndUpdateByIdWithLocks(insertedEntity._id, newValue, 'userId', true);
 
+	t.is(updatedData.objectInfos.lockFields.length, 9, 'Number of lock fields');
 	t.is(updatedData.text, locksDataSample.text, 'text didn\'t change');
 	t.is(updatedData.excludedField, newValue.excludedField, 'excludedField changed');
 	t.is(_.get(updatedData, 'property.value'), locksDataSample.property.value, 'property.value changed');
+	t.is(updatedData.excludedArray.length, newValue.excludedArray.length, 'excludedArray length overrided');
 	t.is(updatedData.excludedArray[0], newValue.excludedArray[0], 'excludedArray overrided');
 	t.deepEqual(updatedData.objects, locksDataSample.objects.concat(newValue.objects), 'right object array');
 	t.is(updatedData.strings.length, 3, 'strings array merged length');
 	t.deepEqual(updatedData.strings, locksDataSample.strings.concat(newValue.strings), 'strings array merged values');
-	t.is(updatedData.objectInfos.lockFields.length, 9, 'Number of lock fields');
 });
 
 test('[LOCK-FIELDS] Insert&update one without saving locks', async (t: Assertions) => {

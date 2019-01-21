@@ -274,20 +274,21 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			const newEntityWithOnlyDataToUpdate = this.pruneEntityWithLockFields(newEntity, existingEntity.objectInfos.lockFields);
 
 			let newEntityToSave;
-			if (forceEditLockFields) {
+			if (!forceEditLockFields) {
 				const newEntityMerged = this.mergeOldEntityWithNewOne(newEntity, existingEntity, existingEntity.objectInfos.lockFields);
 				newEntityToSave = newEntityMerged;
 				// TODO : add function parameter to allow validation here
 			} else {
-				newEntityToSave = newEntity;
+				const newEntityMerged = this.mergeOldEntityWithNewOne(newEntity, existingEntity, []);
+				newEntityToSave = newEntityMerged;
 			}
 
 			const updateQuery: StringMap<any> = {
 				$set: newEntityToSave,
 			};
 			if (lockNewFields) {
-				if (!newEntityToSave.objectInfos.lockFields) {
-					newEntityToSave.objectInfos.lockFields = [];
+				if (!_.get(newEntityToSave, 'objectInfos.lockFields')) {
+					_.set(newEntityToSave, 'objectInfos.lockFields', []);
 				}
 				const allLockFieldsFromEntity = this.getAllLockFieldsFromEntity(newEntityWithOnlyDataToUpdate, new Date(), userId);
 
@@ -301,11 +302,11 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			}
 			delete newEntityToSave.objectInfos;
 			delete newEntityToSave._id;
-			// console.log(`--   --    --   --    --   --    --   --`);
-			// console.log(JSON.stringify(newEntityMerged, null, 2));
+			// console.log(`--   --    --  newEntityToSave  --    --   --    --   --`);
+			// console.log(JSON.stringify(newEntityToSave, null, 2));
 			// console.log(`--   --    --   --    --   --    --   --`);
 			// console.log(JSON.stringify(updateQuery, null, 2));
-			// console.log(`--   --    --   --    --   --    --   --`);
+			// console.log(`--   --    --  updateQuery  --    --   --    --   --`);
 
 			const updatedValue = await this.findOneAndUpdateById(id, updateQuery, userId, true);
 			// console.log(JSON.stringify(updatedValue, null, 2));
