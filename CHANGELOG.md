@@ -1,9 +1,28 @@
+## Version [0.1.3](https://github.com/neo9/n9-mongo-client/compare/0.1.2...0.1.3) (2019-01-21)
+
+
+### git
+
+* Add pre-commit and pre-push hooks ([3b3581c](https://github.com/neo9/n9-mongo-client/commit/3b3581c)) (Benjamin Daniel)
+
+### locks
+
+* Fix some bugs ([9fe19e8](https://github.com/neo9/n9-mongo-client/commit/9fe19e8)) (Benjamin Daniel)
+* Fix update with locks ([5e486f6](https://github.com/neo9/n9-mongo-client/commit/5e486f6)) (Benjamin Daniel)
+* Save only changed fields locks on update ([470e8ce](https://github.com/neo9/n9-mongo-client/commit/470e8ce)) (Benjamin Daniel)
+
+
+
 ## Version [0.1.2](https://github.com/neo9/n9-mongo-client/compare/0.1.1...0.1.2) (2019-01-18)
 
 
 ### locks
 
 * Add option to override locks ([c2022dd](https://github.com/neo9/n9-mongo-client/commit/c2022dd)) (Benjamin Daniel)
+
+### release
+
+* V 0.1.2 ([1549035](https://github.com/neo9/n9-mongo-client/commit/1549035)) (Benjamin Daniel)
 
 
 
