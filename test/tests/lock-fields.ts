@@ -348,6 +348,61 @@ test('[LOCK-FIELDS] Insert&update boolean', async (t: Assertions) => {
 	t.is(attributesUpdated.objectInfos.lockFields.length, 1, 'One element edited, so one should find one lock field');
 });
 
+test('[LOCK-FIELDS] Insert&update array sub object element', async (t: Assertions) => {
+	const attribute: AttributeEntity = {
+		code: 'caracteristique_dimension_jeton',
+		defaultLanguageCode: 'fr-FR',
+		isEditable: false,
+		isLocalSpecific: false,
+		isPublic: false,
+		isVariable: false,
+		toSync: false,
+		label: {
+			'en-GB': 'Token Size',
+			'fr-FR': 'Taille jeton',
+		},
+		parameters: {
+			items: [
+				{
+					code: 'taille_piece_1',
+					label: {
+						'en-GB': 'Size of a 1€ coin',
+						'fr-FR': 'Taille d\'une piece 1€',
+					},
+				},
+				{
+					code: 'autres_tailles',
+					label: {
+						'en-GB': 'Other sizes',
+						'fr-FR': 'Autres tailles',
+					},
+				},
+			],
+		},
+		type: 'select',
+		validations: {
+		},
+	};
+
+	const mongoClient = new MongoClient('test' + Date.now(), AttributeEntity, null, {
+		lockFields: {
+			arrayWithReferences: {
+				'parameters.items': 'code',
+			},
+		},
+		keepHistoric: true,
+	});
+
+	const attributesCreated: AttributeEntity[] = await (await mongoClient.updateManyAtOnce([attribute], 'userId1', true, false, 'code')).toArray();
+
+	const newAttributeValue = _.cloneDeep(attribute);
+	newAttributeValue.parameters.items[0].label['fr-FR'] = 'Taille 1';
+
+	const attributesUpdated = await mongoClient.findOneAndUpdateByIdWithLocks(attributesCreated[0]._id, newAttributeValue, 'userIdUpdate', true, true);
+	t.truthy(attributesUpdated.objectInfos.lockFields, 'Should have some lock fields');
+	t.is(attributesUpdated.objectInfos.lockFields.length, 1, 'One element edited, so one should find one lock field');
+});
+
 test('[LOCK-FIELDS] Insert&update attribute', async (t: Assertions) => {
 	const attribute: AttributeEntity = {
 		code: 'caracteristique_dimension_jeton',

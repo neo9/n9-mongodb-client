@@ -650,7 +650,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 	private getAllLockFieldsFromEntity(newEntity: Partial<U>, date: Date, userId: string, existingEntity?: U): LockField[] {
 		let keys: string[];
 		if (existingEntity) {
-			const entityWithOnlyNewValues = this.pickOnlyNewValues(existingEntity, newEntity);
+			const entityWithOnlyNewValues = this.pickOnlyNewValues(existingEntity, newEntity, '');
 			// console.log(`-- entityWithOnlyNewValues  --`, JSON.stringify(entityWithOnlyNewValues));
 			keys = this.generateAllLockFields(entityWithOnlyNewValues, '');
 		} else {
@@ -798,7 +798,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		});
 	}
 
-	private pickOnlyNewValues(existingEntity: U | string | number, newEntity: Partial<U> | string | number): Partial<U> | string | number {
+	private pickOnlyNewValues(existingEntity: U | string | number, newEntity: Partial<U> | string | number, basePath: string): Partial<U> | string | number {
 		if (_.isEmpty(newEntity)) return;
 		const existingEntityKeys = _.keys(existingEntity);
 		if (!_.isObject(existingEntity)) {
@@ -812,8 +812,9 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		const ret = {};
 		for (const key of existingEntityKeys) {
 			const existingEntityElement = existingEntity[key];
+			const currentPath = this.getJoinPaths(basePath, key);
 			if (_.isObject(existingEntityElement) && !_.isArray(existingEntityElement)) {
-				ret[key] = this.pickOnlyNewValues(existingEntityElement, newEntity[key]);
+				ret[key] = this.pickOnlyNewValues(existingEntityElement, newEntity[key], currentPath);
 				if (_.isNil(ret[key])) {
 					delete ret[key];
 				}
@@ -821,8 +822,8 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				ret[key] = [];
 				for (let i = 0; i < existingEntityElement.length; i++) {
 					const existingEntityElementArrayElement = existingEntityElement[i];
-					const newValue = this.pickOnlyNewValues(existingEntityElementArrayElement, _.get(newEntity, [key, i]));
-					const codeKeyName = this.conf.lockFields.arrayWithReferences[key];
+					const newValue = this.pickOnlyNewValues(existingEntityElementArrayElement, _.get(newEntity, [key, i]), currentPath);
+					const codeKeyName = this.conf.lockFields.arrayWithReferences[currentPath];
 
 					if (!_.isNil(newValue)) {
 						if (codeKeyName) {
