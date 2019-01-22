@@ -272,14 +272,16 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				});
 				return;
 			}
-			const newEntityWithOnlyDataToUpdate = this.pruneEntityWithLockFields(newEntity, existingEntity.objectInfos.lockFields);
 
+			let newEntityWithOnlyDataToUpdate;
 			let newEntityToSave;
 			if (!forceEditLockFields) {
+				newEntityWithOnlyDataToUpdate = this.pruneEntityWithLockFields(newEntity, existingEntity.objectInfos.lockFields);
 				const newEntityMerged = this.mergeOldEntityWithNewOne(newEntity, existingEntity, existingEntity.objectInfos.lockFields);
 				newEntityToSave = newEntityMerged;
 				// TODO : add function in parameters or in mongoClien conf to allow validation here
 			} else {
+				newEntityWithOnlyDataToUpdate = newEntity;
 				const newEntityMerged = this.mergeOldEntityWithNewOne(newEntity, existingEntity, []);
 				newEntityToSave = newEntityMerged;
 			}
