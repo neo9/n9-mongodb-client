@@ -1,9 +1,22 @@
+## Version [0.1.8](https://github.com/neo9/n9-mongo-client/compare/0.1.7...0.1.8) (2019-01-22)
+
+
+### locks
+
+* Fix sub object in array locks ([805bf36](https://github.com/neo9/n9-mongo-client/commit/805bf36)) (Benjamin Daniel)
+
+
+
 ## Version [0.1.7](https://github.com/neo9/n9-mongo-client/compare/0.1.6...0.1.7) (2019-01-22)
 
 
 ### locks
 
 * Fix sub object in array locks ([3fb4474](https://github.com/neo9/n9-mongo-client/commit/3fb4474)) (Benjamin Daniel)
+
+### release
+
+* V 0.1.7 ([0071fae](https://github.com/neo9/n9-mongo-client/commit/0071fae)) (Benjamin Daniel)
 
 
 
