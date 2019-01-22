@@ -99,9 +99,9 @@ test('[LOCK-FIELDS] Insert one and check locks', async (t: Assertions) => {
 		'property.value',
 		'strings["a"]',
 		'strings["b"]',
-		'objects[code=k1]',
-		'objects[code=k2]',
-		'objects[code=k3]',
+		'objects[code=k1].value',
+		'objects[code=k2].value',
+		'objects[code=k3].value',
 	]);
 });
 
@@ -308,6 +308,44 @@ test('[LOCK-FIELDS] Insert&update one without saving locks clear all locks and u
 
 	t.is(updatedData2.objectInfos.lockFields.length, 1, `One field locked`);
 	t.is(updatedData2.property.value, newValue2.property.value, `Update one field OK`);
+});
+
+test('[LOCK-FIELDS] Insert&update boolean', async (t: Assertions) => {
+	const attribute: AttributeEntity = {
+		code: 'caracteristique_dimension_jeton',
+		defaultLanguageCode: 'fr-FR',
+		isEditable: false,
+		isLocalSpecific: false,
+		isPublic: false,
+		isVariable: false,
+		toSync: false,
+		label: {
+			'en-GB': 'Token Size',
+			'fr-FR': 'Taille jeton',
+		},
+		parameters: {
+		},
+		type: 'select',
+		validations: {},
+	};
+
+	const mongoClient = new MongoClient('test' + Date.now(), AttributeEntity, null, {
+		lockFields: {
+			arrayWithReferences: {
+				'parameters.items': 'code',
+			},
+		},
+		keepHistoric: true,
+	});
+
+	const attributesCreated: AttributeEntity[] = await (await mongoClient.updateManyAtOnce([attribute], 'userId1', true, false, 'code')).toArray();
+
+	const newAttributeValue = _.cloneDeep(attribute);
+	newAttributeValue.isEditable = !newAttributeValue.isEditable;
+
+	const attributesUpdated = await mongoClient.findOneAndUpdateByIdWithLocks(attributesCreated[0]._id, newAttributeValue, 'userIdUpdate', true, true);
+	t.truthy(attributesUpdated.objectInfos.lockFields, 'Should have some lock fields');
+	t.is(attributesUpdated.objectInfos.lockFields.length, 1, 'One element edited, so one should find one lock field');
 });
 
 test('[LOCK-FIELDS] Insert&update attribute', async (t: Assertions) => {
