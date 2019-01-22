@@ -1,9 +1,26 @@
+## Version [0.1.6](https://github.com/neo9/n9-mongo-client/compare/0.1.5...0.1.6) (2019-01-22)
+
+
+### locks
+
+* Update locks paths and fix boolean update ([999eb61](https://github.com/neo9/n9-mongo-client/commit/999eb61)) (Benjamin Daniel)
+
+### tests
+
+* Add tests for mongo utils ([835c4e0](https://github.com/neo9/n9-mongo-client/commit/835c4e0)) (Benjamin Daniel)
+
+
+
 ## Version [0.1.5](https://github.com/neo9/n9-mongo-client/compare/0.1.4...0.1.5) (2019-01-21)
 
 
 ### locks
 
 * Fix lock fields on update ([3501d5d](https://github.com/neo9/n9-mongo-client/commit/3501d5d)) (Benjamin Daniel)
+
+### release
+
+* V 0.1.5 ([1fbf7b1](https://github.com/neo9/n9-mongo-client/commit/1fbf7b1)) (Benjamin Daniel)
 
 ### tests
 
