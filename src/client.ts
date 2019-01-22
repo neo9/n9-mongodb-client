@@ -691,14 +691,16 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				if (_.keys(this.conf.lockFields.arrayWithReferences).includes(joinedPath)) {
 					const arrayKey = this.conf.lockFields.arrayWithReferences[joinedPath];
 					for (const element of newEntityElement) {
-						const arrayPath = `${joinedPath}[${arrayKey}=${element[arrayKey]}]`;
-						if (_.isNil(element[arrayKey])) {
-							throw new N9Error('wrong-array-definition', 400, { newEntity, basePath, ignoreOnePath, arrayPath });
-						}
-						if (_.isObject(element) && !_.isArray(element)) {
-							keys.push(...this.generateAllLockFields(element, arrayPath, arrayKey));
-						} else { // TODO: if _.isArray(newEntity[key])
-							keys.push(arrayPath);
+						if (!_.isNil(element)) {
+							const arrayPath = `${joinedPath}[${arrayKey}=${element[arrayKey]}]`;
+							if (_.isNil(element[arrayKey])) {
+								throw new N9Error('wrong-array-definition', 400, { newEntity, basePath, ignoreOnePath, arrayPath });
+							}
+							if (_.isObject(element) && !_.isArray(element)) {
+								keys.push(...this.generateAllLockFields(element, arrayPath, arrayKey));
+							} else { // TODO: if _.isArray(newEntity[key])
+								keys.push(arrayPath);
+							}
 						}
 					}
 				} else { // a[1]

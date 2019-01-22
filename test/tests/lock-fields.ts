@@ -374,7 +374,7 @@ test('[LOCK-FIELDS] Insert&update array sub object element', async (t: Assertion
 					code: 'autres_tailles',
 					label: {
 						'en-GB': 'Other sizes',
-						'fr-FR': 'Autres tailles',
+						'fr-FR': 'Autres',
 					},
 				},
 			],
@@ -396,7 +396,7 @@ test('[LOCK-FIELDS] Insert&update array sub object element', async (t: Assertion
 	const attributesCreated: AttributeEntity[] = await (await mongoClient.updateManyAtOnce([attribute], 'userId1', true, false, 'code')).toArray();
 
 	const newAttributeValue = _.cloneDeep(attribute);
-	newAttributeValue.parameters.items[0].label['fr-FR'] = 'Taille 1';
+	newAttributeValue.parameters.items[1].label['fr-FR'] = 'Autres tailles';
 
 	const attributesUpdated = await mongoClient.findOneAndUpdateByIdWithLocks(attributesCreated[0]._id, newAttributeValue, 'userIdUpdate', true, true);
 	t.truthy(attributesUpdated.objectInfos.lockFields, 'Should have some lock fields');
