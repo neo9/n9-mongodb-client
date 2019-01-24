@@ -30,7 +30,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				delete obj[key];
 			}
 			// @ts-ignore
-			if (objElement && typeof objElement === 'object') MongoClient.removeEmptyDeep(objElement);
+			if (objElement && typeof objElement === 'object') MongoClient.removeEmptyDeep(objElement, compactArrays, removeEmptyObjects);
 			// @ts-ignore
 			else if (_.isNil(objElement)) delete obj[key];
 		}
@@ -275,15 +275,16 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 
 			let newEntityWithOnlyDataToUpdate;
 			let newEntityToSave;
-			if (!forceEditLockFields) {
+			if (forceEditLockFields) {
+				newEntityWithOnlyDataToUpdate = newEntity;
+				const newEntityMerged = this.mergeOldEntityWithNewOne(newEntity, existingEntity, '', []);
+				newEntityToSave = newEntityMerged;
+			} else {
 				newEntityWithOnlyDataToUpdate = this.pruneEntityWithLockFields(newEntity, existingEntity.objectInfos.lockFields);
-				const newEntityMerged = this.mergeOldEntityWithNewOne(newEntity, existingEntity, existingEntity.objectInfos.lockFields);
+				// console.log('-- client.ts ', newEntityWithOnlyDataToUpdate, ` <<-- newEntityWithOnlyDataToUpdate`);
+				const newEntityMerged = this.mergeOldEntityWithNewOne(newEntity, existingEntity, '', existingEntity.objectInfos.lockFields);
 				newEntityToSave = newEntityMerged;
 				// TODO : add function in parameters or in mongoClien conf to allow validation here
-			} else {
-				newEntityWithOnlyDataToUpdate = newEntity;
-				const newEntityMerged = this.mergeOldEntityWithNewOne(newEntity, existingEntity, []);
-				newEntityToSave = newEntityMerged;
 			}
 
 			const updateQuery: StringMap<any> = {
@@ -465,7 +466,8 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 
 				if (this.conf.lockFields && !forceEditLockFields) {
 					const newEntityWithOnlyDataToUpdate = this.pruneEntityWithLockFields(entity, currentValue.objectInfos.lockFields);
-					const newEntityMerged = _.cloneDeep(this.mergeOldEntityWithNewOne(entity, currentValue, currentValue.objectInfos.lockFields));
+					const newEntityMerged = this.mergeOldEntityWithNewOne(entity, currentValue, '', currentValue.objectInfos.lockFields);
+					// console.log(`--  newEntityMerged --`, JSON.stringify(newEntityMerged, null, 2));
 					delete newEntityMerged.objectInfos;
 					delete newEntityMerged._id;
 
@@ -653,7 +655,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		let keys: string[];
 		if (existingEntity) {
 			const entityWithOnlyNewValues = this.pickOnlyNewValues(existingEntity, newEntity, '');
-			// console.log(`-- entityWithOnlyNewValues  --`, JSON.stringify(entityWithOnlyNewValues));
+			// console.log(`-- entityWithOnlyNewValues  --`, JSON.stringify(entityWithOnlyNewValues, null, 2));
 			keys = this.generateAllLockFields(entityWithOnlyNewValues, '');
 		} else {
 			keys = this.generateAllLockFields(newEntity, '');
@@ -769,6 +771,8 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				const index = array.findIndex((item) => item && item[groups.code] === groups.value);
 				if (index !== -1) {
 					newPath = `${groups.basePath}[${index}]`;
+				} else {
+					return;
 				}
 			}
 			if (groups.pathLeft) {
@@ -781,25 +785,85 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				const index = array.findIndex((item) => JSON.stringify(item) === groups.value);
 				if (index !== -1) {
 					newPath = `${groups.basePath}[${index}]`;
+				} else {
+					return;
 				}
 			}
 			if (groups.pathLeft) {
 				newPath += this.translatePathToLodashPath(groups.pathLeft, _.get(entity, groups.basePath));
 			}
+		} else {
+			return path;
 		}
 		return newPath;
 	}
 
-	private mergeOldEntityWithNewOne(newEntity: Partial<U>, existingEntity: U, lockFields: LockField[]): U {
-		return _.mergeWith({}, existingEntity, newEntity, (objValue, srcValue, key) => {
-			if (_.isArray(objValue)) {
-				if (!_.isEmpty(lockFields) && lockFields.find((lockField) => lockField.path.includes(key))) {
-					return objValue.concat(srcValue);
-				} else {
-					return srcValue;
-				}
+	private mergeOldEntityWithNewOne(newEntity: any, existingEntity: any, basePath: string, lockFields: LockField[]): any {
+		let ret;
+		if (_.isObject(newEntity) && _.isObject(existingEntity) && !_.isArray(newEntity) && !_.isArray(existingEntity)) {
+			const keys = _.uniq([..._.keys(newEntity), ..._.keys(existingEntity)]);
+			for (const key of keys) {
+				newEntity[key] = this.mergeOldEntityWithNewOne(newEntity[key], existingEntity[key], this.getJoinPaths(basePath, key), lockFields);
 			}
-		});
+			ret = {
+				...existingEntity,
+				...newEntity,
+			};
+		} else if (_.isArray(newEntity) && _.isArray((existingEntity))) {
+			if (!_.isEmpty(lockFields) && lockFields.find((lockField) => lockField.path.startsWith(basePath))) {
+				// console.log(`--  key --`, basePath, lockFields.find((lockField) => lockField.path.startsWith(basePath)));
+				// console.log('--  ', JSON.stringify(existingEntity, null, 1), ` <<-- existingEntity`);
+				// console.log('--  ', JSON.stringify(newEntity, null, 1), ` <<-- newEntity`);
+				const fieldCodeName = this.conf.lockFields.arrayWithReferences[basePath];
+				const mergedArray = [];
+				// add existing locked elements
+				for (const existingEntityElement of existingEntity) {
+					let elementPath;
+					if (fieldCodeName) {
+						elementPath = `${basePath}[${fieldCodeName}=${existingEntityElement[fieldCodeName]}]`;
+					} else {
+						elementPath = `${basePath}["${existingEntityElement}"]`;
+					}
+					const lockFieldForCurrentElement = lockFields.find((lockField) => lockField.path.startsWith(elementPath));
+					if (lockFieldForCurrentElement) {
+						// push only if existingEntityElement is locked
+						mergedArray.push(existingEntityElement);
+					}
+					// else field not locked
+				}
+
+				for (const newEntityElement of newEntity) {
+					// merge newEntityElement with associated existingEntityElement
+					if (fieldCodeName) { // array of objects
+						const elementPath = `${basePath}[${fieldCodeName}=${newEntityElement[fieldCodeName]}]`;
+						const alreadyAddedElementIndex = mergedArray.findIndex((mergedArrayElement) => {
+							return !_.isNil(mergedArrayElement[fieldCodeName]) && mergedArrayElement[fieldCodeName] === newEntityElement[fieldCodeName];
+						});
+						if (alreadyAddedElementIndex !== -1) {
+							mergedArray[alreadyAddedElementIndex] = this.mergeOldEntityWithNewOne(mergedArray[alreadyAddedElementIndex], newEntityElement, elementPath, lockFields);
+						} else {
+							mergedArray.push(newEntityElement);
+						}
+					} else { // array of non objects values
+						const elementPath = `${basePath}["${newEntityElement[fieldCodeName]}"]`;
+						const alreadyAddedElementIndex = mergedArray.findIndex((mergedArrayElement) => !_.isNil(mergedArrayElement[fieldCodeName]) && mergedArrayElement === newEntityElement);
+						if (alreadyAddedElementIndex !== -1) {
+							mergedArray[alreadyAddedElementIndex] = this.mergeOldEntityWithNewOne(mergedArray[alreadyAddedElementIndex], newEntityElement, elementPath, lockFields);
+						} else {
+							mergedArray.push(newEntityElement);
+						}
+					}
+				}
+				return mergedArray;
+			} else {
+				return newEntity;
+			}
+		} else if (_.isNil(newEntity)) {
+			ret = existingEntity;
+		} else {
+			ret = newEntity;
+		}
+		return ret;
 	}
 
 	private pickOnlyNewValues(existingEntity: U | string | number, newEntity: Partial<U> | string | number, basePath: string): Partial<U> | string | number {
@@ -813,7 +877,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			else return;
 		}
 
-		const ret = {};
+		const ret: any = {};
 		for (const key of existingEntityKeys) {
 			const existingEntityElement = existingEntity[key];
 			const currentPath = this.getJoinPaths(basePath, key);
@@ -823,19 +887,8 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 					delete ret[key];
 				}
 			} else if (_.isArray(existingEntityElement)) {
-				ret[key] = [];
-				for (let i = 0; i < existingEntityElement.length; i++) {
-					const existingEntityElementArrayElement = existingEntityElement[i];
-					const newValue = this.pickOnlyNewValues(existingEntityElementArrayElement, _.get(newEntity, [key, i]), currentPath);
-					const codeKeyName = this.conf.lockFields.arrayWithReferences[currentPath];
+				ret[key] = this.pickOnlyNewValuesInArray(existingEntityElement, newEntity[key], currentPath);
 
-					if (!_.isNil(newValue)) {
-						if (codeKeyName) {
-							newValue[codeKeyName] = _.get(newEntity, [key, i, codeKeyName]);
-						}
-						ret[key][i] = newValue;
-					}
-				}
 				if (_.isEmpty(ret[key])) delete ret[key];
 			} else {
 				if (existingEntityElement !== newEntity[key] && !_.isNil(newEntity[key])) {
@@ -843,6 +896,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				}
 			}
 		}
+
 		// console.log(`-- pickOnlyNewValues  --`);
 		// console.log(JSON.stringify(existingEntity, null, 2));
 		// console.log(`-- -- -- -- -- -- -- -- -- --`);
@@ -854,6 +908,39 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			return;
 		}
 
+		return ret;
+	}
+
+	private pickOnlyNewValuesInArray(existingEntityArray: any[], newEntityElement: any[], currentPath: string): any[] {
+		const ret = [];
+		for (let i = 0; i < Math.max(existingEntityArray.length, newEntityElement.length); i++) {
+			const existingEntityElementArrayElement = existingEntityArray[i];
+			const newValue = this.pickOnlyNewValues(existingEntityElementArrayElement, _.get(newEntityElement, [i]), currentPath);
+			const codeKeyName = this.conf.lockFields.arrayWithReferences[currentPath];
+
+			if (!_.isNil(newValue)) {
+				if (codeKeyName) {
+					newValue[codeKeyName] = _.get(newEntityElement, [i, codeKeyName]);
+				}
+				ret.push(newValue);
+			}
+		}
+
+		// If one delete an array element, we lock the others
+		if (_.size(existingEntityArray) > _.size(newEntityElement)) {
+			for (const newEntityElementArrayElement of newEntityElement) {
+				const codeKeyName = this.conf.lockFields.arrayWithReferences[currentPath];
+
+				if (codeKeyName) {
+					const existingElementIndex = _.findIndex(ret, { [codeKeyName]: _.get(newEntityElementArrayElement, codeKeyName) });
+					if (existingElementIndex === -1) {
+						ret.push(newEntityElementArrayElement);
+					}
+				} else {
+					ret.push(newEntityElementArrayElement);
+				}
+			}
+		}
 		return ret;
 	}
 }

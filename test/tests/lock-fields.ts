@@ -132,7 +132,7 @@ test('[LOCK-FIELDS] Insert&Update one and check locks', async (t: Assertions) =>
 		},
 	};
 
-	const updatedData = await mongoClient.findOneAndUpdateByIdWithLocks(insertedEntity._id, newValue, 'userId', true);
+	const updatedData = await mongoClient.findOneAndUpdateByIdWithLocks(insertedEntity._id, _.cloneDeep(newValue), 'userId', true);
 
 	t.is(updatedData.objectInfos.lockFields.length, 9, 'Number of lock fields');
 	t.is(updatedData.text, locksDataSample.text, 'text didn\'t change');
@@ -140,9 +140,9 @@ test('[LOCK-FIELDS] Insert&Update one and check locks', async (t: Assertions) =>
 	t.is(_.get(updatedData, 'property.value'), locksDataSample.property.value, 'property.value changed');
 	t.is(updatedData.excludedArray.length, newValue.excludedArray.length, 'excludedArray length overrided');
 	t.is(updatedData.excludedArray[0], newValue.excludedArray[0], 'excludedArray overrided');
-	t.deepEqual(updatedData.objects, locksDataSample.objects.concat(newValue.objects), 'right object array');
+	t.deepEqual(updatedData.objects, locksDataSample.objects.concat([newValue.objects[1]]), 'right object array');
 	t.is(updatedData.strings.length, 3, 'strings array merged length');
-	t.deepEqual(updatedData.strings, locksDataSample.strings.concat(newValue.strings), 'strings array merged values');
+	t.deepEqual(updatedData.strings, _.uniq(locksDataSample.strings.concat(newValue.strings)), 'strings array merged values');
 });
 
 test('[LOCK-FIELDS] Insert&update one without saving locks', async (t: Assertions) => {
@@ -179,7 +179,7 @@ test('[LOCK-FIELDS] Insert&update one without saving locks', async (t: Assertion
 	t.deepEqual(updatedData.objects, newValue.objects, 'right object array');
 	t.is(updatedData.strings.length, 2, 'strings array merged length');
 	t.deepEqual(updatedData.strings, newValue.strings, 'strings array merged values');
-	t.is(updatedData.objectInfos.lockFields.length, 6, 'Number of lock fields');
+	t.is(updatedData.objectInfos.lockFields.length, 5, 'Number of lock fields');
 });
 
 test('[LOCK-FIELDS] Forbide usage of some methods', async (t: Assertions) => {
@@ -286,12 +286,13 @@ test('[LOCK-FIELDS] Insert&update one without saving locks clear all locks and u
 	};
 
 	const updatedData = await mongoClient.findOneAndUpdateByIdWithLocks(insertedEntity._id, newValue, 'userId', true);
-	t.is(updatedData.objectInfos.lockFields.length, 6, 'Number of lock fields');
+
+	t.is(updatedData.objectInfos.lockFields.length, 5, 'Number of lock fields');
 
 	let i = 1;
 	for (const lockField of updatedData.objectInfos.lockFields) {
 		const newEntityValue = await mongoClient.findOneByIdAndRemoveLock(updatedData._id, lockField.path, 'userId');
-		t.is(newEntityValue.objectInfos.lockFields.length, 6 - i, 'Number of fields decreased');
+		t.is(newEntityValue.objectInfos.lockFields.length, 5 - i, 'Number of fields decreased');
 		i++;
 	}
 	const lastNewEntityValue = await mongoClient.findOneById(updatedData._id);
@@ -323,8 +324,7 @@ test('[LOCK-FIELDS] Insert&update boolean', async (t: Assertions) => {
 			'en-GB': 'Token Size',
 			'fr-FR': 'Taille jeton',
 		},
-		parameters: {
-		},
+		parameters: {},
 		type: 'select',
 		validations: {},
 	};
@@ -380,8 +380,7 @@ test('[LOCK-FIELDS] Insert&update array sub object element', async (t: Assertion
 			],
 		},
 		type: 'select',
-		validations: {
-		},
+		validations: {},
 	};
 
 	const mongoClient = new MongoClient('test' + Date.now(), AttributeEntity, null, {

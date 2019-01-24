@@ -15,11 +15,11 @@ console.log(`RUNNING TESTS DEV: ${type} TEST matching: ${testMatch || 'all'}`);
 
 let cmd;
 if (type === 'dev') {
-	cmd = `npm run build && nyc ava --verbose --serial ${match} dist/test/ && nyc report --reporter=html`;
+	cmd = `npm run build && nyc ava --verbose --serial ${match} dist/test/tests/ && nyc report --reporter=html`;
 } else if (type === 'watch') {
-	cmd = `npm run dev & \n  nyc ava --verbose --watch --serial ${match} dist/test/ `
+	cmd = `npm run dev & \n  nyc ava --verbose --watch --serial ${match} dist/test/tests/ `
 } else {
-	cmd = `npm run lint  && npm run build && nyc ava --verbose --serial dist/test/${testMatch} && nyc report --reporter=html`;
+	cmd = `npm run lint  && npm run build && nyc ava --verbose --serial dist/test/tests/ ${testMatch} && nyc report --reporter=html`;
 }
 
 console.log(`Exec : ${cmd}`);
