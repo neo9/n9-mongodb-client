@@ -1,9 +1,23 @@
+## Version [0.1.9](https://github.com/neo9/n9-mongo-client/compare/0.1.8...0.1.9) (2019-01-24)
+
+
+### locks
+
+* Fix array updates and add tests A,B,C,D ([4843d33](https://github.com/neo9/n9-mongo-client/commit/4843d33)) (Benjamin Daniel)
+* Fix entity update with force override locks ([3a0f4b9](https://github.com/neo9/n9-mongo-client/commit/3a0f4b9)) (Benjamin Daniel)
+
+
+
 ## Version [0.1.8](https://github.com/neo9/n9-mongo-client/compare/0.1.7...0.1.8) (2019-01-22)
 
 
 ### locks
 
 * Fix sub object in array locks ([805bf36](https://github.com/neo9/n9-mongo-client/commit/805bf36)) (Benjamin Daniel)
+
+### release
+
+* V 0.1.8 ([543f613](https://github.com/neo9/n9-mongo-client/commit/543f613)) (Benjamin Daniel)
 
 
 
