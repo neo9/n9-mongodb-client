@@ -47,7 +47,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 	private readonly collectionHistoric: Collection<EntityHistoric<U>>;
 
 	constructor(collection: Collection<U> | string, type: ClassType<U>, typeList: ClassType<L>, conf: MongoClientConfiguration = {}) {
-		this.conf = _.merge(defaultConfiguration, conf);
+		this.conf = _.merge({}, defaultConfiguration, conf);
 		if (this.conf.lockFields) {
 			this.conf.lockFields.excludedFields = _.union(this.conf.lockFields.excludedFields, ['objectInfos', '_id']);
 		}
