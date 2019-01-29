@@ -1,3 +1,12 @@
+## Version [0.1.10](https://github.com/neo9/n9-mongo-client/compare/0.1.9...0.1.10) (2019-01-29)
+
+
+### conf
+
+* Fix defaultConfiguration overriding ([a02e676](https://github.com/neo9/n9-mongo-client/commit/a02e676)) (Benjamin DANIEL)
+
+
+
 ## Version [0.1.9](https://github.com/neo9/n9-mongo-client/compare/0.1.8...0.1.9) (2019-01-24)
 
 
@@ -5,6 +14,10 @@
 
 * Fix array updates and add tests A,B,C,D ([4843d33](https://github.com/neo9/n9-mongo-client/commit/4843d33)) (Benjamin Daniel)
 * Fix entity update with force override locks ([3a0f4b9](https://github.com/neo9/n9-mongo-client/commit/3a0f4b9)) (Benjamin Daniel)
+
+### release
+
+* V 0.1.9 ([b031f87](https://github.com/neo9/n9-mongo-client/commit/b031f87)) (Benjamin Daniel)
 
 
 
