@@ -496,10 +496,21 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 					};
 				}
 
+				const toUnset = _.omit(currentValue, [..._.keys(entity), '_id', 'objectInfos']);
+				let unsetQuery;
+				if (!_.isEmpty(toUnset)) {
+					unsetQuery = {
+						$unset: {
+							...toUnset as object,
+						}
+					};
+				}
+
 				const update = {
 					$set: {
 						...toSet as object,
 					},
+					...unsetQuery,
 					...setOnInsert,
 				};
 
