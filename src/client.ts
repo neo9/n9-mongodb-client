@@ -496,10 +496,22 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 					};
 				}
 
+				// Unset only level 1, other are override by $set on objects
+				const toUnset: object = _.omit(currentValue, [..._.keys(entity), '_id', 'objectInfos']);
+				let unsetQuery;
+				if (!_.isEmpty(toUnset)) {
+					unsetQuery = {
+						$unset: {
+							... _.mapValues(toUnset, () => false),
+						}
+					};
+				}
+
 				const update = {
 					$set: {
 						...toSet as object,
 					},
+					...unsetQuery,
 					...setOnInsert,
 				};
 
