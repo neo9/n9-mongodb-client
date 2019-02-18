@@ -1,9 +1,22 @@
+## Version [0.1.11](https://github.com/neo9/n9-mongo-client/compare/0.1.10...0.1.11) (2019-02-18)
+
+
+### upsert
+
+* Fix bulk updasert and improve test reading #1 #2 ([317ac85](https://github.com/neo9/n9-mongo-client/commit/317ac85)), closes [#1](https://github.com/neo9/n9-mongo-client/issues/1) [#2](https://github.com/neo9/n9-mongo-client/issues/2) [#1](https://github.com/neo9/n9-mongo-client/issues/1) [#2](https://github.com/neo9/n9-mongo-client/issues/2) (Benjamin DANIEL)
+
+
+
 ## Version [0.1.10](https://github.com/neo9/n9-mongo-client/compare/0.1.9...0.1.10) (2019-01-29)
 
 
 ### conf
 
 * Fix defaultConfiguration overriding ([a02e676](https://github.com/neo9/n9-mongo-client/commit/a02e676)) (Benjamin DANIEL)
+
+### release
+
+* V 0.1.10 ([83cb24d](https://github.com/neo9/n9-mongo-client/commit/83cb24d)) (Benjamin DANIEL)
 
 
 
