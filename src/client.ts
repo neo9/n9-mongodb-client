@@ -621,7 +621,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				_id: {
 					$in: MongoUtils.oids(_.map(newEntities, 'id')),
 				},
-			}, this.type)).toArray(), '_id');
+			}, this.type, 0, _.size(newEntities))).toArray(), '_id');
 		}
 
 		// for (const bulkOperation of bulkOperations) {
@@ -635,7 +635,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			_id: {
 				$in: MongoUtils.oids(_.concat(_.map(newEntities, 'id'), _.values(bulkResult.insertedIds), _.values(bulkResult.upsertedIds))),
 			},
-		}, this.type);
+		}, this.type, 0, _.size(newEntities));
 
 		if (this.conf.keepHistoric) {
 			while (await newValues.hasNext()) {
