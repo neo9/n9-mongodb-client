@@ -1,5 +1,22 @@
+## Version [0.1.12](https://github.com/neo9/n9-mongo-client/compare/0.1.11...0.1.12) (2019-03-14)
+
+
+### bulk
+
+* Fix bulk on more than 10 elements ([b889508](https://github.com/neo9/n9-mongo-client/commit/b889508)) (Benjamin Daniel)
+
+### yarn
+
+* Use npmjs repository ([9cae581](https://github.com/neo9/n9-mongo-client/commit/9cae581)) (Benjamin Daniel)
+
+
+
 ## Version [0.1.11](https://github.com/neo9/n9-mongo-client/compare/0.1.10...0.1.11) (2019-02-18)
 
+
+### release
+
+* V 0.1.11 ([49be73e](https://github.com/neo9/n9-mongo-client/commit/49be73e)) (Benjamin Daniel)
 
 ### upsert
 
