@@ -187,7 +187,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		return await this.findOneAndUpdate(query, updateQuery, userId, internalCall);
 	}
 
-	public async findOneAndUpdate(query: FilterQuery<U>, updateQuery: { [id: string]: object, $set?: object }, userId: string, internalCall: boolean = false): Promise<U> {
+	public async findOneAndUpdate(query: FilterQuery<U>, updateQuery: { [id: string]: object, $set?: object }, userId: string, internalCall: boolean = false, upsert: boolean = false): Promise<U> {
 		if (!internalCall) {
 			this.ifHasLockFieldsThrow();
 		}
@@ -211,7 +211,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			saveOldValue = await this.findOne(query);
 		}
 
-		let newEntity = (await this.collection.findOneAndUpdate(query, updateQuery, { returnOriginal: false })).value as U;
+		let newEntity = (await this.collection.findOneAndUpdate(query, updateQuery, { returnOriginal: false , upsert})).value as U;
 		newEntity = MongoUtils.mapObjectToClass(this.type, newEntity);
 
 		if (this.conf.keepHistoric) {
