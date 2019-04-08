@@ -1,9 +1,22 @@
+# Version [0.2.0](https://github.com/neo9/n9-mongo-client/compare/0.1.12...0.2.0) (2019-04-08)
+
+
+### upsert
+
+* Add new method to upsertOne (#4) ([18777b3](https://github.com/neo9/n9-mongo-client/commit/18777b3)), closes [#4](https://github.com/neo9/n9-mongo-client/issues/4) (pierremalletneo9)
+
+
+
 ## Version [0.1.12](https://github.com/neo9/n9-mongo-client/compare/0.1.11...0.1.12) (2019-03-14)
 
 
 ### bulk
 
 * Fix bulk on more than 10 elements ([b889508](https://github.com/neo9/n9-mongo-client/commit/b889508)) (Benjamin Daniel)
+
+### release
+
+* V 0.1.12 ([0bbba0a](https://github.com/neo9/n9-mongo-client/commit/0bbba0a)) (Benjamin Daniel)
 
 ### yarn
 
