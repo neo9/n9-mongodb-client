@@ -31,7 +31,7 @@ test('[CRUD] Insert one and find it', async (t: Assertions) => {
 	const mongoClient = new MongoClient('test-' + Date.now(), SampleType, SampleTypeListing);
 	const size = await mongoClient.count();
 
-	t.true(size === 0);
+	t.true(size === 0, 'collection should be empty');
 
 	const intValue = 41;
 	await mongoClient.insertOne({
@@ -59,7 +59,7 @@ test('[CRUD] Find one and update', async (t: Assertions) => {
 	const mongoClient = new MongoClient('test-' + Date.now(), SampleType, SampleTypeListing);
 	const size = await mongoClient.count();
 
-	t.true(size === 0);
+	t.true(size === 0, 'collection should be empty');
 
 	const intValue = 41;
 	const intValue2 = 42;
@@ -97,7 +97,7 @@ test('[CRUD] Find one and upsert', async (t: Assertions) => {
 	const mongoClient = new MongoClient('test-' + Date.now(), SampleType, SampleTypeListing);
 	const size = await mongoClient.count();
 
-	t.true(size === 0);
+	t.true(size === 0, 'collection should be empty');
 
 	const intValue = 41;
 	const intValue2 = 42;
