@@ -12,6 +12,7 @@ class SampleTypeListing extends BaseMongoObject {
 
 class SampleType extends SampleTypeListing {
 	public field2Number: number;
+	public field3String?: string;
 }
 
 global.log = new N9Log('tests');
@@ -32,10 +33,10 @@ test('[CRUD] Insert one and find it', async (t: Assertions) => {
 
 	t.true(size === 0);
 
-	const randomInt = Math.ceil(Math.random() * Number.MAX_SAFE_INTEGER);
+	const intValue = 41;
 	await mongoClient.insertOne({
 		field1String: 'string1',
-		field2Number: randomInt,
+		field2Number: intValue,
 	}, 'userId1');
 
 	const sizeWithElementIn = await mongoClient.count();
@@ -45,11 +46,86 @@ test('[CRUD] Insert one and find it', async (t: Assertions) => {
 
 	t.truthy(foundObject, 'found by query');
 	t.is(sizeWithElementIn, 1, 'nb element in collection');
-	t.is(foundObject.field2Number, randomInt, 'found right element');
+	t.is(foundObject.field2Number, intValue, 'found right element');
 	t.is(typeof foundObject._id, 'string', 'ID is a string and not ObjectID');
 	t.is(foundObject._id.constructor, String, 'ID is a string and not ObjectID');
 	t.truthy(foundObjectById, 'found by ID');
 	t.truthy(foundObjectByKey, 'found by key');
+
+	await mongoClient.dropCollection();
+});
+
+test('[CRUD] Find one and update', async (t: Assertions) => {
+	const mongoClient = new MongoClient('test-' + Date.now(), SampleType, SampleTypeListing);
+	const size = await mongoClient.count();
+
+	t.true(size === 0);
+
+	const intValue = 41;
+	const intValue2 = 42;
+
+	await mongoClient.insertOne({
+		field1String: 'string1',
+		field2Number: intValue,
+	}, 'userId1');
+	const sizeAfterInsert = await mongoClient.count();
+
+	const updateQuery = { $set: { field2Number: intValue2 }};
+
+	const founded = await mongoClient.findOneAndUpdate({
+			field1String: 'string1',
+			field2Number: intValue,
+		}, updateQuery, 'userId');
+
+	let sizeAfterUpdate = await mongoClient.count();
+
+	t.is(founded.field2Number, updateQuery.$set.field2Number, 'Element has been updated');
+	t.is(sizeAfterUpdate, sizeAfterInsert, 'No new element added');
+
+	const notFound = await mongoClient.findOneAndUpdate({
+		field1String: 'string1',
+		field2Number: intValue,	// the value is now intValue2
+	}, updateQuery, 'userId');
+	sizeAfterUpdate = await mongoClient.count();
+
+	t.true(!notFound && (sizeAfterUpdate === sizeAfterInsert), 'No element updated or created');
+
+	await mongoClient.dropCollection();
+});
+
+test('[CRUD] Find one and upsert', async (t: Assertions) => {
+	const mongoClient = new MongoClient('test-' + Date.now(), SampleType, SampleTypeListing);
+	const size = await mongoClient.count();
+
+	t.true(size === 0);
+
+	const intValue = 41;
+	const intValue2 = 42;
+
+	await mongoClient.insertOne({
+		field1String: 'string1',
+		field2Number: intValue,
+	}, 'userId1');
+	const sizeAfterInsert = await mongoClient.count();
+
+	const updateQuery = { $set: { field2Number: intValue2 }};
+
+	const founded = await mongoClient.findOneAndUpsert({
+			field1String: 'string1',
+			field2Number: intValue,
+		}, updateQuery, 'userId');
+	const sizeAfterUpdate = await mongoClient.count();
+
+	t.is(founded.field2Number, updateQuery.$set.field2Number, 'Element has been updated');
+	t.is(sizeAfterUpdate, sizeAfterInsert, 'No new element added');
+
+	const upserted = await mongoClient.findOneAndUpsert({
+		field1String: 'string3',
+	}, updateQuery, 'userId');
+	const sizeAfterUpsert = await mongoClient.count();
+
+	t.is(sizeAfterUpsert, sizeAfterUpdate + 1, 'A new element has been created');
+	t.true((upserted.field2Number === updateQuery.$set.field2Number) && upserted.field1String === 'string3', 'Element has been created with updated value');
 
 	await mongoClient.dropCollection();
 });
