@@ -187,7 +187,10 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		return await this.findOneAndUpdate(query, updateQuery, userId, internalCall);
 	}
 
-	public async findOneAndUpdate(query: FilterQuery<U>, updateQuery: { [id: string]: object, $set?: object }, userId: string, internalCall: boolean = false): Promise<U> {
+	/**
+	 * To upsert you should use findOneAndUpsert
+	 */
+	public async findOneAndUpdate(query: FilterQuery<U>, updateQuery: { [id: string]: object, $set?: object }, userId: string, internalCall: boolean = false, upsert: boolean = false): Promise<U> {
 		if (!internalCall) {
 			this.ifHasLockFieldsThrow();
 		}
@@ -206,12 +209,22 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			},
 		};
 
+		if (upsert) {
+			updateQuery['$setOnInsert'] = {
+				...updateQuery['$setOnInsert'] as object,
+				'objectInfos.creation': {
+					date: new Date(),
+					userId,
+				},
+			};
+		}
+
 		let saveOldValue;
 		if (this.conf.keepHistoric) {
 			saveOldValue = await this.findOne(query);
 		}
 
-		let newEntity = (await this.collection.findOneAndUpdate(query, updateQuery, { returnOriginal: false })).value as U;
+		let newEntity = (await this.collection.findOneAndUpdate(query, updateQuery, { returnOriginal: false , upsert})).value as U;
 		newEntity = MongoUtils.mapObjectToClass(this.type, newEntity);
 
 		if (this.conf.keepHistoric) {
@@ -231,6 +244,11 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		}
 
 		return newEntity;
+	}
+
+	// wrapper around findOneAndUpdate
+	public async findOneAndUpsert(query: FilterQuery<U>, updateQuery: { [id: string]: object, $set?: object }, userId: string, internalCall: boolean = false): Promise<U>  {
+		return this.findOneAndUpdate(query, updateQuery, userId, internalCall, true);
 	}
 
 	public async findOneByIdAndRemoveLock(id: string, lockFieldPath: string, userId: string): Promise<U> {
