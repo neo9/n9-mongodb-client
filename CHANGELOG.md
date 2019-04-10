@@ -1,9 +1,22 @@
+## Version [0.2.2](https://github.com/neo9/n9-mongo-client/compare/0.2.1...0.2.2) (2019-04-10)
+
+
+### insert
+
+* Fix insert many with dots characters in keys ([d3bacb0](https://github.com/neo9/n9-mongo-client/commit/d3bacb0)) (Benjamin Daniel)
+
+
+
 ## Version [0.2.1](https://github.com/neo9/n9-mongo-client/compare/0.2.0...0.2.1) (2019-04-10)
 
 
 ### fields
 
 * Add support of dots and dollars in fields names ([8de0d64](https://github.com/neo9/n9-mongo-client/commit/8de0d64)) (Benjamin Daniel)
+
+### release
+
+* V 0.2.1 ([c864b13](https://github.com/neo9/n9-mongo-client/commit/c864b13)) (Benjamin Daniel)
 
 
 
