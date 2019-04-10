@@ -1,5 +1,18 @@
+## Version [0.2.1](https://github.com/neo9/n9-mongo-client/compare/0.2.0...0.2.1) (2019-04-10)
+
+
+### fields
+
+* Add support of dots and dollars in fields names ([8de0d64](https://github.com/neo9/n9-mongo-client/commit/8de0d64)) (Benjamin Daniel)
+
+
+
 # Version [0.2.0](https://github.com/neo9/n9-mongo-client/compare/0.1.12...0.2.0) (2019-04-08)
 
+
+### release
+
+* V 0.2.0 ([92a275a](https://github.com/neo9/n9-mongo-client/commit/92a275a)) (Benjamin Daniel)
 
 ### upsert
 
