@@ -56,4 +56,47 @@ export class MongoUtils {
 		return plainToClass(cls, newPlain, options) as T;
 	}
 
+	public static removeSpecialCharactersInKeys(obj: any): any {
+		if (_.isNil(obj) || _.isString(obj) || obj instanceof ObjectID || obj instanceof Date) return obj;
+
+		if (_.isArray(obj)) {
+			return obj.map((element) => this.removeSpecialCharactersInKeys(element));
+		}
+		for (const key of Object.keys(obj)) {
+			if (obj[key] && typeof obj[key] === 'object') obj[key] = this.removeSpecialCharactersInKeys(obj[key]);
+		}
+
+		obj = _.mapKeys(obj, (val, key: string) => {
+			return MongoUtils.escapeSpecialCharacters(key);
+		}) as any;
+		return obj;
+	}
+
+	public static unRemoveSpecialCharactersInKeys(obj: any): any {
+		if (_.isNil(obj) || _.isString(obj) || obj instanceof ObjectID || obj instanceof Date) return obj;
+
+		if (_.isArray(obj)) {
+			return obj.map((element) => this.unRemoveSpecialCharactersInKeys(element));
+		}
+		for (const key of Object.keys(obj)) {
+			if (obj[key] && typeof obj[key] === 'object') obj[key] = this.unRemoveSpecialCharactersInKeys(obj[key]);
+		}
+
+		obj = _.mapKeys(obj, (val, key: string) => {
+			return MongoUtils.unescapeSpecialCharacters(key);
+		}) as any;
+		return obj;
+	}
+
+	public static escapeSpecialCharacters(key: string): string {
+		return key
+				.replace(/\$/g, '\\u0024')
+				.replace(/\./g, '\\u002e');
+	}
+
+	public static unescapeSpecialCharacters(key: string): string {
+		return key
+				.replace(/\\u0024/g, '$')
+				.replace(/\\u002e/g, '.');
+	}
 }

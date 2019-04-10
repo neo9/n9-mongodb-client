@@ -37,7 +37,7 @@ test('[DATE-PARSER] Insert&update entity with date', async (t: Assertions) => {
 
 	const createdEntity = await mongoClient.insertOne(entity, 'userId');
 
-	t.true(_.isDate(createdEntity.date), 'date is Date instance');
+	t.true(_.isDate(createdEntity.date), 'date created is Date instance');
 	t.is(createdEntity.date.constructor.name, 'Date', 'date has Date constructor');
 
 	const entityFound = await mongoClient.findOne({});
@@ -55,7 +55,7 @@ test('[DATE-PARSER] Insert&update entity with date and no transformer', async (t
 
 	const createdEntity = await mongoClientOld.insertOne(entity, 'userId');
 
-	t.true(_.isDate(createdEntity.date), 'date is Date instance');
+	t.true(_.isDate(createdEntity.date), 'date created is Date instance');
 	t.is(createdEntity.date.constructor.name, 'Date', 'date has Date constructor');
 	// t.false(_.isDate(createdEntity.date), 'date is not Date instance');
 	// t.true(_.isString(createdEntity.date), 'date is string due to no tranformer');

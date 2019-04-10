@@ -5,7 +5,7 @@ import * as _ from 'lodash';
 import { Collection, CollectionInsertManyOptions, Cursor, Db, FilterQuery, IndexOptions, ObjectId, UpdateQuery } from 'mongodb';
 import { BaseMongoObject, EntityHistoric, LockField, StringMap, UpdateManyQuery } from './models';
 import { ClassType } from './models/class-type.models';
-import { MongoUtils } from './mongo';
+import { MongoUtils } from './mongo-utils';
 
 export interface MongoClientConfiguration {
 	keepHistoric?: boolean;
@@ -35,6 +35,11 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			else if (_.isNil(objElement)) delete obj[key];
 		}
 		return obj;
+	}
+
+	private static getJoinPaths(basePath: string, key: string): string {
+		if (basePath) return basePath + '.' + key;
+		else return key;
 	}
 
 	private readonly logger: N9Log;
@@ -98,7 +103,6 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 
 	public async insertOne(newEntity: U, userId: string, lockFields: boolean = true): Promise<U> {
 		if (!newEntity) return newEntity;
-
 		const date = new Date();
 		newEntity.objectInfos = {
 			creation: {
@@ -106,17 +110,18 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				userId,
 			},
 		};
+		let newEntityWithoutForbiddenCharacters = MongoUtils.removeSpecialCharactersInKeys(newEntity);
 
 		if (this.conf.lockFields) {
-			if (!newEntity.objectInfos.lockFields) newEntity.objectInfos.lockFields = [];
+			if (!newEntityWithoutForbiddenCharacters.objectInfos.lockFields) newEntityWithoutForbiddenCharacters.objectInfos.lockFields = [];
 			if (lockFields) {
-				newEntity.objectInfos.lockFields = this.getAllLockFieldsFromEntity(newEntity, date, userId);
+				newEntityWithoutForbiddenCharacters.objectInfos.lockFields = this.getAllLockFieldsFromEntity(newEntityWithoutForbiddenCharacters, date, userId);
 			}
 		}
 
-		newEntity = MongoClient.removeEmptyDeep(newEntity);
-		await this.collection.insertOne(newEntity);
-		return MongoUtils.mapObjectToClass(this.type, newEntity);
+		newEntityWithoutForbiddenCharacters = MongoClient.removeEmptyDeep(newEntityWithoutForbiddenCharacters);
+		await this.collection.insertOne(newEntityWithoutForbiddenCharacters);
+		return MongoUtils.mapObjectToClass(this.type, MongoUtils.unRemoveSpecialCharactersInKeys(newEntityWithoutForbiddenCharacters));
 	}
 
 	public async count(query: object = {}): Promise<number> {
@@ -137,7 +142,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		});
 
 		const insertResult = await this.collection.insertMany(entitiesToInsert, options);
-		return (insertResult.ops || []).map((newEntity) => MongoUtils.mapObjectToClass(this.type, newEntity));
+		return (insertResult.ops || []).map((newEntity) => MongoUtils.mapObjectToClass(this.type, MongoUtils.unRemoveSpecialCharactersInKeys(newEntity)));
 	}
 
 	public async findWithType<T extends U>(query: object, type: ClassType<T>, page: number = 0, size: number = 10, sort: object = {}): Promise<Cursor<T>> {
@@ -146,7 +151,8 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				.skip(page * size)
 				.limit(size)
 				.map((a: U) => {
-					return MongoUtils.mapObjectToClass(type, a);
+					const b = MongoUtils.unRemoveSpecialCharactersInKeys(a);
+					return MongoUtils.mapObjectToClass(type, b);
 				});
 	}
 
@@ -160,16 +166,16 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 
 	public async findOneByKey(keyValue: any, keyName: string = 'code'): Promise<U> {
 		const query: StringMap<any> = {
-			[keyName]: keyValue,
+			[MongoUtils.escapeSpecialCharacters(keyName)]: keyValue,
 		};
 
 		return await this.findOne(query);
 	}
 
 	public async findOne(query: object): Promise<U> {
-		const entity = await this.collection.findOne(query);
-		if (!entity) return null;
-
+		const internalEntity = await this.collection.findOne(query);
+		if (!internalEntity) return null;
+		const entity = MongoUtils.unRemoveSpecialCharactersInKeys(internalEntity);
 		return MongoUtils.mapObjectToClass(this.type, entity);
 	}
 
@@ -182,7 +188,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 
 	public async findOneAndUpdateByKey(keyValue: any, updateQuery: { [id: string]: object, $set?: object }, userId: string, keyName: string = 'code', internalCall: boolean = false): Promise<U> {
 		const query: StringMap<any> = {
-			[keyName]: keyValue,
+			[MongoUtils.escapeSpecialCharacters(keyName)]: keyValue,
 		};
 		return await this.findOneAndUpdate(query, updateQuery, userId, internalCall);
 	}
@@ -224,8 +230,8 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			saveOldValue = await this.findOne(query);
 		}
 
-		let newEntity = (await this.collection.findOneAndUpdate(query, updateQuery, { returnOriginal: false , upsert})).value as U;
-		newEntity = MongoUtils.mapObjectToClass(this.type, newEntity);
+		let newEntity = (await this.collection.findOneAndUpdate(query, updateQuery, { returnOriginal: false, upsert })).value as U;
+		newEntity = MongoUtils.mapObjectToClass(this.type, MongoUtils.unRemoveSpecialCharactersInKeys(newEntity));
 
 		if (this.conf.keepHistoric) {
 			const diffs = deepDiff.diff(saveOldValue, newEntity, (path: string[], key: string) => {
@@ -237,7 +243,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 					date: now,
 					userId: ObjectId.isValid(userId) ? MongoUtils.oid(userId) as any : userId,
 					dataEdited: diffs,
-					snapshot: saveOldValue,
+					snapshot: MongoUtils.removeSpecialCharactersInKeys(saveOldValue),
 				};
 				await this.collectionHistoric.insertOne(change);
 			}
@@ -247,7 +253,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 	}
 
 	// wrapper around findOneAndUpdate
-	public async findOneAndUpsert(query: FilterQuery<U>, updateQuery: { [id: string]: object, $set?: object }, userId: string, internalCall: boolean = false): Promise<U>  {
+	public async findOneAndUpsert(query: FilterQuery<U>, updateQuery: { [id: string]: object, $set?: object }, userId: string, internalCall: boolean = false): Promise<U> {
 		return this.findOneAndUpdate(query, updateQuery, userId, internalCall, true);
 	}
 
@@ -295,13 +301,11 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			let newEntityToSave;
 			if (forceEditLockFields) {
 				newEntityWithOnlyDataToUpdate = newEntity;
-				const newEntityMerged = this.mergeOldEntityWithNewOne(newEntity, existingEntity, '', []);
-				newEntityToSave = newEntityMerged;
+				newEntityToSave = this.mergeOldEntityWithNewOne(newEntity, existingEntity, '', []);
 			} else {
 				newEntityWithOnlyDataToUpdate = this.pruneEntityWithLockFields(newEntity, existingEntity.objectInfos.lockFields);
 				// console.log('-- client.ts ', newEntityWithOnlyDataToUpdate, ` <<-- newEntityWithOnlyDataToUpdate`);
-				const newEntityMerged = this.mergeOldEntityWithNewOne(newEntity, existingEntity, '', existingEntity.objectInfos.lockFields);
-				newEntityToSave = newEntityMerged;
+				newEntityToSave = this.mergeOldEntityWithNewOne(newEntity, existingEntity, '', existingEntity.objectInfos.lockFields);
 				// TODO : add function in parameters or in mongoClien conf to allow validation here
 			}
 
@@ -400,7 +404,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				.sort('_id', -1)
 				.skip(page * size)
 				.limit(size)
-				.map((a: EntityHistoric<U>) => MongoUtils.mapObjectToClass<EntityHistoric<U>, EntityHistoric<U>>(EntityHistoric, a));
+				.map((a: EntityHistoric<U>) => MongoUtils.mapObjectToClass<EntityHistoric<U>, EntityHistoric<U>>(EntityHistoric, MongoUtils.unRemoveSpecialCharactersInKeys(a)));
 	}
 
 	public async findOneHistoricByUserIdMostRecent(entityId: string, userId: string): Promise<EntityHistoric<U>> {
@@ -411,7 +415,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				})
 				.sort('_id', -1)
 				.limit(1)
-				.map((a: EntityHistoric<U>) => MongoUtils.mapObjectToClass<EntityHistoric<U>, EntityHistoric<U>>(EntityHistoric, a));
+				.map((a: EntityHistoric<U>) => MongoUtils.mapObjectToClass<EntityHistoric<U>, EntityHistoric<U>>(EntityHistoric, MongoUtils.unRemoveSpecialCharactersInKeys(a)));
 		if (await cursor.hasNext()) {
 			return await cursor.next();
 		} else {
@@ -429,7 +433,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				})
 				.sort('_id', 1)
 				.limit(1)
-				.map((a: EntityHistoric<U>) => MongoUtils.mapObjectToClass<EntityHistoric<U>, EntityHistoric<U>>(EntityHistoric, a));
+				.map((a: EntityHistoric<U>) => MongoUtils.mapObjectToClass<EntityHistoric<U>, EntityHistoric<U>>(EntityHistoric, MongoUtils.unRemoveSpecialCharactersInKeys(a)));
 		if (await cursor.hasNext()) {
 			return await cursor.next();
 		} else {
@@ -520,8 +524,8 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				if (!_.isEmpty(toUnset)) {
 					unsetQuery = {
 						$unset: {
-							... _.mapValues(toUnset, () => false),
-						}
+							..._.mapValues(toUnset, () => false),
+						},
 					};
 				}
 
@@ -710,7 +714,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		if (_.isNil(newEntity)) return keys;
 
 		for (const key of _.keys(newEntity)) {
-			const joinedPath = this.getJoinPaths(basePath, key);
+			const joinedPath = MongoClient.getJoinPaths(basePath, key);
 			// excluded fields
 			const newEntityElement = newEntity[key];
 			if (key === ignoreOnePath || _.includes(this.conf.lockFields.excludedFields, joinedPath) || _.isNil(newEntityElement)) {
@@ -749,11 +753,6 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			}
 		}
 		return keys;
-	}
-
-	private getJoinPaths(basePath: string, key: string): string {
-		if (basePath) return basePath + '.' + key;
-		else return key;
 	}
 
 	private ifHasLockFieldsThrow(): void {
@@ -833,7 +832,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		if (_.isObject(newEntity) && _.isObject(existingEntity) && !_.isArray(newEntity) && !_.isArray(existingEntity)) {
 			const keys = _.uniq([..._.keys(newEntity), ..._.keys(existingEntity)]);
 			for (const key of keys) {
-				newEntity[key] = this.mergeOldEntityWithNewOne(newEntity[key], existingEntity[key], this.getJoinPaths(basePath, key), lockFields);
+				newEntity[key] = this.mergeOldEntityWithNewOne(newEntity[key], existingEntity[key], MongoClient.getJoinPaths(basePath, key), lockFields);
 			}
 			ret = {
 				...existingEntity,
@@ -910,7 +909,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		const ret: any = {};
 		for (const key of existingEntityKeys) {
 			const existingEntityElement = existingEntity[key];
-			const currentPath = this.getJoinPaths(basePath, key);
+			const currentPath = MongoClient.getJoinPaths(basePath, key);
 			if (_.isObject(existingEntityElement) && !_.isArray(existingEntityElement)) {
 				ret[key] = this.pickOnlyNewValues(existingEntityElement, newEntity[key], currentPath);
 				if (_.isNil(ret[key])) {

@@ -1,3 +1,3 @@
 
 export * from './client';
-export * from './mongo';
+export * from './mongo-utils';

@@ -472,3 +472,20 @@ test('[LOCK-FIELDS] Insert&update attribute', async (t: Assertions) => {
 	const newAttributeValue2 = await mongoClient.findOneAndUpdateByIdWithLocks(attributeCreated._id, newAttributeValue, 'userIdUpdate', true, true);
 	t.is(newAttributeValue2.objectInfos.lockFields.length, 1, 'One element edited, so one should find one lock field');
 });
+
+test('[LOCK-FIELDS] Forbidden actions', async (t: Assertions) => {
+	const mongoClient = new MongoClient('test' + Date.now(), AttributeEntity, null, {
+		lockFields: {},
+	});
+
+	await t.throwsAsync(async () => await mongoClient.findOneAndUpdate({}, {}, 'userId', false));
+
+	const notFoundElement = await mongoClient.findOneAndUpdateByIdWithLocks('01234567890123456789abcd', {}, 'userId');
+	t.is(notFoundElement, undefined, 'element is null is not found');
+});
+
+test('[LOCK-FIELDS] Forbidden actions without locks', async (t: Assertions) => {
+	const mongoClient = new MongoClient('test' + Date.now(), AttributeEntity, null);
+
+	await t.throwsAsync(async () => await mongoClient.findOneAndRemoveLock({}, 'lock.path', 'userId'));
+});

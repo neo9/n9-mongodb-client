@@ -1,10 +1,9 @@
 import { N9Log } from '@neo9/n9-node-log';
 import test, { Assertions } from 'ava';
-import * as _ from 'lodash';
 import * as mongodb from 'mongodb';
 
 import { MongoClient, MongoUtils } from '../../src';
-import { BaseMongoObject, EntityHistoric } from '../../src/models';
+import { BaseMongoObject } from '../../src/models';
 
 class SampleTypeListing extends BaseMongoObject {
 	public field1String: string;
@@ -56,7 +55,7 @@ test('[CRUD] Insert one and find it', async (t: Assertions) => {
 });
 
 test('[CRUD] Find one and update', async (t: Assertions) => {
-	const mongoClient = new MongoClient('test-' + Date.now(), SampleType, SampleTypeListing);
+	const mongoClient = new MongoClient(global.db.collection('test-' + Date.now()), SampleType, SampleTypeListing);
 	const size = await mongoClient.count();
 
 	t.true(size === 0, 'collection should be empty');
