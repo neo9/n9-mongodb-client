@@ -84,3 +84,26 @@ test('[DOTS-KEYS] Insert&update and check historic', async (t: Assertions) => {
 
 	t.deepEqual(JSON.parse(JSON.stringify(historicValue.snapshot)), JSON.parse(JSON.stringify(insertedValue)), 'snapshot is equal to inserted value');
 });
+
+test('[DOTS-KEYS] Insert many with dots and find it', async (t: Assertions) => {
+	const mongoClient = new MongoClient('test-' + Date.now(), SampleType, SampleType);
+	const size = await mongoClient.count();
+
+	t.true(size === 0, 'collection should be empty');
+
+	const intValue = 41;
+	const aKeyWithDots: keyof SampleType = 'a.key.with.dots';
+	const newEntity: SampleType = {
+		[aKeyWithDots]: intValue,
+	};
+	await mongoClient.insertMany([newEntity, newEntity], 'userId1');
+
+	const sizeWithElementIn = await mongoClient.count();
+	t.is(sizeWithElementIn, 2, 'nb element in collection');
+
+	const query = { [MongoUtils.escapeSpecialCharacters(aKeyWithDots)]: intValue };
+	const foundObject = await mongoClient.findOne(query);
+	t.truthy(foundObject, 'found by query');
+
+	t.is(foundObject['a.key.with.dots'], intValue, 'key is converted back to commons characters on read');
+});

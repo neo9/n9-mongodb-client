@@ -138,7 +138,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 					userId,
 				},
 			};
-			return newEntity;
+			return MongoUtils.removeSpecialCharactersInKeys(newEntity);
 		});
 
 		const insertResult = await this.collection.insertMany(entitiesToInsert, options);
