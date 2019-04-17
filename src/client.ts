@@ -42,6 +42,14 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		else return key;
 	}
 
+	private static isClassicObject(existingEntityElement: any): boolean {
+		return _.isObject(existingEntityElement)
+				&& !_.isFunction(existingEntityElement)
+				&& !(existingEntityElement instanceof ObjectID)
+				&& !(existingEntityElement instanceof Date)
+				&& !_.isArray(existingEntityElement);
+	}
+
 	private readonly logger: N9Log;
 	private readonly db: Db;
 
@@ -721,7 +729,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				continue;
 			}
 
-			if (_.isObject(newEntityElement) && !_.isArray(newEntityElement) && !(newEntityElement instanceof ObjectID) && !(newEntityElement instanceof Date)) {
+			if (MongoClient.isClassicObject(newEntityElement)) {
 				// generate a.b.c
 				keys.push(...this.generateAllLockFields(newEntityElement, joinedPath));
 			} else if (_.isArray(newEntityElement)) {
@@ -734,7 +742,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 							if (_.isNil(element[arrayKey])) {
 								throw new N9Error('wrong-array-definition', 400, { newEntity, basePath, ignoreOnePath, arrayPath });
 							}
-							if (_.isObject(element) && !_.isArray(element)) {
+							if (MongoClient.isClassicObject(element)) {
 								keys.push(...this.generateAllLockFields(element, arrayPath, arrayKey));
 							} else { // TODO: if _.isArray(newEntity[key])
 								keys.push(arrayPath);
@@ -829,7 +837,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 
 	private mergeOldEntityWithNewOne(newEntity: any, existingEntity: any, basePath: string, lockFields: LockField[]): any {
 		let ret;
-		if (_.isObject(newEntity) && _.isObject(existingEntity) && !_.isArray(newEntity) && !_.isArray(existingEntity)) {
+		if (MongoClient.isClassicObject(newEntity) && MongoClient.isClassicObject(existingEntity)) {
 			const keys = _.uniq([..._.keys(newEntity), ..._.keys(existingEntity)]);
 			for (const key of keys) {
 				newEntity[key] = this.mergeOldEntityWithNewOne(newEntity[key], existingEntity[key], MongoClient.getJoinPaths(basePath, key), lockFields);
@@ -910,7 +918,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		for (const key of existingEntityKeys) {
 			const existingEntityElement = existingEntity[key];
 			const currentPath = MongoClient.getJoinPaths(basePath, key);
-			if (_.isObject(existingEntityElement) && !_.isArray(existingEntityElement)) {
+			if (MongoClient.isClassicObject(existingEntityElement)) {
 				ret[key] = this.pickOnlyNewValues(existingEntityElement, newEntity[key], currentPath);
 				if (_.isNil(ret[key])) {
 					delete ret[key];
@@ -920,7 +928,17 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 
 				if (_.isEmpty(ret[key])) delete ret[key];
 			} else {
-				if (existingEntityElement !== newEntity[key] && !_.isNil(newEntity[key])) {
+				let existingEntityElementToCompare = existingEntityElement;
+				if (existingEntityElementToCompare instanceof ObjectID) {
+					existingEntityElementToCompare = existingEntityElementToCompare.toHexString();
+				}
+
+				let newEntityElementToCompare = newEntity[key];
+				if (newEntityElementToCompare instanceof ObjectID) {
+					newEntityElementToCompare = newEntityElementToCompare.toHexString();
+				}
+
+				if (existingEntityElementToCompare !== newEntityElementToCompare && !_.isNil(newEntity[key])) {
 					ret[key] = newEntity[key];
 				}
 			}
