@@ -2,7 +2,7 @@ import { N9Log } from '@neo9/n9-node-log';
 import { N9Error } from '@neo9/n9-node-utils';
 import * as deepDiff from 'deep-diff';
 import * as _ from 'lodash';
-import { Collection, CollectionInsertManyOptions, Cursor, Db, FilterQuery, IndexOptions, ObjectId, UpdateQuery } from 'mongodb';
+import { Collection, CollectionInsertManyOptions, Cursor, Db, FilterQuery, IndexOptions, ObjectID, ObjectId, UpdateQuery } from 'mongodb';
 import { BaseMongoObject, EntityHistoric, LockField, StringMap, UpdateManyQuery } from './models';
 import { ClassType } from './models/class-type.models';
 import { MongoUtils } from './mongo-utils';
@@ -721,7 +721,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				continue;
 			}
 
-			if (_.isObject(newEntityElement) && !_.isArray(newEntityElement)) {
+			if (_.isObject(newEntityElement) && !_.isArray(newEntityElement) && !(newEntityElement instanceof ObjectID) && !(newEntityElement instanceof Date)) {
 				// generate a.b.c
 				keys.push(...this.generateAllLockFields(newEntityElement, joinedPath));
 			} else if (_.isArray(newEntityElement)) {

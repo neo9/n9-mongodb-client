@@ -1,6 +1,7 @@
 import { N9Log } from '@neo9/n9-node-log';
 import test, { Assertions } from 'ava';
 import * as _ from 'lodash';
+import { ObjectID } from 'mongodb';
 import * as mongodb from 'mongodb';
 import { MongoClient, MongoUtils } from '../../src';
 import { BaseMongoObject, EntityHistoric, StringMap } from '../../src/models';
@@ -93,7 +94,7 @@ test('[LOCK-FIELDS] Insert one and check locks', async (t: Assertions) => {
 
 	const entity = await mongoClient.findOneById(insertedEntity._id);
 
-	t.true(!_.isEmpty(entity.objectInfos.lockFields));
+	t.true(!_.isEmpty(entity.objectInfos.lockFields), 'is there some lock fields');
 	t.deepEqual(_.map(entity.objectInfos.lockFields, 'path'), [
 		'text',
 		'property.value',
@@ -102,7 +103,34 @@ test('[LOCK-FIELDS] Insert one and check locks', async (t: Assertions) => {
 		'objects[code=k1].value',
 		'objects[code=k2].value',
 		'objects[code=k3].value',
-	]);
+	], 'all lock fields are present');
+});
+
+test('[LOCK-FIELDS] Insert one with mongoID and Date and check locks', async (t: Assertions) => {
+
+	const mongoClient = getLockFieldsMongoClient();
+
+	const data = {
+		..._.cloneDeep(locksDataSample),
+		id: new ObjectID(),
+		date: new Date(),
+	};
+	const insertedEntity = await mongoClient.insertOne(data, '');
+
+	const entity = await mongoClient.findOneById(insertedEntity._id);
+
+	t.true(!_.isEmpty(entity.objectInfos.lockFields), 'is there some lock fields');
+	t.deepEqual(_.map(entity.objectInfos.lockFields, 'path'), [
+		'text',
+		'property.value',
+		'strings["a"]',
+		'strings["b"]',
+		'objects[code=k1].value',
+		'objects[code=k2].value',
+		'objects[code=k3].value',
+		'id',
+		'date',
+	], 'all lock fields are present');
 });
 
 test('[LOCK-FIELDS] Insert&Update one and check locks', async (t: Assertions) => {
