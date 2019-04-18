@@ -361,6 +361,24 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		}
 	}
 
+	public async deleteOneById(id: string): Promise<U> {
+		return this.deleteOneByKey(MongoUtils.oid(id), '_id');
+	}
+
+	public async deleteOneByKey(keyValue: any, keyName: string = 'code'): Promise<U> {
+		const query: StringMap<any> = {
+			[MongoUtils.escapeSpecialCharacters(keyName)]: keyValue,
+		};
+
+		return await this.deleteOne(query);
+	}
+
+	public async deleteOne(query: object): Promise<U> {
+		const entity = await this.findOne(query);
+		await this.collection.deleteOne(query);
+		return entity;
+	}
+
 	public async updateManyAtOnce(
 			entities: Partial<U>[],
 			userId: string,
