@@ -1,5 +1,18 @@
+# Version [0.3.0](https://github.com/neo9/n9-mongo-client/compare/0.2.4...0.3.0) (2019-04-18)
+
+
+### delete
+
+* Add delete one method and declinations byId and byKey ([5a740e2](https://github.com/neo9/n9-mongo-client/commit/5a740e2)) (Benjamin Daniel)
+
+
+
 ## Version [0.2.4](https://github.com/neo9/n9-mongo-client/compare/0.2.3...0.2.4) (2019-04-17)
 
+
+### release
+
+* V 0.2.4 ([bbe8907](https://github.com/neo9/n9-mongo-client/commit/bbe8907)) (Benjamin Daniel)
 
 
 
