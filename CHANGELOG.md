@@ -1,9 +1,22 @@
+## Version [0.3.1](https://github.com/neo9/n9-mongo-client/compare/0.3.0...0.3.1) (2019-05-03)
+
+
+### updateMany
+
+* Add current value to mapping function if any ([043cd94](https://github.com/neo9/n9-mongo-client/commit/043cd94)) (Benjamin Daniel)
+
+
+
 # Version [0.3.0](https://github.com/neo9/n9-mongo-client/compare/0.2.4...0.3.0) (2019-04-18)
 
 
 ### delete
 
 * Add delete one method and declinations byId and byKey ([5a740e2](https://github.com/neo9/n9-mongo-client/commit/5a740e2)) (Benjamin Daniel)
+
+### release
+
+* V 0.3.0 ([a7c50d3](https://github.com/neo9/n9-mongo-client/commit/a7c50d3)) (Benjamin Daniel)
 
 
 
