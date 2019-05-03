@@ -1,5 +1,18 @@
+## Version [0.3.2](https://github.com/neo9/n9-mongo-client/compare/0.3.1...0.3.2) (2019-05-03)
+
+
+### updateMany
+
+* Fix public function updateManyAtOnce definition ([a70407c](https://github.com/neo9/n9-mongo-client/commit/a70407c)) (Benjamin Daniel)
+
+
+
 ## Version [0.3.1](https://github.com/neo9/n9-mongo-client/compare/0.3.0...0.3.1) (2019-05-03)
 
+
+### release
+
+* V 0.3.1 ([219c89e](https://github.com/neo9/n9-mongo-client/commit/219c89e)) (Benjamin Daniel)
 
 ### updateMany
 
