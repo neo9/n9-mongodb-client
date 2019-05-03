@@ -385,7 +385,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			upsert: boolean = false,
 			lockNewFields: boolean = true,
 			query?: string | StringMap<(keyValue: any, entity: Partial<U>, key: string) => any>,
-			mapFunction?: (entity: Partial<U>) => Promise<Partial<U>>,
+			mapFunction?: (entity: Partial<U>, existingEntity?: U) => Promise<Partial<U>>,
 			onlyInsertFieldsKey?: string[],
 			forceEditLockFields: boolean = false,
 	): Promise<Cursor<U>> {
