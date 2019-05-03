@@ -492,7 +492,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			userId: string,
 			lockNewFields: boolean,
 			query?: string | StringMap<(keyValue: any, entity: Partial<U>, key: string) => any>,
-			mapFunction?: (entity: Partial<U>) => Promise<Partial<U>>,
+			mapFunction?: (entity: Partial<U>, existingEntity?: U) => Promise<Partial<U>>,
 			onlyInsertFieldsKey?: string[],
 			forceEditLockFields?: boolean,
 	): Promise<UpdateManyQuery[]> {
@@ -508,7 +508,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			}
 			if (currentValue) {
 				if (!!mapFunction) {
-					entity = await mapFunction(entity);
+					entity = await mapFunction(entity, currentValue);
 				}
 				MongoClient.removeEmptyDeep(entity);
 
