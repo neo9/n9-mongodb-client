@@ -314,7 +314,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				newEntityWithOnlyDataToUpdate = this.pruneEntityWithLockFields(newEntity, existingEntity.objectInfos.lockFields);
 				// console.log('-- client.ts ', newEntityWithOnlyDataToUpdate, ` <<-- newEntityWithOnlyDataToUpdate`);
 				newEntityToSave = this.mergeOldEntityWithNewOne(newEntity, existingEntity, '', existingEntity.objectInfos.lockFields);
-				// TODO : add function in parameters or in mongoClien conf to allow validation here
+				// TODO : add function in parameters or in mongoClient conf to allow validation here
 			}
 
 			const updateQuery: StringMap<any> = {
@@ -512,19 +512,22 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				}
 				MongoClient.removeEmptyDeep(entity);
 
-				if (this.conf.lockFields && !forceEditLockFields) {
-					const newEntityWithOnlyDataToUpdate = this.pruneEntityWithLockFields(entity, currentValue.objectInfos.lockFields);
-					const newEntityMerged = this.mergeOldEntityWithNewOne(entity, currentValue, '', currentValue.objectInfos.lockFields);
-					// console.log(`--  newEntityMerged --`, JSON.stringify(newEntityMerged, null, 2));
-					delete newEntityMerged.objectInfos;
-					delete newEntityMerged._id;
+				if (this.conf.lockFields) {
+					if (!forceEditLockFields) {
+						entity = this.pruneEntityWithLockFields(entity, currentValue.objectInfos.lockFields);
+						const newEntityMerged = this.mergeOldEntityWithNewOne(entity, currentValue, '', currentValue.objectInfos.lockFields);
+						// console.log(`--  newEntityMerged --`, JSON.stringify(newEntityMerged, null, 2));
+						delete newEntityMerged.objectInfos;
+						delete newEntityMerged._id;
 
-					entity = newEntityMerged;
-					// TODO : add function parameter to allow validation here
+						entity = newEntityMerged;
+						// TODO : add function parameter to allow validation here
+					}
 
 					if (lockNewFields) {
 						const lockFields = currentValue.objectInfos.lockFields || [];
-						const newLockFields = this.getAllLockFieldsFromEntity(newEntityWithOnlyDataToUpdate, new Date(), userId, currentValue);
+						const newLockFields = this.getAllLockFieldsFromEntity(entity, new Date(), userId, currentValue);
+
 						if (!_.isEmpty(newLockFields)) {
 							lockFields.push(...newLockFields);
 							entity['objectInfos.lockFields'] = lockFields;
@@ -761,13 +764,17 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 								throw new N9Error('wrong-array-definition', 400, { newEntity, basePath, ignoreOnePath, arrayPath });
 							}
 							if (MongoClient.isClassicObject(element)) {
-								keys.push(...this.generateAllLockFields(element, arrayPath, arrayKey));
+								if (_.isEmpty(_.omit(element, arrayKey))) {
+									keys.push(arrayPath);
+								} else {
+									keys.push(...this.generateAllLockFields(element, arrayPath, arrayKey));
+								}
 							} else { // TODO: if _.isArray(newEntity[key])
 								keys.push(arrayPath);
 							}
 						}
 					}
-				} else { // a[1]
+				} else { // a["elementValue"]
 					for (const element of newEntityElement) {
 						const arrayPath = `${joinedPath}[${JSON.stringify(element)}]`;
 						keys.push(arrayPath);
@@ -962,6 +969,11 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			}
 		}
 
+		for (const newEntityKey of _.keys(newEntity)) {
+			if (!existingEntityKeys.includes(newEntityKey)) {
+				ret[newEntityKey] = newEntity[newEntityKey];
+			}
+		}
 		// console.log(`-- pickOnlyNewValues  --`);
 		// console.log(JSON.stringify(existingEntity, null, 2));
 		// console.log(`-- -- -- -- -- -- -- -- -- --`);
@@ -978,7 +990,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 
 	private pickOnlyNewValuesInArray(existingEntityArray: any[], newEntityElement: any[], currentPath: string): any[] {
 		const ret = [];
-		for (let i = 0; i < Math.max(existingEntityArray.length, newEntityElement.length); i++) {
+		for (let i = 0; i < Math.max(_.size(existingEntityArray), _.size(newEntityElement)); i++) {
 			const existingEntityElementArrayElement = existingEntityArray[i];
 			const newValue = this.pickOnlyNewValues(existingEntityElementArrayElement, _.get(newEntityElement, [i]), currentPath);
 			const codeKeyName = this.conf.lockFields.arrayWithReferences[currentPath];

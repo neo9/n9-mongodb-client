@@ -42,6 +42,15 @@ class SampleComplexType extends BaseMongoObject {
 	public strings: string[];
 }
 
+class ObjectWithArray extends BaseMongoObject {
+	public parameters: {
+		items: {
+			code: string;
+			label?: StringMap<string>;
+		}[];
+	};
+}
+
 const locksDataSample: SampleComplexType = {
 	text: 'text sample',
 	excludedField: 'not locked field',
@@ -104,6 +113,7 @@ test('[LOCK-FIELDS] Insert one and check locks', async (t: Assertions) => {
 		'objects[code=k2].value',
 		'objects[code=k3].value',
 	], 'all lock fields are present');
+	t.deepEqual(insertedEntity.objectInfos.lockFields, entity.objectInfos.lockFields, 'inserted value is same as saved one');
 });
 
 test('[LOCK-FIELDS] Insert one with mongoID and Date and check locks', async (t: Assertions) => {
@@ -428,6 +438,52 @@ test('[LOCK-FIELDS] Insert&update array sub object element', async (t: Assertion
 	const attributesUpdated = await mongoClient.findOneAndUpdateByIdWithLocks(attributesCreated[0]._id, newAttributeValue, 'userIdUpdate', true, true);
 	t.truthy(attributesUpdated.objectInfos.lockFields, 'Should have some lock fields');
 	t.is(attributesUpdated.objectInfos.lockFields.length, 1, 'One element edited, so one should find one lock field');
+});
+
+test('[LOCK-FIELDS] Insert object with array and code with no value', async (t: Assertions) => {
+	const objectWithArray: ObjectWithArray = {
+		parameters: {
+			items: [
+				{
+					code: 'code1',
+					label: {
+						'en-GB': 'Size of a 1€ coin',
+						'fr-FR': 'Taille d\'une piece 1€',
+					},
+				},
+				{
+					code: 'code2',
+				},
+			],
+		},
+	};
+
+	const mongoClient = new MongoClient('test' + Date.now(), ObjectWithArray, null, {
+		lockFields: {
+			arrayWithReferences: {
+				'parameters.items': 'code',
+			},
+		},
+		keepHistoric: true,
+	});
+
+	const objectCreated: ObjectWithArray = await mongoClient.insertOne(objectWithArray, 'userId', true);
+
+	t.truthy(objectCreated.objectInfos.lockFields, 'Should have some lock fields');
+
+	const paths = _.map(objectCreated.objectInfos.lockFields, 'path');
+	t.deepEqual(paths, [
+		'parameters.items[code=code1].label.en-GB',
+		'parameters.items[code=code1].label.fr-FR',
+		'parameters.items[code=code2]',
+	], 'One element edited, so one should find one lock field');
+
+	const newObjectWithArray = _.cloneDeep(objectWithArray);
+	newObjectWithArray.parameters.items.pop();
+
+	const objectUpdated: ObjectWithArray = await mongoClient.findOneAndUpdateByIdWithLocks(objectCreated._id, newObjectWithArray, 'userId', true, false);
+
+	t.is(objectUpdated.parameters.items.length, 2, 'Should kee element locked');
 });
 
 test('[LOCK-FIELDS] Insert&update attribute', async (t: Assertions) => {
