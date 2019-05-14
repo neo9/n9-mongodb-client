@@ -1,5 +1,18 @@
+## Version [0.3.3](https://github.com/neo9/n9-mongo-client/compare/0.3.2...0.3.3) (2019-05-14)
+
+
+### locks
+
+* Improve locks on empty new values ([290e2d8](https://github.com/neo9/n9-mongo-client/commit/290e2d8)) (Benjamin Daniel)
+
+
+
 ## Version [0.3.2](https://github.com/neo9/n9-mongo-client/compare/0.3.1...0.3.2) (2019-05-03)
 
+
+### release
+
+* V 0.3.2 ([88dc6a6](https://github.com/neo9/n9-mongo-client/commit/88dc6a6)) (Benjamin Daniel)
 
 ### updateMany
 
