@@ -6,6 +6,7 @@ import { Collection, CollectionInsertManyOptions, Cursor, Db, FilterQuery, Index
 import { BaseMongoObject, EntityHistoric, LockField, StringMap, UpdateManyQuery } from './models';
 import { ClassType } from './models/class-type.models';
 import { MongoUtils } from './mongo-utils';
+import { MongoReadStream } from './mongo-read-stream';
 
 export interface MongoClientConfiguration {
 	keepHistoric?: boolean;
@@ -153,19 +154,26 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		return (insertResult.ops || []).map((newEntity) => MongoUtils.mapObjectToClass(this.type, MongoUtils.unRemoveSpecialCharactersInKeys(newEntity)));
 	}
 
-	public async findWithType<T extends U>(query: object, type: ClassType<T>, page: number = 0, size: number = 10, sort: object = {}): Promise<Cursor<T>> {
+	public async findWithType<T extends U>(
+		query: object, type: ClassType<T>, page: number = 0, size: number = 10,
+		sort: object = {}, projection: object = {}): Promise<Cursor<T>> {
 		return this.collection.find<T>(query)
-				.sort(sort)
-				.skip(page * size)
-				.limit(size)
-				.map((a: U) => {
-					const b = MongoUtils.unRemoveSpecialCharactersInKeys(a);
-					return MongoUtils.mapObjectToClass(type, b);
-				});
+			.sort(sort)
+			.skip(page * size)
+			.limit(size)
+			.project(projection)
+			.map((a: U) => {
+				const b = MongoUtils.unRemoveSpecialCharactersInKeys(a);
+				return MongoUtils.mapObjectToClass(type, b);
+			});
 	}
 
-	public async find(query: object, page: number = 0, size: number = 10, sort: object = {}): Promise<Cursor<L>> {
-		return this.findWithType<any>(query, this.typeList, page, size, sort);
+	public stream<T extends U>(query: object, size: number, projection: object = {}): MongoReadStream<U, L> {
+		return new MongoReadStream<U, L>(this, query, size, projection);
+	}
+
+	public async find(query: object, page: number = 0, size: number = 10, sort: object = {}, projection: object = {}): Promise<Cursor<L>> {
+		return this.findWithType<any>(query, this.typeList, page, size, sort, projection);
 	}
 
 	public async findOneById(id: string): Promise<U> {
