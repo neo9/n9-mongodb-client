@@ -61,7 +61,6 @@
       5
     ],
     "no-string-literal": false,
-    "no-use-before-declare": true,
     "no-conditional-assignment": true,
     "label-position": true,
     "no-shadowed-variable": true,
