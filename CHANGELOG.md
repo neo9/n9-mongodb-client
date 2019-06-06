@@ -1,9 +1,26 @@
+# Version [0.4.0](https://github.com/neo9/n9-mongo-client/compare/0.3.3...0.4.0) (2019-06-06)
+
+
+### client
+
+* Add stream feature ([d44a92c](https://github.com/neo9/n9-mongo-client/commit/d44a92c)) (Clement Petit)
+
+### yarn
+
+* Upgrade dependencies due to security issue ([0c727c8](https://github.com/neo9/n9-mongo-client/commit/0c727c8)) (Benjamin Daniel)
+
+
+
 ## Version [0.3.3](https://github.com/neo9/n9-mongo-client/compare/0.3.2...0.3.3) (2019-05-14)
 
 
 ### locks
 
 * Improve locks on empty new values ([290e2d8](https://github.com/neo9/n9-mongo-client/commit/290e2d8)) (Benjamin Daniel)
+
+### release
+
+* V 0.3.3 ([128a694](https://github.com/neo9/n9-mongo-client/commit/128a694)) (Benjamin Daniel)
 
 
 
