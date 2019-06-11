@@ -95,6 +95,7 @@ export class MongoReadStream<T extends BaseMongoObject, U extends BaseMongoObjec
 	}
 
 	public async _read(size: number): Promise<void> {
+		this.pause();
 		if (this.first) {
 			this.first = false;
 		} else {
@@ -106,9 +107,8 @@ export class MongoReadStream<T extends BaseMongoObject, U extends BaseMongoObjec
 		let item = null;
 		while (await cursor.hasNext()) {
 			resultLength++;
-
 			item = await cursor.next();
-			if (item != null) this.push(item);
+			if (item) this.push(item);
 		}
 		if (item != null) {
 			this.lastId = item._id;
@@ -117,6 +117,7 @@ export class MongoReadStream<T extends BaseMongoObject, U extends BaseMongoObjec
 		if (resultLength < this.pageSize) {
 			this.push(null);
 		}
+		this.resume();
 	}
 
 }
