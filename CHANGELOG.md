@@ -1,9 +1,22 @@
+## Version [0.4.1](https://github.com/neo9/n9-mongo-client/compare/0.4.0...0.4.1) (2019-06-12)
+
+
+### stream
+
+* Fix parallel issues ([e50251d](https://github.com/neo9/n9-mongo-client/commit/e50251d)) (Clement Petit)
+
+
+
 # Version [0.4.0](https://github.com/neo9/n9-mongo-client/compare/0.3.3...0.4.0) (2019-06-06)
 
 
 ### client
 
 * Add stream feature ([d44a92c](https://github.com/neo9/n9-mongo-client/commit/d44a92c)) (Clement Petit)
+
+### release
+
+* V 0.4.0 ([d1fad29](https://github.com/neo9/n9-mongo-client/commit/d1fad29)) (Benjamin Daniel)
 
 ### yarn
 
