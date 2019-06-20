@@ -1,7 +1,8 @@
+import { Cursor } from 'mongodb';
 import { Readable, Writable } from 'stream';
 import { MongoClient } from './client';
 import { MongoUtils } from './mongo-utils';
-import { BaseMongoObject } from "./models";
+import { BaseMongoObject } from './models';
 
 export type PageConsumer<T> = (data: T[]) => Promise<void>;
 export type ItemConsumer<T> = (data: T) => Promise<void>;
@@ -11,8 +12,8 @@ export class PageConsumerWritable<T> extends Writable {
 	private buffer: T[] = [];
 
 	constructor(
-		private pageSize: number,
-		private consumerFn: PageConsumer<T>) {
+			private pageSize: number,
+			private consumerFn: PageConsumer<T>) {
 		super({ objectMode: true });
 	}
 
@@ -52,21 +53,17 @@ export class ItemConsumerWritable<T> extends Writable {
 	}
 }
 
-/**
- * Readable stream that streams the content of a collection.
- * This stream implement pagination without using cursor.skip() but rather by using limit and a comparison
- * with _id. This behaviour has better performance when reading large collections.
- */
 export class MongoReadStream<T extends BaseMongoObject, U extends BaseMongoObject> extends Readable {
 
-	private first: boolean = true;
 	private lastId: string = null;
+	private cursor: Cursor<U> = null;
 
 	constructor(
-		private mongoClient: MongoClient<T, U>,
-		private query: object,
-		private pageSize: number,
-		private projection: object = {}) {
+			private mongoClient: MongoClient<T, U>,
+			private query: object,
+			private pageSize: number,
+			private projection: object = {},
+	) {
 		super({ objectMode: true });
 	}
 
@@ -77,8 +74,8 @@ export class MongoReadStream<T extends BaseMongoObject, U extends BaseMongoObjec
 	public async forEachPage(consumerFn: PageConsumer<U>): Promise<void> {
 		return new Promise<void>((resolve, reject) => {
 			this.pipe(new PageConsumerWritable(this.pageSize, consumerFn))
-				.on("error", reject)
-				.on("finish", resolve);
+					.on('error', reject)
+					.on('finish', resolve);
 		});
 	}
 
@@ -89,35 +86,26 @@ export class MongoReadStream<T extends BaseMongoObject, U extends BaseMongoObjec
 	public async forEach(consumerFn: ItemConsumer<U>): Promise<void> {
 		return new Promise<void>((resolve, reject) => {
 			this.pipe(new ItemConsumerWritable(consumerFn))
-				.on("error", reject)
-				.on("finish", resolve);
+					.on('error', reject)
+					.on('finish', resolve);
 		});
 	}
 
 	public async _read(size: number): Promise<void> {
-		this.pause();
-		if (this.first) {
-			this.first = false;
-		} else {
-			(this.query as any)['_id'] = { $gt: MongoUtils.oid(this.lastId) };
+		if (!(this.cursor && await this.cursor.hasNext())) {
+			if (this.lastId) {
+				(this.query as any)['_id'] = { $gt: MongoUtils.oid(this.lastId) };
+			}
+			this.cursor = await this.mongoClient.find(this.query, 0, this.pageSize, { _id: 1 }, this.projection);
 		}
-
-		const cursor = await this.mongoClient.find(this.query, 0, this.pageSize, { _id: 1 }, this.projection);
-		let resultLength = 0;
 		let item = null;
-		while (await cursor.hasNext()) {
-			resultLength++;
-			item = await cursor.next();
-			if (item) this.push(item);
+		if (await this.cursor.hasNext()) {
+			item = await this.cursor.next();
 		}
-		if (item != null) {
+		if (item) {
 			this.lastId = item._id;
 		}
-
-		if (resultLength < this.pageSize) {
-			this.push(null);
-		}
-		this.resume();
+		this.push(item);
 	}
 
 }

@@ -1,4 +1,5 @@
 import { N9Log } from '@neo9/n9-node-log';
+import { waitFor } from '@neo9/n9-node-utils';
 import test, { Assertions } from 'ava';
 import * as mongodb from 'mongodb';
 
@@ -24,27 +25,28 @@ test.after(async () => {
 test('[MONGO-READ-STREAM] Read page by page', async (t: Assertions) => {
 	const mongoClient = new MongoClient('test-' + Date.now(), TestItem, TestItem);
 
-	await Promise.all(
-		new Array(38).fill(0)
-			.map(async () => mongoClient.insertOne({ key: 'value-' + Math.random() }, 'userId1', false))
-	);
+	const collectionSize = 38;
+	const pageSize = 10;
+	for (let i = 0; i < collectionSize; i++) {
+		await mongoClient.insertOne({ key: 'value-' + Math.random() }, 'userId1', false);
+	}
 
 	let length = 0;
 	let pages = 0;
-	await mongoClient.stream({}, 10).forEachPage(async (page: TestItem[]) => {
+	await mongoClient.stream({}, pageSize).forEachPage(async (page: TestItem[]) => {
 		length += page.length;
 		pages++;
 	});
 
-	t.is(length, 38, 'nb elements in collection');
-	t.is(pages, 4, 'nb pages in collection');
+	t.is(length, collectionSize, 'nb elements in collection');
+	t.is(pages, Math.ceil(collectionSize / pageSize), 'nb pages in collection');
 	await mongoClient.dropCollection();
 });
 
 test('[MONGO-READ-STREAM] Read page by page on empty collection', async (t: Assertions) => {
 	const mongoClient = new MongoClient('test-' + Date.now(), TestItem, TestItem);
 
-	await mongoClient.stream({}, 10).forEachPage(async (page: TestItem[]) => {
+	await mongoClient.stream({}, 10).forEachPage(async () => {
 		t.fail('should never be called');
 	});
 
@@ -54,24 +56,30 @@ test('[MONGO-READ-STREAM] Read page by page on empty collection', async (t: Asse
 test('[MONGO-READ-STREAM] Read item by item', async (t: Assertions) => {
 	const mongoClient = new MongoClient('test-' + Date.now(), TestItem, TestItem);
 
-	await Promise.all(
-		new Array(38).fill(0)
-			.map(async () => mongoClient.insertOne({ key: 'value-' + Math.random() }, 'userId1', false))
-	);
+	const collectionSize = 38;
+	const pageSize = 10;
+	for (let i = 0; i < collectionSize; i++) {
+		await mongoClient.insertOne({ key: 'value-' + Math.random() }, 'userId1', false);
+	}
 
 	let length = 0;
-	await mongoClient.stream({}, 10).forEach(async (item: TestItem) => {
-		length++;
+	await mongoClient.stream({}, pageSize).forEach(async (item: TestItem) => {
+		if (item) {
+			length++;
+			await waitFor(2); // add some time to simulate long process
+		} else {
+			t.fail('missing item');
+		}
 	});
 
-	t.is(length, 38, 'nb elements in collection');
+	t.is(length, collectionSize, 'nb elements in collection');
 	await mongoClient.dropCollection();
 });
 
 test('[MONGO-READ-STREAM] Read item by item on empty collection', async (t: Assertions) => {
 	const mongoClient = new MongoClient('test-' + Date.now(), TestItem, TestItem);
 
-	await mongoClient.stream({}, 10).forEach(async (item: TestItem) => {
+	await mongoClient.stream({}, 10).forEach(async () => {
 		t.fail('should never be called');
 	});
 
