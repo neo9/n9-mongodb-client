@@ -1,5 +1,18 @@
+## Version [0.4.2](https://github.com/neo9/n9-mongo-client/compare/0.4.1...0.4.2) (2019-06-20)
+
+
+### stream
+
+* Fix memory issue with collection stream ([7ef57d3](https://github.com/neo9/n9-mongo-client/commit/7ef57d3)) (Benjamin Daniel)
+
+
+
 ## Version [0.4.1](https://github.com/neo9/n9-mongo-client/compare/0.4.0...0.4.1) (2019-06-12)
 
+
+### release
+
+* V 0.4.1 ([2febb06](https://github.com/neo9/n9-mongo-client/commit/2febb06)) (Benjamin Daniel)
 
 ### stream
 
