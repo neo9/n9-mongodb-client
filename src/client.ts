@@ -181,6 +181,10 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		return this.findWithType<any>(query, this.typeList, page, size, sort, projection);
 	}
 
+	public async findEntities(query: object, page: number = 0, size: number = 10, sort: object = {}, projection: object = {}): Promise<Cursor<U>> {
+		return this.findWithType<any>(query, this.type, page, size, sort, projection);
+	}
+
 	public async findOneById(id: string): Promise<U> {
 		return this.findOneByKey(MongoUtils.oid(id), '_id');
 	}

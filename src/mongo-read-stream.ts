@@ -53,16 +53,17 @@ export class ItemConsumerWritable<T> extends Writable {
 	}
 }
 
-export class MongoReadStream<T extends BaseMongoObject, U extends BaseMongoObject> extends Readable {
+export class MongoReadStream<L extends BaseMongoObject, U extends BaseMongoObject> extends Readable {
 
 	private lastId: string = null;
-	private cursor: Cursor<U> = null;
+	private cursor: Cursor<L | U> = null;
 
 	constructor(
-			private mongoClient: MongoClient<T, U>,
+			private mongoClient: MongoClient<L, U>,
 			private query: object,
 			private pageSize: number,
 			private projection: object = {},
+			private useFullEntity: boolean = false,
 	) {
 		super({ objectMode: true });
 	}
@@ -71,7 +72,7 @@ export class MongoReadStream<T extends BaseMongoObject, U extends BaseMongoObjec
 	 * Call the given callback for each page in series
 	 * Return a promise that is resolved when all the items have been consumed
 	 */
-	public async forEachPage(consumerFn: PageConsumer<U>): Promise<void> {
+	public async forEachPage(consumerFn: PageConsumer<Partial<L | U>>): Promise<void> {
 		return new Promise<void>((resolve, reject) => {
 			this.pipe(new PageConsumerWritable(this.pageSize, consumerFn))
 					.on('error', reject)
@@ -83,7 +84,7 @@ export class MongoReadStream<T extends BaseMongoObject, U extends BaseMongoObjec
 	 * Call the given callback for each item in series
 	 * Return a promise that is resolved when all the items have been consumed
 	 */
-	public async forEach(consumerFn: ItemConsumer<U>): Promise<void> {
+	public async forEach(consumerFn: ItemConsumer<Partial<L | U>>): Promise<void> {
 		return new Promise<void>((resolve, reject) => {
 			this.pipe(new ItemConsumerWritable(consumerFn))
 					.on('error', reject)
@@ -96,7 +97,11 @@ export class MongoReadStream<T extends BaseMongoObject, U extends BaseMongoObjec
 			if (this.lastId) {
 				(this.query as any)['_id'] = { $gt: MongoUtils.oid(this.lastId) };
 			}
-			this.cursor = await this.mongoClient.find(this.query, 0, this.pageSize, { _id: 1 }, this.projection);
+			if (this.useFullEntity) {
+				this.cursor = await this.mongoClient.findEntities(this.query, 0, this.pageSize, { _id: 1 }, this.projection);
+			} else {
+				this.cursor = await this.mongoClient.find(this.query, 0, this.pageSize, { _id: 1 }, this.projection);
+			}
 		}
 		let item = null;
 		if (await this.cursor.hasNext()) {
