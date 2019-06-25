@@ -1,6 +1,7 @@
 import { Cursor } from 'mongodb';
 import { Readable, Writable } from 'stream';
 import { MongoClient } from './client';
+import { ClassType } from './models/class-type.models';
 import { MongoUtils } from './mongo-utils';
 import { BaseMongoObject } from './models';
 
@@ -53,17 +54,17 @@ export class ItemConsumerWritable<T> extends Writable {
 	}
 }
 
-export class MongoReadStream<L extends BaseMongoObject, U extends BaseMongoObject> extends Readable {
+export class MongoReadStream<U extends BaseMongoObject, L extends BaseMongoObject> extends Readable {
 
 	private lastId: string = null;
-	private cursor: Cursor<L | U> = null;
+	private cursor: Cursor<Partial<U | L>> = null;
 
 	constructor(
-			private mongoClient: MongoClient<L, U>,
+			private mongoClient: MongoClient<U, L>,
 			private query: object,
 			private pageSize: number,
 			private projection: object = {},
-			private useFullEntity: boolean = false,
+			private customType?: ClassType<Partial<U | L>>,
 	) {
 		super({ objectMode: true });
 	}
@@ -72,7 +73,7 @@ export class MongoReadStream<L extends BaseMongoObject, U extends BaseMongoObjec
 	 * Call the given callback for each page in series
 	 * Return a promise that is resolved when all the items have been consumed
 	 */
-	public async forEachPage(consumerFn: PageConsumer<Partial<L | U>>): Promise<void> {
+	public async forEachPage(consumerFn: PageConsumer<Partial<U | L>>): Promise<void> {
 		return new Promise<void>((resolve, reject) => {
 			this.pipe(new PageConsumerWritable(this.pageSize, consumerFn))
 					.on('error', reject)
@@ -84,7 +85,7 @@ export class MongoReadStream<L extends BaseMongoObject, U extends BaseMongoObjec
 	 * Call the given callback for each item in series
 	 * Return a promise that is resolved when all the items have been consumed
 	 */
-	public async forEach(consumerFn: ItemConsumer<Partial<L | U>>): Promise<void> {
+	public async forEach(consumerFn: ItemConsumer<Partial<U | L>>): Promise<void> {
 		return new Promise<void>((resolve, reject) => {
 			this.pipe(new ItemConsumerWritable(consumerFn))
 					.on('error', reject)
@@ -97,8 +98,8 @@ export class MongoReadStream<L extends BaseMongoObject, U extends BaseMongoObjec
 			if (this.lastId) {
 				(this.query as any)['_id'] = { $gt: MongoUtils.oid(this.lastId) };
 			}
-			if (this.useFullEntity) {
-				this.cursor = await this.mongoClient.findEntities(this.query, 0, this.pageSize, { _id: 1 }, this.projection);
+			if (this.customType) {
+				this.cursor = await this.mongoClient.findWithType(this.query, this.customType, 0, this.pageSize, { _id: 1 }, this.projection);
 			} else {
 				this.cursor = await this.mongoClient.find(this.query, 0, this.pageSize, { _id: 1 }, this.projection);
 			}

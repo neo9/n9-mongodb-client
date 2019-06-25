@@ -154,7 +154,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		return (insertResult.ops || []).map((newEntity) => MongoUtils.mapObjectToClass(this.type, MongoUtils.unRemoveSpecialCharactersInKeys(newEntity)));
 	}
 
-	public async findWithType<T extends Partial<U>>(
+	public async findWithType<T extends Partial<U | L>>(
 			query: object,
 			type: ClassType<T>,
 			page: number = 0,
@@ -167,22 +167,22 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				.skip(page * size)
 				.limit(size)
 				.project(projection)
-				.map((a: Partial<U>) => {
+				.map((a: Partial<U | L>) => {
 					const b = MongoUtils.unRemoveSpecialCharactersInKeys(a);
 					return MongoUtils.mapObjectToClass(type, b);
 				});
 	}
 
-	public stream<T extends U>(query: object, size: number, projection: object = {}): MongoReadStream<U, L> {
-		return new MongoReadStream<U, L>(this, query, size, projection);
+	public stream<T extends Partial<U | L>>(query: object, pageSize: number, projection: object = {}): MongoReadStream<Partial<U>, Partial<L>> {
+		return new MongoReadStream<U, L>(this, query, pageSize, projection);
+	}
+
+	public streamWithType<T extends Partial<U | L>>(query: object, type: ClassType<T>, pageSize: number, projection: object = {}): MongoReadStream<Partial<U>, Partial<L>> {
+		return new MongoReadStream<U, L>(this, query, pageSize, projection, type);
 	}
 
 	public async find(query: object, page: number = 0, size: number = 10, sort: object = {}, projection: object = {}): Promise<Cursor<L>> {
 		return this.findWithType<any>(query, this.typeList, page, size, sort, projection);
-	}
-
-	public async findEntities(query: object, page: number = 0, size: number = 10, sort: object = {}, projection: object = {}): Promise<Cursor<U>> {
-		return this.findWithType<any>(query, this.type, page, size, sort, projection);
 	}
 
 	public async findOneById(id: string): Promise<U> {
