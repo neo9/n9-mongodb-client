@@ -1,5 +1,18 @@
+## Version [0.4.3](https://github.com/neo9/n9-mongo-client/compare/0.4.2...0.4.3) (2019-06-25)
+
+
+### types
+
+* Fix find with type type to match projection ([bae25d1](https://github.com/neo9/n9-mongo-client/commit/bae25d1)) (Benjamin Daniel)
+
+
+
 ## Version [0.4.2](https://github.com/neo9/n9-mongo-client/compare/0.4.1...0.4.2) (2019-06-20)
 
+
+### release
+
+* V 0.4.2 ([7f6c2e4](https://github.com/neo9/n9-mongo-client/commit/7f6c2e4)) (Benjamin Daniel)
 
 ### stream
 
