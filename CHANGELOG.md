@@ -1,5 +1,18 @@
+## Version [0.4.4](https://github.com/neo9/n9-mongo-client/compare/0.4.3...0.4.4) (2019-06-25)
+
+
+### types
+
+* Fix stream types to match projection ([bd849b4](https://github.com/neo9/n9-mongo-client/commit/bd849b4)) (Benjamin Daniel)
+
+
+
 ## Version [0.4.3](https://github.com/neo9/n9-mongo-client/compare/0.4.2...0.4.3) (2019-06-25)
 
+
+### release
+
+* V 0.4.3 ([16d6048](https://github.com/neo9/n9-mongo-client/commit/16d6048)) (Benjamin Daniel)
 
 ### types
 
