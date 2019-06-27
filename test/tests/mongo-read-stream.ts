@@ -43,6 +43,14 @@ test('[MONGO-READ-STREAM] Read page by page', async (t: Assertions) => {
 	await mongoClient.dropCollection();
 });
 
+test('[MONGO-READ-STREAM] Create stream with no _id in projection', async (t: Assertions) => {
+	const mongoClient = new MongoClient('test-' + Date.now(), TestItem, TestItem);
+	await mongoClient.insertOne({ key: 'value-' + Math.random() }, 'userId1', false);
+
+	await t.throwsAsync(async () => await mongoClient.stream({}, 1, { _id: 0 }));
+	await mongoClient.dropCollection();
+});
+
 test('[MONGO-READ-STREAM] Read page by page on empty collection', async (t: Assertions) => {
 	const mongoClient = new MongoClient('test-' + Date.now(), TestItem, TestItem);
 

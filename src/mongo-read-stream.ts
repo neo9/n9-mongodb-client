@@ -1,3 +1,4 @@
+import { N9Error } from '@neo9/n9-node-utils';
 import { Cursor } from 'mongodb';
 import { Readable, Writable } from 'stream';
 import { MongoClient } from './client';
@@ -67,6 +68,7 @@ export class MongoReadStream<U extends BaseMongoObject, L extends BaseMongoObjec
 			private customType?: ClassType<Partial<U | L>>,
 	) {
 		super({ objectMode: true });
+		if (projection['_id'] === 0) throw new N9Error('can-t-create-projection-without-_id', 400, { projection });
 	}
 
 	/**
