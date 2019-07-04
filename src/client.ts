@@ -21,7 +21,7 @@ const defaultConfiguration: MongoClientConfiguration = {
 };
 
 export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
-	public static removeEmptyDeep<T>(obj: T, compactArrays: boolean = false, removeEmptyObjects: boolean = false): T {
+	public static removeEmptyDeep<T>(obj: T, compactArrays: boolean = false, removeEmptyObjects: boolean = false, keepNullValues: boolean = false): T {
 		for (const key of Object.keys(obj)) {
 			const objElement = obj[key];
 			if (compactArrays && _.isArray(objElement)) {
@@ -31,9 +31,9 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				delete obj[key];
 			}
 			// @ts-ignore
-			if (objElement && typeof objElement === 'object') MongoClient.removeEmptyDeep(objElement, compactArrays, removeEmptyObjects);
+			if (objElement && typeof objElement === 'object') MongoClient.removeEmptyDeep(objElement, compactArrays, removeEmptyObjects, keepNullValues);
 			// @ts-ignore
-			else if (_.isNil(objElement)) delete obj[key];
+			else if ((keepNullValues && _.isUndefined(objElement)) || (!keepNullValues && _.isNil(objElement))) delete obj[key];
 		}
 		return obj;
 	}
@@ -415,6 +415,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				onlyInsertFieldsKey,
 				forceEditLockFields,
 		);
+		// console.log(`-- client.ts>updateManyAtOnce updatequeries --`, JSON.stringify(updateQueries, null, 2));
 		return await this.updateMany(updateQueries, userId, upsert);
 	}
 
@@ -527,7 +528,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				if (!!mapFunction) {
 					entity = await mapFunction(entity, currentValue);
 				}
-				MongoClient.removeEmptyDeep(entity);
+				MongoClient.removeEmptyDeep(entity, false, false, true);
 
 				if (this.conf.lockFields) {
 					if (!forceEditLockFields) {
@@ -827,7 +828,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				}
 			}
 		}
-		MongoClient.removeEmptyDeep(entity, true, true);
+		MongoClient.removeEmptyDeep(entity, true, true, true);
 		return entity;
 	}
 
@@ -937,7 +938,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			} else {
 				return newEntity;
 			}
-		} else if (_.isNil(newEntity)) {
+		} else if (_.isUndefined(newEntity)) {
 			ret = existingEntity;
 		} else {
 			ret = newEntity;
