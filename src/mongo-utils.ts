@@ -57,7 +57,7 @@ export class MongoUtils {
 	}
 
 	public static removeSpecialCharactersInKeys(obj: any): any {
-		if (_.isNil(obj) || _.isString(obj) || obj instanceof ObjectID || obj instanceof Date) return obj;
+		if (_.isNil(obj) || _.isString(obj) || _.isBoolean(obj) || _.isNumber(obj) || obj instanceof ObjectID || _.isDate(obj)) return obj;
 
 		if (_.isArray(obj)) {
 			return obj.map((element) => this.removeSpecialCharactersInKeys(element));
@@ -73,7 +73,7 @@ export class MongoUtils {
 	}
 
 	public static unRemoveSpecialCharactersInKeys(obj: any): any {
-		if (_.isNil(obj) || _.isString(obj) || obj instanceof ObjectID || obj instanceof Date) return obj;
+		if (_.isNil(obj) || _.isString(obj) || _.isBoolean(obj) || _.isNumber(obj) || obj instanceof ObjectID || _.isDate(obj)) return obj;
 
 		if (_.isArray(obj)) {
 			return obj.map((element) => this.unRemoveSpecialCharactersInKeys(element));
