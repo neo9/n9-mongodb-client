@@ -1,9 +1,22 @@
+## Version [0.4.7](https://github.com/neo9/n9-mongo-client/compare/0.4.6...0.4.7) (2019-07-04)
+
+
+### update
+
+* Add support of null value to remove entity value ([1417a21](https://github.com/neo9/n9-mongo-client/commit/1417a21)) (Benjamin Daniel)
+
+
+
 ## Version [0.4.6](https://github.com/neo9/n9-mongo-client/compare/0.4.5...0.4.6) (2019-07-04)
 
 
 ### mongo
 
 * Fix primitive type mapping ([a392670](https://github.com/neo9/n9-mongo-client/commit/a392670)) (Clement Petit)
+
+### release
+
+* V 0.4.6 ([7e8d943](https://github.com/neo9/n9-mongo-client/commit/7e8d943)) (Benjamin Daniel)
 
 ### stream
 
