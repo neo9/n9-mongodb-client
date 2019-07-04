@@ -1,5 +1,22 @@
+## Version [0.4.6](https://github.com/neo9/n9-mongo-client/compare/0.4.5...0.4.6) (2019-07-04)
+
+
+### mongo
+
+* Fix primitive type mapping ([a392670](https://github.com/neo9/n9-mongo-client/commit/a392670)) (Clement Petit)
+
+### stream
+
+* Add throw error if trying to project without _id ([3b4d056](https://github.com/neo9/n9-mongo-client/commit/3b4d056)) (Benjamin Daniel)
+
+
+
 ## Version [0.4.5](https://github.com/neo9/n9-mongo-client/compare/0.4.4...0.4.5) (2019-06-25)
 
+
+### release
+
+* V 0.4.5 ([9b6e655](https://github.com/neo9/n9-mongo-client/commit/9b6e655)) (Benjamin Daniel)
 
 ### types
 
