@@ -2,7 +2,7 @@ import { N9Log } from '@neo9/n9-node-log';
 import { N9Error } from '@neo9/n9-node-utils';
 import * as deepDiff from 'deep-diff';
 import * as _ from 'lodash';
-import { Collection, CollectionInsertManyOptions, Cursor, Db, FilterQuery, IndexOptions, ObjectID, ObjectId, UpdateQuery } from 'mongodb';
+import { Collection, CollectionAggregationOptions, CollectionInsertManyOptions, Cursor, Db, FilterQuery, IndexOptions, ObjectID, ObjectId, UpdateQuery, AggregationCursor } from 'mongodb';
 import { BaseMongoObject, EntityHistoric, LockField, StringMap, UpdateManyQuery } from './models';
 import { ClassType } from './models/class-type.models';
 import { MongoUtils } from './mongo-utils';
@@ -441,6 +441,17 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		}
 		const updateResult = await this.collection.updateMany(query, updateQuery);
 		return this.findWithType(query, this.type, 0, updateResult.matchedCount);
+	}
+
+	/**
+	 * Do an aggregation on mongodb, use it carefully
+	 * @param aggregateSteps: steps of the aggregation
+	 * @param options : options to send to the client
+	 */
+	public async aggregate<T = void>(aggregateSteps: object[], options?: CollectionAggregationOptions): Promise<AggregationCursor<T>> {
+		// TODO: add more specialised types for aggregateSteps, like { $match: object } ....
+		// TODO: add aggregation query builder
+		return await this.collection.aggregate(aggregateSteps, options);
 	}
 
 	public async findHistoricByEntityId(id: string, page: number = 0, size: number = 10): Promise<Cursor<EntityHistoric<U>>> {
