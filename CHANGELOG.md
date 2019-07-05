@@ -1,5 +1,14 @@
+# Version [0.5.0](https://github.com/neo9/n9-mongo-client/compare/0.4.7...0.5.0) (2019-07-05)
+
+
+
+
 ## Version [0.4.7](https://github.com/neo9/n9-mongo-client/compare/0.4.6...0.4.7) (2019-07-04)
 
+
+### release
+
+* V 0.4.7 ([27a2763](https://github.com/neo9/n9-mongo-client/commit/27a2763)) (Benjamin Daniel)
 
 ### update
 
