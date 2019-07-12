@@ -529,6 +529,12 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		return await this.collectionHistoric.countDocuments(query);
 	}
 
+	public async collectionExists(): Promise<boolean> {
+		const collectionName = this.collection.collectionName;
+		const collections = await this.db.listCollections({ name: collectionName }).toArray();
+		return collections.length === 1;
+	}
+
 	public async dropCollection(): Promise<void> {
 		await this.collection.drop();
 	}
