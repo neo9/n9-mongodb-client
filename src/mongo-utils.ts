@@ -3,12 +3,13 @@ import * as _ from 'lodash';
 import * as mongodb from 'mongodb';
 import { Db, MongoClient, ObjectID } from 'mongodb';
 import { ClassType } from './models/class-type.models';
+import { MongoClientOptions } from "mongodb";
 
 export class MongoUtils {
-	public static async connect(url: string): Promise<Db> {
+	public static async connect(url: string, options: MongoClientOptions = { useNewUrlParser: true }): Promise<Db> {
 		const log = global.log.module('mongo');
 		log.info(`Connecting to ${url}...`);
-		global.dbClient = await MongoClient.connect(url, { useNewUrlParser: true });
+		global.dbClient = await MongoClient.connect(url, options);
 		const db = (global.dbClient as MongoClient).db();
 		global.db = db;
 		log.info(`Connected`);
