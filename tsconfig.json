@@ -2,7 +2,7 @@
   "compileOnSave": true,
   "compilerOptions": {
     "module": "commonjs",
-    "target": "es6",
+    "target": "es2018",
     "outDir": "dist",
     "moduleResolution": "node",
     "skipLibCheck": true,

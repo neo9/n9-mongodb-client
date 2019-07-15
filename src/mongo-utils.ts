@@ -32,9 +32,7 @@ export class MongoUtils {
 
 	public static oids(ids: string[] | ObjectID[]): ObjectID[] | undefined {
 		if (ids) {
-			return _.map(ids, (id: string | ObjectID) => {
-				return MongoUtils.oid(id);
-			});
+			return (ids as any[]).map((id) => MongoUtils.oid(id));
 		}
 		return undefined;
 	}
