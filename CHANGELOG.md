@@ -1,9 +1,30 @@
+## Version [0.5.2](https://github.com/neo9/n9-mongo-client/compare/0.5.1...0.5.2) (2019-07-15)
+
+
+### mongo
+
+* Add collection exists method ([f32f069](https://github.com/neo9/n9-mongo-client/commit/f32f069)) (Clement Petit)
+
+### tsconfig
+
+* Fix bad identation ([4e70bec](https://github.com/neo9/n9-mongo-client/commit/4e70bec)) (Clement Petit)
+
+### utils
+
+* Allow to pass options to connect ([f80f6c6](https://github.com/neo9/n9-mongo-client/commit/f80f6c6)) (Clement Petit)
+
+
+
 ## Version [0.5.1](https://github.com/neo9/n9-mongo-client/compare/0.5.0...0.5.1) (2019-07-15)
 
 
 ### performance
 
 * Allow projections to more function and add exists ([e26c481](https://github.com/neo9/n9-mongo-client/commit/e26c481)) (Benjamin Daniel)
+
+### release
+
+* V 0.5.1 ([3947e2c](https://github.com/neo9/n9-mongo-client/commit/3947e2c)) (Benjamin Daniel)
 
 
 
