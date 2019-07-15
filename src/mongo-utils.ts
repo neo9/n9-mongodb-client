@@ -52,7 +52,7 @@ export class MongoUtils {
 	public static mapObjectToClass<T extends object, V>(cls: ClassType<T>, plain: V, options?: ClassTransformOptions): T {
 		if (!plain) return plain as any;
 
-		const newPlain = MongoUtils.mapObjectIdToStringHex(_.cloneDeep(plain));
+		const newPlain = MongoUtils.mapObjectIdToStringHex(plain);
 		return plainToClass(cls, newPlain, options) as T;
 	}
 

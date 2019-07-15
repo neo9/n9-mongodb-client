@@ -25,7 +25,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		for (const key of Object.keys(obj)) {
 			const objElement = obj[key];
 			if (compactArrays && _.isArray(objElement)) {
-				obj[key] = _.filter(objElement, (elmt) => !_.isNil(elmt));
+				obj[key] = _.filter(objElement, (elm) => !_.isNil(elm));
 			}
 			if (removeEmptyObjects && _.isObject(objElement) && !_.isArray(objElement) && _.isEmpty(objElement)) {
 				delete obj[key];
@@ -185,23 +185,40 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		return this.findWithType<any>(query, this.typeList, page, size, sort, projection);
 	}
 
-	public async findOneById(id: string): Promise<U> {
-		return this.findOneByKey(MongoUtils.oid(id), '_id');
+	public async findOneById(id: string, projection?: object): Promise<U> {
+		return this.findOneByKey(MongoUtils.oid(id), '_id', projection);
 	}
 
-	public async findOneByKey(keyValue: any, keyName: string = 'code'): Promise<U> {
+	public async findOneByKey(keyValue: any, keyName: string = 'code', projection?: object): Promise<U> {
 		const query: StringMap<any> = {
 			[MongoUtils.escapeSpecialCharacters(keyName)]: keyValue,
 		};
 
-		return await this.findOne(query);
+		return await this.findOne(query, projection);
 	}
 
-	public async findOne(query: object): Promise<U> {
-		const internalEntity = await this.collection.findOne(query);
+	public async findOne(query: object, projection?: object): Promise<U> {
+		const internalEntity = await this.collection.findOne(query, { projection });
 		if (!internalEntity) return null;
 		const entity = MongoUtils.unRemoveSpecialCharactersInKeys(internalEntity);
 		return MongoUtils.mapObjectToClass(this.type, entity);
+	}
+
+	public async existsById(id: string): Promise<boolean> {
+		return this.existsByKey(MongoUtils.oid(id), '_id');
+	}
+
+	public async existsByKey(keyValue: any, keyName: string = 'code'): Promise<boolean> {
+		const query: StringMap<any> = {
+			[MongoUtils.escapeSpecialCharacters(keyName)]: keyValue,
+		};
+
+		return await this.exists(query);
+	}
+
+	public async exists(query: object): Promise<boolean> {
+		const found = await this.collection.findOne<U>(query, { projection: { _id: 1 } });
+		return !!found;
 	}
 
 	public async findOneAndUpdateById(id: string, updateQuery: { [id: string]: object, $set?: object }, userId: string, internalCall: boolean = false): Promise<U> {
@@ -415,7 +432,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				onlyInsertFieldsKey,
 				forceEditLockFields,
 		);
-		// console.log(`-- client.ts>updateManyAtOnce updatequeries --`, JSON.stringify(updateQueries, null, 2));
+		// console.log(`-- client.ts>updateManyAtOnce updateQueries --`, JSON.stringify(updateQueries, null, 2));
 		return await this.updateMany(updateQueries, userId, upsert);
 	}
 

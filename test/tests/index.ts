@@ -42,6 +42,7 @@ test('[CRUD] Insert one and find it', async (t: Assertions) => {
 	const foundObject = await mongoClient.findOne({ field1String: 'string1' });
 	const foundObjectById = await mongoClient.findOneById(foundObject._id);
 	const foundObjectByKey = await mongoClient.findOneByKey('string1', 'field1String');
+	const existsById = await mongoClient.existsById(foundObject._id);
 
 	t.truthy(foundObject, 'found by query');
 	t.is(sizeWithElementIn, 1, 'nb element in collection');
@@ -50,6 +51,7 @@ test('[CRUD] Insert one and find it', async (t: Assertions) => {
 	t.is(foundObject._id.constructor, String, 'ID is a string and not ObjectID');
 	t.truthy(foundObjectById, 'found by ID');
 	t.truthy(foundObjectByKey, 'found by key');
+	t.true(existsById, 'exists by ID');
 
 	await mongoClient.dropCollection();
 });
