@@ -1,9 +1,22 @@
+# Version [0.6.0](https://github.com/neo9/n9-mongo-client/compare/0.5.2...0.6.0) (2019-07-15)
+
+
+### perf
+
+* Improve performance and transpile to ES2018 ([60bb383](https://github.com/neo9/n9-mongo-client/commit/60bb383)) (Benjamin Daniel)
+
+
+
 ## Version [0.5.2](https://github.com/neo9/n9-mongo-client/compare/0.5.1...0.5.2) (2019-07-15)
 
 
 ### mongo
 
 * Add collection exists method ([f32f069](https://github.com/neo9/n9-mongo-client/commit/f32f069)) (Clement Petit)
+
+### release
+
+* V 0.5.2 ([62a97a8](https://github.com/neo9/n9-mongo-client/commit/62a97a8)) (Benjamin Daniel)
 
 ### tsconfig
 
