@@ -1,5 +1,18 @@
+## Version [0.5.1](https://github.com/neo9/n9-mongo-client/compare/0.5.0...0.5.1) (2019-07-15)
+
+
+### performance
+
+* Allow projections to more function and add exists ([e26c481](https://github.com/neo9/n9-mongo-client/commit/e26c481)) (Benjamin Daniel)
+
+
+
 # Version [0.5.0](https://github.com/neo9/n9-mongo-client/compare/0.4.7...0.5.0) (2019-07-05)
 
+
+### release
+
+* V 0.5.0 ([b1e7676](https://github.com/neo9/n9-mongo-client/commit/b1e7676)) (Benjamin Daniel)
 
 
 
