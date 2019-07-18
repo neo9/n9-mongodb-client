@@ -1,9 +1,22 @@
+## Version [0.6.1](https://github.com/neo9/n9-mongo-client/compare/0.6.0...0.6.1) (2019-07-18)
+
+
+### perf
+
+* Add options to not return inserted or updated value ([b3c30a7](https://github.com/neo9/n9-mongo-client/commit/b3c30a7)) (Benjamin Daniel)
+
+
+
 # Version [0.6.0](https://github.com/neo9/n9-mongo-client/compare/0.5.2...0.6.0) (2019-07-15)
 
 
 ### perf
 
 * Improve performance and transpile to ES2018 ([60bb383](https://github.com/neo9/n9-mongo-client/commit/60bb383)) (Benjamin Daniel)
+
+### release
+
+* V 0.6.0 ([20674b1](https://github.com/neo9/n9-mongo-client/commit/20674b1)) (Benjamin Daniel)
 
 
 
