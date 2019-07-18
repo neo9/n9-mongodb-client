@@ -110,7 +110,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		await this.createHistoricIndex(fieldOrSpec, { unique: true });
 	}
 
-	public async insertOne(newEntity: U, userId: string, lockFields: boolean = true): Promise<U> {
+	public async insertOne(newEntity: U, userId: string, lockFields: boolean = true, returnNewValue: boolean = true): Promise<U> {
 		if (!newEntity) return newEntity;
 		const date = new Date();
 		newEntity.objectInfos = {
@@ -130,7 +130,8 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 
 		newEntityWithoutForbiddenCharacters = MongoClient.removeEmptyDeep(newEntityWithoutForbiddenCharacters);
 		await this.collection.insertOne(newEntityWithoutForbiddenCharacters);
-		return MongoUtils.mapObjectToClass(this.type, MongoUtils.unRemoveSpecialCharactersInKeys(newEntityWithoutForbiddenCharacters));
+		if (returnNewValue) return MongoUtils.mapObjectToClass(this.type, MongoUtils.unRemoveSpecialCharactersInKeys(newEntityWithoutForbiddenCharacters));
+		else return;
 	}
 
 	public async count(query: object = {}): Promise<number> {
@@ -430,6 +431,10 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		const entity = await this.findOne(query);
 		await this.collection.deleteOne(query);
 		return entity;
+	}
+
+	public async deleteMany(query: object): Promise<void> {
+		await this.collection.deleteMany(query);
 	}
 
 	public async updateManyAtOnce(
