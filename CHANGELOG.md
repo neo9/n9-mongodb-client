@@ -1,9 +1,22 @@
+## Version [0.6.2](https://github.com/neo9/n9-mongo-client/compare/0.6.1...0.6.2) (2019-07-18)
+
+
+### yarn
+
+* Upgrade dependencies to fix security issues ([ff1c309](https://github.com/neo9/n9-mongo-client/commit/ff1c309)) (Benjamin Daniel)
+
+
+
 ## Version [0.6.1](https://github.com/neo9/n9-mongo-client/compare/0.6.0...0.6.1) (2019-07-18)
 
 
 ### perf
 
 * Add options to not return inserted or updated value ([b3c30a7](https://github.com/neo9/n9-mongo-client/commit/b3c30a7)) (Benjamin Daniel)
+
+### release
+
+* V 0.6.1 ([83f7bd0](https://github.com/neo9/n9-mongo-client/commit/83f7bd0)) (Benjamin Daniel)
 
 
 
