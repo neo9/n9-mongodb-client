@@ -1,5 +1,18 @@
+## Version [0.6.4](https://github.com/neo9/n9-mongo-client/compare/0.6.3...0.6.4) (2019-07-18)
+
+
+### delete
+
+* Add delete many function ([aced93b](https://github.com/neo9/n9-mongo-client/commit/aced93b)) (Benjamin Daniel)
+
+
+
 ## Version [0.6.3](https://github.com/neo9/n9-mongo-client/compare/0.6.2...0.6.3) (2019-07-18)
 
+
+### release
+
+* V 0.6.3 ([d978254](https://github.com/neo9/n9-mongo-client/commit/d978254)) (Benjamin Daniel)
 
 ### yarn
 
