@@ -137,7 +137,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		return await this.collection.countDocuments(query);
 	}
 
-	public async insertMany(newEntities: U[], userId: string, options?: CollectionInsertManyOptions): Promise<U[]> {
+	public async insertMany(newEntities: U[], userId: string, options?: CollectionInsertManyOptions, returnNewValue: boolean = true): Promise<U[]> {
 		if (_.isEmpty(newEntities)) return;
 
 		const entitiesToInsert = newEntities.map((newEntity) => {
@@ -151,7 +151,11 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		});
 
 		const insertResult = await this.collection.insertMany(entitiesToInsert, options);
-		return (insertResult.ops || []).map((newEntity) => MongoUtils.mapObjectToClass(this.type, MongoUtils.unRemoveSpecialCharactersInKeys(newEntity)));
+		if (returnNewValue) {
+			return (insertResult.ops || []).map((newEntity) => MongoUtils.mapObjectToClass(this.type, MongoUtils.unRemoveSpecialCharactersInKeys(newEntity)));
+		} else {
+			return;
+		}
 	}
 
 	public async findWithType<T extends Partial<U | L>>(
@@ -221,24 +225,36 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		return !!found;
 	}
 
-	public async findOneAndUpdateById(id: string, updateQuery: { [id: string]: object, $set?: object }, userId: string, internalCall: boolean = false): Promise<U> {
+	public async findOneAndUpdateById(id: string, updateQuery: { [id: string]: object, $set?: object }, userId: string, internalCall: boolean = false, returnNewValue: boolean = true): Promise<U> {
 		const query: StringMap<any> = {
 			_id: MongoUtils.oid(id),
 		};
-		return await this.findOneAndUpdate(query, updateQuery, userId, internalCall);
+		return await this.findOneAndUpdate(query, updateQuery, userId, internalCall, false, returnNewValue);
 	}
 
-	public async findOneAndUpdateByKey(keyValue: any, updateQuery: { [id: string]: object, $set?: object }, userId: string, keyName: string = 'code', internalCall: boolean = false): Promise<U> {
+	public async findOneAndUpdateByKey(
+			keyValue: any,
+			updateQuery: { [id: string]: object, $set?: object },
+			userId: string,
+			keyName: string = 'code',
+			internalCall: boolean = false,
+			returnNewValue: boolean = true): Promise<U> {
 		const query: StringMap<any> = {
 			[MongoUtils.escapeSpecialCharacters(keyName)]: keyValue,
 		};
-		return await this.findOneAndUpdate(query, updateQuery, userId, internalCall);
+		return await this.findOneAndUpdate(query, updateQuery, userId, internalCall, false, returnNewValue);
 	}
 
 	/**
 	 * To upsert you should use findOneAndUpsert
 	 */
-	public async findOneAndUpdate(query: FilterQuery<U>, updateQuery: { [id: string]: object, $set?: object }, userId: string, internalCall: boolean = false, upsert: boolean = false): Promise<U> {
+	public async findOneAndUpdate(
+			query: FilterQuery<U>,
+			updateQuery: { [id: string]: object, $set?: object, $unset?: object },
+			userId: string,
+			internalCall: boolean = false,
+			upsert: boolean = false,
+			returnNewValue: boolean = true): Promise<U> {
 		if (!internalCall) {
 			this.ifHasLockFieldsThrow();
 		}
@@ -272,8 +288,10 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			saveOldValue = await this.findOne(query);
 		}
 
-		let newEntity = (await this.collection.findOneAndUpdate(query, updateQuery, { returnOriginal: false, upsert })).value as U;
-		newEntity = MongoUtils.mapObjectToClass(this.type, MongoUtils.unRemoveSpecialCharactersInKeys(newEntity));
+		let newEntity = (await this.collection.findOneAndUpdate(query, updateQuery, { returnOriginal: !returnNewValue, upsert })).value as U;
+		if (returnNewValue || this.conf.keepHistoric) {
+			newEntity = MongoUtils.mapObjectToClass(this.type, MongoUtils.unRemoveSpecialCharactersInKeys(newEntity));
+		}
 
 		if (this.conf.keepHistoric) {
 			const diffs = deepDiff.diff(saveOldValue, newEntity, (path: string[], key: string) => {
@@ -291,12 +309,13 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			}
 		}
 
-		return newEntity;
+		if (returnNewValue) return newEntity;
+		else return;
 	}
 
 	// wrapper around findOneAndUpdate
-	public async findOneAndUpsert(query: FilterQuery<U>, updateQuery: { [id: string]: object, $set?: object }, userId: string, internalCall: boolean = false): Promise<U> {
-		return this.findOneAndUpdate(query, updateQuery, userId, internalCall, true);
+	public async findOneAndUpsert(query: FilterQuery<U>, updateQuery: { [id: string]: object, $set?: object }, userId: string, internalCall: boolean = false, returnNewValue: boolean = true): Promise<U> {
+		return this.findOneAndUpdate(query, updateQuery, userId, internalCall, true, returnNewValue);
 	}
 
 	public async findOneByIdAndRemoveLock(id: string, lockFieldPath: string, userId: string): Promise<U> {
@@ -324,7 +343,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 					path: lockFieldPath,
 				},
 			},
-		}, userId, true);
+		}, userId, true, false, true);
 	}
 
 	public async findOneAndUpdateByIdWithLocks(id: string, newEntity: Partial<U>, userId: string, lockNewFields: boolean = true, forceEditLockFields: boolean = false): Promise<U> {
