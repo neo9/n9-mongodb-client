@@ -3,7 +3,7 @@ import * as _ from 'lodash';
 import * as mongodb from 'mongodb';
 import { Db, MongoClient, ObjectID } from 'mongodb';
 import { ClassType } from './models/class-type.models';
-import { MongoClientOptions } from "mongodb";
+import { MongoClientOptions } from 'mongodb';
 
 export class MongoUtils {
 	public static async connect(url: string, options: MongoClientOptions = { useNewUrlParser: true }): Promise<Db> {
@@ -88,6 +88,8 @@ export class MongoUtils {
 	}
 
 	public static escapeSpecialCharacters(key: string): string {
+		if (!key.includes('.') && !key.includes('$')) return key;
+
 		return key
 				.replace(/\$/g, '\\u0024')
 				.replace(/\./g, '\\u002e');
