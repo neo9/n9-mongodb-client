@@ -2,11 +2,11 @@ import { N9Log } from '@neo9/n9-node-log';
 import { N9Error } from '@neo9/n9-node-utils';
 import * as deepDiff from 'deep-diff';
 import * as _ from 'lodash';
-import { Collection, CollectionAggregationOptions, CollectionInsertManyOptions, Cursor, Db, FilterQuery, IndexOptions, ObjectID, ObjectId, UpdateQuery, AggregationCursor } from 'mongodb';
+import { AggregationCursor, Collection, CollectionAggregationOptions, CollectionInsertManyOptions, Cursor, Db, FilterQuery, IndexOptions, ObjectID, ObjectId, UpdateQuery } from 'mongodb';
 import { BaseMongoObject, EntityHistoric, LockField, StringMap, UpdateManyQuery } from './models';
 import { ClassType } from './models/class-type.models';
-import { MongoUtils } from './mongo-utils';
 import { MongoReadStream } from './mongo-read-stream';
+import { MongoUtils } from './mongo-utils';
 
 export interface MongoClientConfiguration {
 	keepHistoric?: boolean;
@@ -446,6 +446,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			mapFunction?: (entity: Partial<U>, existingEntity?: U) => Promise<Partial<U>>,
 			onlyInsertFieldsKey?: string[],
 			forceEditLockFields: boolean = false,
+			unsetUndefined: boolean = true
 	): Promise<Cursor<U>> {
 		const updateQueries = await this.buildUpdatesQueries(
 				entities,
@@ -455,6 +456,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				mapFunction,
 				onlyInsertFieldsKey,
 				forceEditLockFields,
+				unsetUndefined
 		);
 		// console.log(`-- client.ts>updateManyAtOnce updateQueries --`, JSON.stringify(updateQueries, null, 2));
 		return await this.updateMany(updateQueries, userId, upsert);
@@ -571,6 +573,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			mapFunction?: (entity: Partial<U>, existingEntity?: U) => Promise<Partial<U>>,
 			onlyInsertFieldsKey?: string[],
 			forceEditLockFields?: boolean,
+			unsetUndefined?: boolean
 	): Promise<UpdateManyQuery[]> {
 		const updates: UpdateManyQuery[] = [];
 		for (let entity of entities) {
@@ -624,14 +627,16 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				}
 
 				// Unset only level 1, other are override by $set on objects
-				const toUnset: object = _.omit(currentValue, [..._.keys(entity), '_id', 'objectInfos']);
 				let unsetQuery;
-				if (!_.isEmpty(toUnset)) {
-					unsetQuery = {
-						$unset: {
-							..._.mapValues(toUnset, () => false),
-						},
-					};
+				if (unsetUndefined) {
+					const toUnset: object = _.omit(currentValue, [..._.keys(entity), '_id', 'objectInfos']);
+					if (!_.isEmpty(toUnset)) {
+						unsetQuery = {
+							$unset: {
+								..._.mapValues(toUnset, () => false),
+							},
+						};
+					}
 				}
 
 				const update = {
