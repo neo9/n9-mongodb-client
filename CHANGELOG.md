@@ -1,9 +1,22 @@
+## Version [0.6.5](https://github.com/neo9/n9-mongo-client/compare/0.6.4...0.6.5) (2019-07-22)
+
+
+### update
+
+* Add options to not unset data on update many at once ([c60b555](https://github.com/neo9/n9-mongo-client/commit/c60b555)) (Benjamin Daniel)
+
+
+
 ## Version [0.6.4](https://github.com/neo9/n9-mongo-client/compare/0.6.3...0.6.4) (2019-07-18)
 
 
 ### delete
 
 * Add delete many function ([aced93b](https://github.com/neo9/n9-mongo-client/commit/aced93b)) (Benjamin Daniel)
+
+### release
+
+* V 0.6.4 ([d2a89a7](https://github.com/neo9/n9-mongo-client/commit/d2a89a7)) (Benjamin Daniel)
 
 
 
