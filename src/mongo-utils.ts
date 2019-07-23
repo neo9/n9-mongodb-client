@@ -102,9 +102,9 @@ export class MongoUtils {
 	}
 
 	public static hidePasswordFromURI(uri: string): string {
-		const regex = /(?<=:)([^@:]+)(?=@[^@]+$)/;
-
 		if (!uri) return '';
+
+		const regex = /(?<=:)([^@:]+)(?=@[^@]+$)/;
 
 		return uri.replace(regex, '********');
 	}
