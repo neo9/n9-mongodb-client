@@ -8,7 +8,7 @@ import { MongoClientOptions } from 'mongodb';
 export class MongoUtils {
 	public static async connect(url: string, options: MongoClientOptions = { useNewUrlParser: true }): Promise<Db> {
 		const log = global.log.module('mongo');
-		log.info(`Connecting to ${url}...`);
+		log.info(`Connecting to ${MongoUtils.hidePasswordFromURI(url)}...`);
 		global.dbClient = await MongoClient.connect(url, options);
 		const db = (global.dbClient as MongoClient).db();
 		global.db = db;
@@ -20,7 +20,7 @@ export class MongoUtils {
 		if (!global.dbClient) return;
 
 		const log = global.log.module('mongo');
-		log.info(`Diconnect from MongoDB.`);
+		log.info(`Disconnect from MongoDB.`);
 		await new Promise((resolve) => {
 			(global.dbClient as mongodb.MongoClient).logout(resolve);
 		});
@@ -99,5 +99,13 @@ export class MongoUtils {
 		return key
 				.replace(/\\u0024/g, '$')
 				.replace(/\\u002e/g, '.');
+	}
+
+	public static hidePasswordFromURI(uri: string): string {
+		const regex = /(?<=:)([^@:]+)(?=@[^@]+$)/;
+
+		if (!uri) return '';
+
+		return uri.replace(regex, '********');
 	}
 }
