@@ -1,5 +1,20 @@
+# Version [0.7.0](https://github.com/neo9/n9-mongo-client/compare/0.6.5...0.7.0) (2019-07-25)
+
+
+### mongo
+
+* Add mongo uri with password test ([d509d28](https://github.com/neo9/n9-mongo-client/commit/d509d28)) (Maxime Fradin)
+* Create regex only if uri exist ([671488b](https://github.com/neo9/n9-mongo-client/commit/671488b)) (Maxime Fradin)
+* Hide password in mongo URI ([f9150d8](https://github.com/neo9/n9-mongo-client/commit/f9150d8)) (Maxime Fradin)
+
+
+
 ## Version [0.6.5](https://github.com/neo9/n9-mongo-client/compare/0.6.4...0.6.5) (2019-07-22)
 
+
+### release
+
+* V 0.6.5 ([59edc2b](https://github.com/neo9/n9-mongo-client/commit/59edc2b)) (Benjamin Daniel)
 
 ### update
 
