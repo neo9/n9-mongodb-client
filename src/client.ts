@@ -2,7 +2,10 @@ import { N9Log } from '@neo9/n9-node-log';
 import { N9Error } from '@neo9/n9-node-utils';
 import * as deepDiff from 'deep-diff';
 import * as _ from 'lodash';
-import { AggregationCursor, Collection, CollectionAggregationOptions, CollectionInsertManyOptions, Cursor, Db, FilterQuery, IndexOptions, ObjectID, ObjectId, UpdateQuery } from 'mongodb';
+import {
+	AggregationCursor, CollationDocument, Collection, CollectionAggregationOptions,
+	CollectionInsertManyOptions, Cursor, Db, FilterQuery, IndexOptions, ObjectID, ObjectId, UpdateQuery,
+} from 'mongodb';
 import { BaseMongoObject, EntityHistoric, LockField, StringMap, UpdateManyQuery } from './models';
 import { ClassType } from './models/class-type.models';
 import { MongoReadStream } from './mongo-read-stream';
@@ -166,8 +169,15 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			size: number = 10,
 			sort: object = {},
 			projection: object = {},
+			collation?: CollationDocument,
 	): Promise<Cursor<T>> {
-		return this.collection.find<T>(query)
+		let findCursor: Cursor<T> = this.collection.find<T>(query);
+
+		if (collation) {
+			findCursor = findCursor.collation(collation);
+		}
+
+		return findCursor
 				.sort(sort)
 				.skip(page * size)
 				.limit(size)
@@ -176,6 +186,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 					const b = MongoUtils.unRemoveSpecialCharactersInKeys(a);
 					return MongoUtils.mapObjectToClass(type, b);
 				});
+
 	}
 
 	public stream<T extends Partial<U | L>>(query: object, pageSize: number, projection: object = {}): MongoReadStream<Partial<U>, Partial<L>> {
@@ -186,8 +197,8 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		return new MongoReadStream<U, L>(this, query, pageSize, projection, type);
 	}
 
-	public async find(query: object, page: number = 0, size: number = 10, sort: object = {}, projection: object = {}): Promise<Cursor<L>> {
-		return this.findWithType<any>(query, this.typeList, page, size, sort, projection);
+	public async find(query: object, page: number = 0, size: number = 10, sort: object = {}, projection: object = {}, collation?: CollationDocument): Promise<Cursor<L>> {
+		return this.findWithType<any>(query, this.typeList, page, size, sort, projection, collation);
 	}
 
 	public async findOneById(id: string, projection?: object): Promise<U> {
