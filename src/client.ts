@@ -186,7 +186,6 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 					const b = MongoUtils.unRemoveSpecialCharactersInKeys(a);
 					return MongoUtils.mapObjectToClass(type, b);
 				});
-
 	}
 
 	public stream<T extends Partial<U | L>>(query: object, pageSize: number, projection: object = {}): MongoReadStream<Partial<U>, Partial<L>> {
