@@ -1,3 +1,24 @@
+# Version [0.8.0](https://github.com/neo9/n9-mongo-client/compare/0.7.0...0.8.0) (2019-09-03)
+
+
+### find
+
+* Add collations parameters ([54b617d](https://github.com/neo9/n9-mongo-client/commit/54b617d)) (Cédric Ribeiro)
+
+### lint
+
+* Removed empty line ([77b044d](https://github.com/neo9/n9-mongo-client/commit/77b044d)) (Cédric Ribeiro)
+
+### locks
+
+* Add n9MongoLock to get distributed locks using MongoDB ([879da8e](https://github.com/neo9/n9-mongo-client/commit/879da8e)) (Benjamin Daniel)
+
+### yarn
+
+* Upgrade dependencies to fix security alerts ([bc17200](https://github.com/neo9/n9-mongo-client/commit/bc17200)) (Benjamin Daniel)
+
+
+
 # Version [0.7.0](https://github.com/neo9/n9-mongo-client/compare/0.6.5...0.7.0) (2019-07-25)
 
 
@@ -6,6 +27,10 @@
 * Add mongo uri with password test ([d509d28](https://github.com/neo9/n9-mongo-client/commit/d509d28)) (Maxime Fradin)
 * Create regex only if uri exist ([671488b](https://github.com/neo9/n9-mongo-client/commit/671488b)) (Maxime Fradin)
 * Hide password in mongo URI ([f9150d8](https://github.com/neo9/n9-mongo-client/commit/f9150d8)) (Maxime Fradin)
+
+### release
+
+* V 0.7.0 ([8506dcf](https://github.com/neo9/n9-mongo-client/commit/8506dcf)) (Benjamin Daniel)
 
 
 
