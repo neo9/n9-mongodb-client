@@ -55,6 +55,7 @@
     "deep-diff": "^1.0.2",
     "lodash": "^4.17.14",
     "mongodb": "^3.1.10",
+    "mongodb-lock": "^1.0.1",
     "release-it": "7.4.8"
   },
   "devDependencies": {
