@@ -95,6 +95,13 @@ export class MongoReadStream<U extends BaseMongoObject, L extends BaseMongoObjec
 		});
 	}
 
+	/**
+	 * Alias to foreach
+	 */
+	public async forEachAsync(consumerFn: ItemConsumer<Partial<U | L>>): Promise<void> {
+		return await this.forEach(consumerFn);
+	}
+
 	public async _read(size: number): Promise<void> {
 		if (!(this.cursor && await this.cursor.hasNext())) {
 			if (this.lastId) {
