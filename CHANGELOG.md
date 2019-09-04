@@ -1,3 +1,12 @@
+## Version [0.8.1](https://github.com/neo9/n9-mongo-client/compare/0.8.0...0.8.1) (2019-09-04)
+
+
+### stream
+
+* Add forEachAsync alias to forEach ([2758683](https://github.com/neo9/n9-mongo-client/commit/2758683)) (Benjamin Daniel)
+
+
+
 # Version [0.8.0](https://github.com/neo9/n9-mongo-client/compare/0.7.0...0.8.0) (2019-09-03)
 
 
@@ -12,6 +21,10 @@
 ### locks
 
 * Add n9MongoLock to get distributed locks using MongoDB ([879da8e](https://github.com/neo9/n9-mongo-client/commit/879da8e)) (Benjamin Daniel)
+
+### release
+
+* V 0.8.0 ([c0ea0a8](https://github.com/neo9/n9-mongo-client/commit/c0ea0a8)) (Benjamin Daniel)
 
 ### yarn
 
