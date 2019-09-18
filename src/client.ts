@@ -101,6 +101,10 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		await this.createIndex(fieldOrSpec, { ...options, unique: true });
 	}
 
+	public async createExpirationIndex(ttlInDays: number, options?: IndexOptions): Promise<void> {
+		await this.ensureExpirationIndex(this.collection, ttlInDays, options);
+	}
+
 	public async initHistoricIndexes(): Promise<void> {
 		await this.createHistoricIndex('entityId');
 	}
@@ -111,6 +115,10 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 
 	public async createHistoricUniqueIndex(fieldOrSpec: string | any = 'code'): Promise<void> {
 		await this.createHistoricIndex(fieldOrSpec, { unique: true });
+	}
+
+	public async createHistoricExpirationIndex(ttlInDays: number, options?: IndexOptions): Promise<void> {
+		await this.ensureExpirationIndex(this.collectionHistoric, ttlInDays, options);
 	}
 
 	public async insertOne(newEntity: U, userId: string, lockFields: boolean = true, returnNewValue: boolean = true): Promise<U> {
@@ -573,6 +581,10 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 
 	public async dropCollection(): Promise<void> {
 		await this.collection.drop();
+	}
+
+	public async dropHistory(): Promise<void> {
+		await this.collectionHistoric.drop();
 	}
 
 	private async buildUpdatesQueries(
@@ -1110,5 +1122,21 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			}
 		}
 		return ret;
+	}
+
+	private async ensureExpirationIndex(collection: Collection, ttlInDays: number, options: IndexOptions = {}): Promise<void> {
+		options.expireAfterSeconds = ttlInDays * 24 * 3600;
+		options.name = options.name || 'n9MongoClient_expiration';
+		try {
+			await collection.createIndex('objectInfos.creation.date', options);
+		} catch (e) {
+			// error 85 means the index already exists with different parameters
+			if (e.code === 85) {
+				await collection.dropIndex(options.name);
+				await collection.createIndex('objectInfos.creation.date', options);
+			} else {
+				throw e;
+			}
+		}
 	}
 }
