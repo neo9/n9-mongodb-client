@@ -1,5 +1,18 @@
+## Version [0.8.2](https://github.com/neo9/n9-mongo-client/compare/0.8.1...0.8.2) (2019-09-19)
+
+
+### client
+
+* Add createExpirationIndex and createHistoricExpirationIndex methods ([5d0a01c](https://github.com/neo9/n9-mongo-client/commit/5d0a01c)) (Clement Petit)
+
+
+
 ## Version [0.8.1](https://github.com/neo9/n9-mongo-client/compare/0.8.0...0.8.1) (2019-09-04)
 
+
+### release
+
+* V 0.8.1 ([a268960](https://github.com/neo9/n9-mongo-client/commit/a268960)) (Benjamin Daniel)
 
 ### stream
 
