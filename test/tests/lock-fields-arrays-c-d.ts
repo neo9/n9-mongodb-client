@@ -56,7 +56,11 @@ test('[LOCK-FIELDS-ARRAY C] Import twice should remove element', async (t: Asser
 	const mongoClient = generateMongoClient();
 
 	// Simulate import
-	const resultImport1: SampleEntityWithArray[] = await (await mongoClient.updateManyAtOnce([vC], 'externalUser', true, false, 'code')).toArray();
+	const resultImport1: SampleEntityWithArray[] = await (await mongoClient.updateManyAtOnce([vC], 'externalUser', {
+		upsert: true,
+		lockNewFields: false,
+		query: 'code',
+	})).toArray();
 	t.is(resultImport1[0].objectInfos.lockFields, undefined, '[resultImport1] Has no lock fields');
 	t.deepEqual(_.map(resultImport1[0].parameters.items, 'code'), ['a', 'b', 'c'], '[resultImport1] All values saved');
 
@@ -65,7 +69,11 @@ test('[LOCK-FIELDS-ARRAY C] Import twice should remove element', async (t: Asser
 	vCp.parameters.items = [a, b];
 
 	// Simulate import
-	const resultImport2: SampleEntityWithArray[] = await (await mongoClient.updateManyAtOnce([vCp], 'externalUser', true, false, 'code')).toArray();
+	const resultImport2: SampleEntityWithArray[] = await (await mongoClient.updateManyAtOnce([vCp], 'externalUser', {
+		upsert: true,
+		lockNewFields: false,
+		query: 'code',
+	})).toArray();
 	t.is(resultImport2[0].objectInfos.lockFields, undefined, '[resultImport2] Has no lock fields');
 	t.deepEqual(_.map(resultImport2[0].parameters.items, 'code'), ['a', 'b'], '[resultImport2] All values saved');
 });
@@ -96,7 +104,11 @@ test('[LOCK-FIELDS-ARRAY D] Lock fields order should be keept', async (t: Assert
 	vDp.parameters.items = _.cloneDeep([c, a, b, d]);
 
 	// Simulate import
-	const resultImport1: SampleEntityWithArray[] = await (await mongoClient.updateManyAtOnce([vDp], 'externalUser', true, false, 'code')).toArray();
+	const resultImport1: SampleEntityWithArray[] = await (await mongoClient.updateManyAtOnce([vDp], 'externalUser', {
+		upsert: true,
+		lockNewFields: false,
+		query: 'code',
+	})).toArray();
 	t.truthy(entityCreated.objectInfos.lockFields, '[resultImport1] Has lock fields');
 	t.deepEqual(_.map(resultImport1[0].parameters.items, 'code'), ['a', 'b', 'c', 'd'], '[resultImport1] Order respected');
 });

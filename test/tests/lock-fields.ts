@@ -261,7 +261,7 @@ test('[LOCK-FIELDS] Update many with locks', async (t: Assertions) => {
 		},
 	}];
 
-	await mongoClient.updateManyAtOnce(newValues, 'userId', false, true, 'text');
+	await mongoClient.updateManyAtOnce(newValues, 'userId', { query: 'text', });
 	const listing: Partial<SampleComplexType>[] = await (await mongoClient.find({}, 0, 0)).toArray();
 
 	t.is(listing.length, 2, 'found 2 elements');
@@ -376,7 +376,11 @@ test('[LOCK-FIELDS] Insert&update boolean', async (t: Assertions) => {
 		keepHistoric: true,
 	});
 
-	const attributesCreated: AttributeEntity[] = await (await mongoClient.updateManyAtOnce([attribute], 'userId1', true, false, 'code')).toArray();
+	const attributesCreated: AttributeEntity[] = await (await mongoClient.updateManyAtOnce([attribute], 'userId1', {
+		upsert: true,
+		lockNewFields: false,
+		query: 'code',
+	})).toArray();
 
 	const newAttributeValue = _.cloneDeep(attribute);
 	newAttributeValue.isEditable = !newAttributeValue.isEditable;
@@ -430,7 +434,11 @@ test('[LOCK-FIELDS] Insert&update array sub object element', async (t: Assertion
 		keepHistoric: true,
 	});
 
-	const attributesCreated: AttributeEntity[] = await (await mongoClient.updateManyAtOnce([attribute], 'userId1', true, false, 'code')).toArray();
+	const attributesCreated: AttributeEntity[] = await (await mongoClient.updateManyAtOnce([attribute], 'userId1', {
+		upsert: true,
+		lockNewFields: false,
+		query: 'code',
+	})).toArray();
 
 	const newAttributeValue = _.cloneDeep(attribute);
 	newAttributeValue.parameters.items[1].label['fr-FR'] = 'Autres tailles';
@@ -544,7 +552,11 @@ test('[LOCK-FIELDS] Insert&update attribute', async (t: Assertions) => {
 		keepHistoric: true,
 	});
 
-	const attributesCreated: AttributeEntity[] = await (await mongoClient.updateManyAtOnce([attribute], 'userId1', true, false, 'code')).toArray();
+	const attributesCreated: AttributeEntity[] = await (await mongoClient.updateManyAtOnce([attribute], 'userId1', {
+		upsert: true,
+		lockNewFields: false,
+		query: 'code',
+	})).toArray();
 	const attributeCreated = await mongoClient.findOneByKey(attribute.code);
 
 	t.deepEqual(attributesCreated[0], attributeCreated, `update many at once return new data`);

@@ -10,6 +10,7 @@ import { BaseMongoObject, EntityHistoric, LockField, StringMap, UpdateManyQuery 
 import { ClassType } from './models/class-type.models';
 import { MongoReadStream } from './mongo-read-stream';
 import { MongoUtils } from './mongo-utils';
+import { UpdateManyAtOnceOptions } from './models/update-many-at-once-options.models';
 
 export interface MongoClientConfiguration {
 	keepHistoric?: boolean;
@@ -455,29 +456,29 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		await this.collection.deleteMany(query);
 	}
 
+	/**
+	 * Update multiple entities in one update. The update will be performed through a bulkWrite.
+	 *
+	 * @param entities list of entities to update
+	 * @param userId id of the user that is performing the operation. Will be stored in objectInfos.
+	 * @param options see UpdateManyAtOnceOptions for more details
+	 */
 	public async updateManyAtOnce(
 			entities: Partial<U>[],
 			userId: string,
-			upsert: boolean = false,
-			lockNewFields: boolean = true,
-			query?: string | StringMap<(keyValue: any, entity: Partial<U>, key: string) => any>,
-			mapFunction?: (entity: Partial<U>, existingEntity?: U) => Promise<Partial<U>>,
-			onlyInsertFieldsKey?: string[],
-			forceEditLockFields: boolean = false,
-			unsetUndefined: boolean = true
+			options: UpdateManyAtOnceOptions<U> = {}
 	): Promise<Cursor<U>> {
+		options.upsert = _.isBoolean(options.upsert) ? options.upsert : false;
+		options.lockNewFields = _.isBoolean(options.lockNewFields) ? options.lockNewFields : true;
+		options.forceEditLockFields = _.isBoolean(options.forceEditLockFields) ? options.forceEditLockFields : false;
+		options.unsetUndefined = _.isBoolean(options.unsetUndefined) ? options.unsetUndefined : true;
 		const updateQueries = await this.buildUpdatesQueries(
 				entities,
 				userId,
-				lockNewFields,
-				query,
-				mapFunction,
-				onlyInsertFieldsKey,
-				forceEditLockFields,
-				unsetUndefined
+				options
 		);
 		// console.log(`-- client.ts>updateManyAtOnce updateQueries --`, JSON.stringify(updateQueries, null, 2));
-		return await this.updateMany(updateQueries, userId, upsert);
+		return await this.updateMany(updateQueries, userId, options.upsert);
 	}
 
 	public async updateManyToSameValue(query: FilterQuery<U>, updateQuery: UpdateQuery<U>, userId: string): Promise<Cursor<U>> {
@@ -590,31 +591,26 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 	private async buildUpdatesQueries(
 			entities: Partial<U>[],
 			userId: string,
-			lockNewFields: boolean,
-			query?: string | StringMap<(keyValue: any, entity: Partial<U>, key: string) => any>,
-			mapFunction?: (entity: Partial<U>, existingEntity?: U) => Promise<Partial<U>>,
-			onlyInsertFieldsKey?: string[],
-			forceEditLockFields?: boolean,
-			unsetUndefined?: boolean
+			options: UpdateManyAtOnceOptions<U>
 	): Promise<UpdateManyQuery[]> {
 		const updates: UpdateManyQuery[] = [];
 		for (let entity of entities) {
 			let currentValue: U;
-			if (query) {
-				if (_.isString(query)) {
-					currentValue = await this.findOneByKey(_.get(entity, query), query);
+			if (options.query) {
+				if (_.isString(options.query)) {
+					currentValue = await this.findOneByKey(_.get(entity, options.query), options.query);
 				} else {
-					currentValue = await this.findOne(_.mapValues(query, (val, key) => val && val.call(null, _.get(entity, key), entity, key)));
+					currentValue = await this.findOne(options.query.call(null, entity));
 				}
 			}
 			if (currentValue) {
-				if (!!mapFunction) {
-					entity = await mapFunction(entity, currentValue);
+				if (!!options.mapFunction) {
+					entity = await options.mapFunction(entity, currentValue);
 				}
 				MongoClient.removeEmptyDeep(entity, false, false, true);
 
 				if (this.conf.lockFields) {
-					if (!forceEditLockFields) {
+					if (!options.forceEditLockFields) {
 						entity = this.pruneEntityWithLockFields(entity, currentValue.objectInfos.lockFields);
 						const newEntityMerged = this.mergeOldEntityWithNewOne(entity, currentValue, '', currentValue.objectInfos.lockFields);
 						// console.log(`--  newEntityMerged --`, JSON.stringify(newEntityMerged, null, 2));
@@ -625,7 +621,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 						// TODO : add function parameter to allow validation here
 					}
 
-					if (lockNewFields) {
+					if (options.lockNewFields) {
 						const lockFields = currentValue.objectInfos.lockFields || [];
 						const newLockFields = this.getAllLockFieldsFromEntity(entity, new Date(), userId, currentValue);
 
@@ -636,8 +632,8 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 					}
 				}
 
-				const toSet = _.omit(entity, onlyInsertFieldsKey);
-				const toSetOnInsert = _.pick(entity, onlyInsertFieldsKey);
+				const toSet = _.omit(entity, options.onlyInsertFieldsKey);
+				const toSetOnInsert = _.pick(entity, options.onlyInsertFieldsKey);
 
 				let setOnInsert;
 				if (!_.isEmpty(toSetOnInsert)) {
@@ -650,7 +646,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 
 				// Unset only level 1, other are override by $set on objects
 				let unsetQuery;
-				if (unsetUndefined) {
+				if (options.unsetUndefined) {
 					const toUnset: object = _.omit(currentValue, [..._.keys(entity), '_id', 'objectInfos']);
 					if (!_.isEmpty(toUnset)) {
 						unsetQuery = {
@@ -674,13 +670,13 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 					updateQuery: update,
 				});
 			} else { // on insert for upsert
-				if (!!mapFunction) {
-					entity = await mapFunction(entity);
+				if (!!options.mapFunction) {
+					entity = await options.mapFunction(entity);
 				}
 				MongoClient.removeEmptyDeep(entity);
 
-				const toSet = _.omit(entity, onlyInsertFieldsKey);
-				const toSetOnInsert = _.pick(entity, onlyInsertFieldsKey);
+				const toSet = _.omit(entity, options.onlyInsertFieldsKey);
+				const toSetOnInsert = _.pick(entity, options.onlyInsertFieldsKey);
 
 				let setOnInsert;
 				if (!_.isEmpty(toSetOnInsert)) {
@@ -700,14 +696,14 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 					},
 				};
 
-				if (query) {
-					if (_.isString(query)) {
+				if (options.query) {
+					if (_.isString(options.query)) {
 						update.key = {
-							name: query,
-							value: _.get(entity, query),
+							name: options.query,
+							value: _.get(entity, options.query),
 						};
 					} else {
-						update.query = _.mapValues(query, (val, key) => val && val.call(null, _.get(entity, key), entity, key));
+						update.query = options.query.call(null, entity);
 					}
 				}
 				updates.push(update);
