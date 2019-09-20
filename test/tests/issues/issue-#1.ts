@@ -58,7 +58,11 @@ test('[ISSUE#1] updateManyAtOnce should remove properties if not specified', asy
 	t.is(foundObject.field5, 'string5', 'found right element string5');
 
 	global.log.debug(`updateManyAtOnce with savedObject without field1String field`);
-	const updateArray = await (await mongoClient.updateManyAtOnce([newValue], 'userId1', true, false, 'code')).toArray();
+	const updateArray = await (await mongoClient.updateManyAtOnce([newValue], 'userId1', {
+		upsert: true,
+		lockNewFields: false,
+		query: 'code',
+	})).toArray();
 
 	const updatedObject = updateArray[0];
 
@@ -106,7 +110,11 @@ test('[ISSUE#1] updateManyAtOnce should remove recursively properties if not spe
 	t.is(foundObject.sub.field4, 'string4', 'found right element string4');
 
 	global.log.debug(`updateManyAtOnce with savedObject without field1String field`);
-	const updateArray = await (await mongoClient.updateManyAtOnce([newValue], 'userId1', true, false, 'code')).toArray();
+	const updateArray = await (await mongoClient.updateManyAtOnce([newValue], 'userId1', {
+		upsert: true,
+		lockNewFields: false,
+		query: 'code',
+	})).toArray();
 
 	const updatedObject = updateArray[0];
 

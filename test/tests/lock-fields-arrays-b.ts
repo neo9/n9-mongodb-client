@@ -71,7 +71,11 @@ test('[LOCK-FIELDS-ARRAY B] Import, edit one, change order, re-import datas', as
 	const mongoClient = generateMongoClient();
 
 	// Simulate import
-	const resultImport1: SampleEntityWithArray[] = await (await mongoClient.updateManyAtOnce([vB], 'externalUser', true, false, 'code')).toArray();
+	const resultImport1: SampleEntityWithArray[] = await (await mongoClient.updateManyAtOnce([vB], 'externalUser', {
+		upsert: true,
+		lockNewFields: false,
+		query: 'code',
+	})).toArray();
 	t.deepEqual(_.map(resultImport1[0].parameters.items, 'code'), ['a', 'b', 'c'], '[resultImport1] All values saved');
 
 	const vBp = _.cloneDeep(vB);
@@ -89,7 +93,11 @@ test('[LOCK-FIELDS-ARRAY B] Import, edit one, change order, re-import datas', as
 	const vBpp = _.cloneDeep(vB);
 	vBpp.parameters.items = [b, c, a];
 	// Simulate import
-	const resultImport2: SampleEntityWithArray[] = await (await mongoClient.updateManyAtOnce([vBpp], 'externalUser', true, false, 'code')).toArray();
+	const resultImport2: SampleEntityWithArray[] = await (await mongoClient.updateManyAtOnce([vBpp], 'externalUser', {
+		upsert: true,
+		lockNewFields: false,
+		query: 'code',
+	})).toArray();
 	t.deepEqual(_.map(resultImport2[0].parameters.items, 'code'), ['c', 'b', 'a'], '[resultImport2] All values saved');
 	t.deepEqual(_.map(resultImport2[0].objectInfos.lockFields, 'path'), bLockPaths, '[resultImport2] Lock field b still alone');
 	t.deepEqual(resultImport2[0].parameters.items[1], bp, '[resultImport2] bp Label kept');

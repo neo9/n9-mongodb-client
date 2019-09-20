@@ -66,7 +66,10 @@ test('[LOCK-FIELDS] Update multiple field with value to null', async (t: Asserti
 		property: {
 			value: null,
 		},
-	}], 'TEST', false, false, '_id');
+	}], 'TEST', {
+		lockNewFields: false,
+		query: '_id',
+	});
 
 	t.deepEqual((await entities.toArray())[0].property, { value: null }, 'value is deleted');
 });

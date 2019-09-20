@@ -5,6 +5,7 @@ import * as mongodb from 'mongodb';
 import { MongoClient, MongoUtils } from '../../src';
 import { BaseMongoObject, StringMap } from '../../src/models';
 import { generateMongoClient, init, SampleEntityWithArray } from './fixtures/utils';
+import { UpdateManyAtOnceOptions } from '../../src/models/update-many-at-once-options.models';
 
 global.log = new N9Log('tests').module('lock-fields-arrays');
 
@@ -68,7 +69,11 @@ test('[LOCK-FIELDS-ARRAY A] Import, remove one, import others, import new one', 
 	const mongoClient = generateMongoClient();
 
 	// Simulate import
-	const resultImport1: SampleEntityWithArray[] = await (await mongoClient.updateManyAtOnce([vA], 'externalUser', true, false, 'code')).toArray();
+	const resultImport1: SampleEntityWithArray[] = await (await mongoClient.updateManyAtOnce([vA], 'externalUser', {
+		upsert: true,
+		lockNewFields: false,
+		query: 'code',
+	})).toArray();
 	t.deepEqual(_.map(resultImport1[0].parameters.items, 'code'), ['a', 'b', 'c'], '[resultImport1] All values saved');
 
 	const vAp = _.cloneDeep(vA);
@@ -86,7 +91,11 @@ test('[LOCK-FIELDS-ARRAY A] Import, remove one, import others, import new one', 
 	const vApp = _.cloneDeep(vA);
 	vApp.parameters.items = [a, c];
 
-	const resultImport2: SampleEntityWithArray[] = await (await mongoClient.updateManyAtOnce([vApp], 'externalUser', true, false, 'code')).toArray();
+	const resultImport2: SampleEntityWithArray[] = await (await mongoClient.updateManyAtOnce([vApp], 'externalUser', {
+		upsert: true,
+		lockNewFields: false,
+		query: 'code',
+	})).toArray();
 
 	t.truthy(resultImport2[0].objectInfos.lockFields, '[resultImport2] Has lock fields');
 	t.is(resultImport2[0].objectInfos.lockFields.length, 4, '[resultImport2] a and b are still locked, nothing changed');
@@ -96,7 +105,11 @@ test('[LOCK-FIELDS-ARRAY A] Import, remove one, import others, import new one', 
 	const vAppp = _.cloneDeep(vA);
 	vAppp.parameters.items = [a, c, d];
 
-	const resultImport3: SampleEntityWithArray[] = await (await mongoClient.updateManyAtOnce([vAppp], 'externalUser', true, false, 'code')).toArray();
+	const resultImport3: SampleEntityWithArray[] = await (await mongoClient.updateManyAtOnce([vAppp], 'externalUser', {
+		upsert: true,
+		lockNewFields: false,
+		query: 'code',
+	})).toArray();
 	t.truthy(resultImport3[0].objectInfos.lockFields, '[resultImport3] Stil has lock fields');
 	t.is(resultImport3[0].objectInfos.lockFields.length, 4, '[resultImport3] a and b are still locked, nothing changed');
 	t.deepEqual(_.map(resultImport3[0].objectInfos.lockFields, 'path'), aAndbLockPaths, '[resultImport3] a and b are locked');
@@ -105,7 +118,11 @@ test('[LOCK-FIELDS-ARRAY A] Import, remove one, import others, import new one', 
 	const vApppp = _.cloneDeep(vA);
 	vApppp.parameters.items = [a, d];
 
-	const resultImport4: SampleEntityWithArray[] = await (await mongoClient.updateManyAtOnce([vApppp], 'externalUser', true, false, 'code')).toArray();
+	const resultImport4: SampleEntityWithArray[] = await (await mongoClient.updateManyAtOnce([vApppp], 'externalUser', {
+		upsert: true,
+		lockNewFields: false,
+		query: 'code',
+	})).toArray();
 	t.truthy(resultImport4[0].objectInfos.lockFields, '[resultImport4] Stil has lock fields');
 	t.is(resultImport4[0].objectInfos.lockFields.length, 4, '[resultImport4] a and b are still locked, nothing changed');
 	t.deepEqual(_.map(resultImport4[0].objectInfos.lockFields, 'path'), aAndbLockPaths, '[resultImport4] a and b are locked');
