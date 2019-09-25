@@ -1,5 +1,18 @@
+# Version [0.10.0](https://github.com/neo9/n9-mongo-client/compare/0.9.0...0.10.0) (2019-09-25)
+
+
+### client
+
+* Use options params for updateManyAtOnce ([01ce294](https://github.com/neo9/n9-mongo-client/commit/01ce294)) (Clement Petit)
+
+
+
 # Version [0.9.0](https://github.com/neo9/n9-mongo-client/compare/0.8.2...0.9.0) (2019-09-19)
 
+
+### release
+
+* V 0.9.0 ([15521db](https://github.com/neo9/n9-mongo-client/commit/15521db)) (Benjamin Daniel)
 
 
 
