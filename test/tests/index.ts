@@ -15,6 +15,21 @@ class SampleType extends SampleTypeListing {
 	public field3String?: string;
 }
 
+class SubArrayType {
+	public id: string;
+	public filedNumber: number;
+}
+
+class ArrayType {
+	public id: string;
+	public "sub-array": SubArrayType[];
+}
+
+class SampleArrayType extends BaseMongoObject {
+	public id: number;
+	public array: ArrayType[];
+}
+
 global.log = new N9Log('tests');
 
 let mongod: MongoMemoryServer;
@@ -96,6 +111,59 @@ test('[CRUD] Find one and update', async (t: Assertions) => {
 	sizeAfterUpdate = await mongoClient.count();
 
 	t.true(!notFound && (sizeAfterUpdate === sizeAfterInsert), 'No element updated or created');
+
+	await mongoClient.dropCollection();
+});
+
+test('[CRUD] Find one and update with filter', async (t: Assertions) => {
+	const mongoClient = new MongoClient(global.db.collection('test-' + Date.now()), SampleArrayType, SampleTypeListing);
+	const size = await mongoClient.count();
+
+	t.true(size === 0, 'collection should be empty');
+
+	const intValue = 2;
+	const intValue2 = 9;
+
+	await mongoClient.insertOne({
+		id: 52,
+		array: [
+			{
+				'id': '1',
+				'sub-array': [{ id: 'sub-1', filedNumber: 1 }, { id: 'sub-2', filedNumber: intValue }],
+			}, {
+				'id': '2',
+				'sub-array': [{ id: 'sub-1', filedNumber: 3 }, { id: 'sub-2', filedNumber: 4 }],
+			},
+		],
+	}, 'userId1');
+	const sizeAfterInsert = await mongoClient.count();
+
+	const updateQuery = { $set: { "array.$[arrayParam].sub-array.$[subArrayParam].filedNumber": intValue2 }};
+
+	const filters = [{ 'arrayParam.id': '1' }, { 'subArrayParam.id': 'sub-2'}];
+
+	const founded = await mongoClient.findOneAndUpdate(
+		{ id: 52 },
+		updateQuery,
+		'userId',
+		false,
+		false,
+		true,
+		filters,
+	);
+
+	let sizeAfterUpdate = await mongoClient.count();
+
+	t.is(founded.array[0]['sub-array'][1].filedNumber, intValue2, 'Element has been updated');
+
+	t.is(sizeAfterUpdate, sizeAfterInsert, 'No new element added');
+
+	const notFound = await mongoClient.find({
+		"array.sub-array.filedNumber": intValue,	// the value is now intValue2
+	});
+	sizeAfterUpdate = await mongoClient.count();
+
+	t.true((await notFound.count()) === 0 && (sizeAfterUpdate === sizeAfterInsert), 'No element updated or created');
 
 	await mongoClient.dropCollection();
 });
