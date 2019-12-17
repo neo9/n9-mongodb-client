@@ -4,13 +4,14 @@ import * as deepDiff from 'deep-diff';
 import * as _ from 'lodash';
 import {
 	AggregationCursor, CollationDocument, Collection, CollectionAggregationOptions,
-	CollectionInsertManyOptions, Cursor, Db, FilterQuery, IndexOptions, ObjectID, ObjectId, UpdateQuery,
+	CollectionInsertManyOptions, Cursor, Db, FilterQuery, IndexOptions, ObjectID, ObjectId,
+	UpdateQuery,
 } from 'mongodb';
 import { BaseMongoObject, EntityHistoric, LockField, StringMap, UpdateManyQuery } from './models';
 import { ClassType } from './models/class-type.models';
+import { UpdateManyAtOnceOptions } from './models/update-many-at-once-options.models';
 import { MongoReadStream } from './mongo-read-stream';
 import { MongoUtils } from './mongo-utils';
-import { UpdateManyAtOnceOptions } from './models/update-many-at-once-options.models';
 
 export interface MongoClientConfiguration {
 	keepHistoric?: boolean;
@@ -245,11 +246,18 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		return !!found;
 	}
 
-	public async findOneAndUpdateById(id: string, updateQuery: { [id: string]: object, $set?: object }, userId: string, internalCall: boolean = false, returnNewValue: boolean = true): Promise<U> {
+	public async findOneAndUpdateById(
+		id: string,
+		updateQuery: { [id: string]: object, $set?: object },
+		userId: string,
+		internalCall: boolean = false,
+		returnNewValue: boolean = true,
+		arrayFilters: FilterQuery<U>[] = [],
+	): Promise<U> {
 		const query: StringMap<any> = {
 			_id: MongoUtils.oid(id),
 		};
-		return await this.findOneAndUpdate(query, updateQuery, userId, internalCall, false, returnNewValue);
+		return await this.findOneAndUpdate(query, updateQuery, userId, internalCall, false, returnNewValue, arrayFilters);
 	}
 
 	public async findOneAndUpdateByKey(
@@ -258,15 +266,40 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			userId: string,
 			keyName: string = 'code',
 			internalCall: boolean = false,
-			returnNewValue: boolean = true): Promise<U> {
+			returnNewValue: boolean = true,
+			arrayFilters: FilterQuery<U>[] = [],
+	): Promise<U> {
 		const query: StringMap<any> = {
 			[MongoUtils.escapeSpecialCharacters(keyName)]: keyValue,
 		};
-		return await this.findOneAndUpdate(query, updateQuery, userId, internalCall, false, returnNewValue);
+		return await this.findOneAndUpdate(query, updateQuery, userId, internalCall, false, returnNewValue, arrayFilters);
 	}
 
 	/**
 	 * To upsert you should use findOneAndUpsert
+	 *
+	 * @param query The selection criteria for the update. The same query selectors as in the find() method are available.
+	 *
+	 * @param updateQuery The update document
+	 *
+	 * @param userId user identifier
+	 *
+	 * @param internalCall activate the lock field management.
+	 *
+	 * @param upsert Optional. When true, findOneAndUpdate() either:<ul><li>Creates a new document
+	 * if no documents match the filter. For more details see upsert behavior. Returns null after
+	 * inserting the new document, unless returnNewDocument is true.</li><li>Updates a single
+	 * document that matches the filter.</li></ul><br/>To avoid multiple upserts, ensure that the
+	 * filter fields are uniquely indexed.<br/> Defaults to false.
+	 *
+	 * @param returnNewValue Optional. When true, returns the updated document instead of the
+	 * original document.<br/> Defaults to true.
+	 *
+	 * @param arrayFilters Optional. An array of filter documents that determine which array
+	 * elements to modify for an update operation on an array field. <br/> In the update document,
+	 * use the $[<identifier>] filtered positional operator to define an identifier, which you then
+	 * reference in the array filter documents. You cannot have an array filter document for an
+	 * identifier if the identifier is not included in the update document.
 	 */
 	public async findOneAndUpdate(
 			query: FilterQuery<U>,
@@ -274,7 +307,9 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			userId: string,
 			internalCall: boolean = false,
 			upsert: boolean = false,
-			returnNewValue: boolean = true): Promise<U> {
+			returnNewValue: boolean = true,
+			arrayFilters: FilterQuery<U>[] = [],
+	): Promise<U> {
 		if (!internalCall) {
 			this.ifHasLockFieldsThrow();
 		}
@@ -308,7 +343,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			saveOldValue = await this.findOne(query);
 		}
 
-		let newEntity = (await this.collection.findOneAndUpdate(query, updateQuery, { returnOriginal: !returnNewValue, upsert })).value as U;
+		let newEntity = (await this.collection.findOneAndUpdate(query, updateQuery, { returnOriginal: !returnNewValue, upsert, arrayFilters })).value as U;
 		if (returnNewValue || this.conf.keepHistoric) {
 			newEntity = MongoUtils.mapObjectToClass(this.type, MongoUtils.unRemoveSpecialCharactersInKeys(newEntity));
 		}
@@ -334,8 +369,15 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 	}
 
 	// wrapper around findOneAndUpdate
-	public async findOneAndUpsert(query: FilterQuery<U>, updateQuery: { [id: string]: object, $set?: object }, userId: string, internalCall: boolean = false, returnNewValue: boolean = true): Promise<U> {
-		return this.findOneAndUpdate(query, updateQuery, userId, internalCall, true, returnNewValue);
+	public async findOneAndUpsert(
+		query: FilterQuery<U>,
+		updateQuery: { [id: string]: object, $set?: object },
+		userId: string,
+		internalCall: boolean = false,
+		returnNewValue: boolean = true,
+		arrayFilters: FilterQuery<U>[] = [],
+	): Promise<U> {
+		return this.findOneAndUpdate(query, updateQuery, userId, internalCall, true, returnNewValue, arrayFilters);
 	}
 
 	public async findOneByIdAndRemoveLock(id: string, lockFieldPath: string, userId: string): Promise<U> {
