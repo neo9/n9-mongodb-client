@@ -2,10 +2,13 @@ import { N9Log } from '@neo9/n9-node-log';
 import test, { Assertions } from 'ava';
 import * as _ from 'lodash';
 import { ObjectID } from 'mongodb';
+import { MongoMemoryServer } from 'mongodb-memory-server';
 import * as stdMocks from 'std-mocks';
 import { MongoUtils } from '../../src';
 
 global.log = new N9Log('tests').module('mongo-utils');
+
+let mongod: MongoMemoryServer;
 
 test('[MONGO-UTILS] disconnect without connect', async (t: Assertions) => {
 	t.deepEqual(await MongoUtils.disconnect(), undefined, 'should not block disconnect');
@@ -30,7 +33,8 @@ test('[MONGO-UTILS] mapObjectToClass null', async (t: Assertions) => {
 });
 
 test('[MONGO-UTILS] URI connection log', async (t: Assertions) => {
-	const mongoURI = 'mongodb://localhost:27017/test-n9-mongo-client';
+	mongod = new MongoMemoryServer();
+	const mongoURI = await mongod.getConnectionString();
 	const mongoURIregex = new RegExp(_.escapeRegExp(mongoURI));
 
 	stdMocks.use();
@@ -51,4 +55,6 @@ test('[MONGO-UTILS] URI connection log', async (t: Assertions) => {
 	stdMocks.restore();
 
 	t.notRegex(output.stdout[0], mongoURIPasswordRegex, 'Password should not be displayed in URI');
+
+	await mongod.stop();
 });

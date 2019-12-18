@@ -1,6 +1,7 @@
 import test from 'ava';
 import { TestInterface } from 'ava';
 import * as mongodb from 'mongodb';
+import { MongoMemoryServer } from 'mongodb-memory-server';
 import { MongoClient, MongoUtils } from '../../../src';
 import { BaseMongoObject, StringMap } from '../../../src/models';
 
@@ -28,13 +29,18 @@ export function generateMongoClient(): MongoClient<SampleEntityWithArray, null> 
 }
 
 export function init(tst: TestInterface): void {
+	let mongod: MongoMemoryServer;
+
 	test.before(async () => {
-		await MongoUtils.connect('mongodb://localhost:27017/test-n9-mongo-client');
+		mongod = new MongoMemoryServer();
+		const uri = await mongod.getConnectionString();
+		await MongoUtils.connect(uri);
 	});
 
 	test.after(async () => {
 		global.log.info(`DROP DB after tests OK`);
 		await (global.db as mongodb.Db).dropDatabase();
 		await MongoUtils.disconnect();
+		await mongod.stop();
 	});
 }
