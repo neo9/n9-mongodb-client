@@ -6,6 +6,7 @@ import { MongoMemoryServer } from 'mongodb-memory-server';
 
 import { MongoClient, MongoUtils } from '../../src';
 import { BaseMongoObject } from '../../src/models';
+import { init } from './fixtures/utils';
 
 export class TestItem extends BaseMongoObject {
 	public key: string;
@@ -13,20 +14,7 @@ export class TestItem extends BaseMongoObject {
 
 global.log = new N9Log('tests').module('mongo-read-stream');
 
-let mongod: MongoMemoryServer;
-
-test.before(async () => {
-	mongod = new MongoMemoryServer();
-	const uri = await mongod.getConnectionString();
-	await MongoUtils.connect(uri);
-});
-
-test.after(async () => {
-	global.log.info(`DROP DB after tests OK`);
-	await (global.db as mongodb.Db).dropDatabase();
-	await MongoUtils.disconnect();
-	await mongod.stop();
-});
+init(test);
 
 test('[MONGO-READ-STREAM] Read page by page', async (t: Assertions) => {
 	const mongoClient = new MongoClient('test-' + Date.now(), TestItem, TestItem);
