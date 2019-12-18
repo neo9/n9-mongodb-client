@@ -4212,7 +4212,7 @@ mongodb-core@3.1.9:
 
 mongodb-lock@^1.0.1:
   version "1.0.1"
-  resolved "https://repo.neo9.pro/repository/npm-global/mongodb-lock/-/mongodb-lock-1.0.1.tgz#e06a8ac9c9cfe459fe1c1e3112c6ff008cd9d110"
+  resolved "https://registry.npmjs.org/mongodb-lock/-/mongodb-lock-1.0.1.tgz#e06a8ac9c9cfe459fe1c1e3112c6ff008cd9d110"
   integrity sha512-iGvbSFrsYINJ1ZKhaQV9p/qoPRyTxG3XStKpU+txSdN8Ty5B37ygmB3rd5uDOJPp+EIBar7VgDZymLpqSvNltw==
 
 mongodb@^3.1.10:
