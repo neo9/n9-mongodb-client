@@ -1,9 +1,38 @@
+# Version [0.11.0](https://github.com/neo9/n9-mongo-client/compare/0.10.0...0.11.0) (2019-12-19)
+
+
+### doc
+
+* Add build instructions to README.md ([12cc931](https://github.com/neo9/n9-mongo-client/commit/12cc931)) (Gabriel ROQUIGNY)
+* Add CONTRIBUTING.md ([980fc61](https://github.com/neo9/n9-mongo-client/commit/980fc61)) (Gabriel ROQUIGNY)
+
+### feat
+
+* Add array filters to FindOneAndUpdate ([d686952](https://github.com/neo9/n9-mongo-client/commit/d686952)) (Gabriel ROQUIGNY)
+
+### tests
+
+* Add array filters to FindOneAndUpdate ([134b36b](https://github.com/neo9/n9-mongo-client/commit/134b36b)) (Gabriel ROQUIGNY)
+* Add mongo start in memory server ([b54b8cf](https://github.com/neo9/n9-mongo-client/commit/b54b8cf)) (Gabriel ROQUIGNY)
+* Use init function ([942db30](https://github.com/neo9/n9-mongo-client/commit/942db30)) (Gabriel ROQUIGNY)
+
+### yarn
+
+* Fix repository reference ([6fc6181](https://github.com/neo9/n9-mongo-client/commit/6fc6181)) (Benjamin Daniel)
+* Fix repository reference ([0ca82b8](https://github.com/neo9/n9-mongo-client/commit/0ca82b8)) (Benjamin Daniel)
+
+
+
 # Version [0.10.0](https://github.com/neo9/n9-mongo-client/compare/0.9.0...0.10.0) (2019-09-25)
 
 
 ### client
 
 * Use options params for updateManyAtOnce ([01ce294](https://github.com/neo9/n9-mongo-client/commit/01ce294)) (Clement Petit)
+
+### release
+
+* V 0.10.0 ([9cda36f](https://github.com/neo9/n9-mongo-client/commit/9cda36f)) (Benjamin Daniel)
 
 
 
