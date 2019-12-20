@@ -1,8 +1,6 @@
 import { N9Log } from '@neo9/n9-node-log';
 import { waitFor } from '@neo9/n9-node-utils';
 import test, { Assertions } from 'ava';
-import * as mongodb from 'mongodb';
-import { MongoMemoryServer } from 'mongodb-memory-server';
 
 import { MongoClient, MongoUtils } from '../../src';
 import { BaseMongoObject } from '../../src/models';
@@ -10,6 +8,7 @@ import { init } from './fixtures/utils';
 
 export class TestItem extends BaseMongoObject {
 	public key: string;
+	public i?: number;
 }
 
 global.log = new N9Log('tests').module('mongo-read-stream');
@@ -86,4 +85,46 @@ test('[MONGO-READ-STREAM] Read item by item on empty collection', async (t: Asse
 	});
 
 	t.pass('ok');
+});
+
+test('[MONGO-READ-STREAM] Does not override conditions on _id', async (t: Assertions) => {
+	const mongoClient = new MongoClient('test-' + Date.now(), TestItem, TestItem);
+
+	const collectionSize = 38;
+	const pageSize = 10;
+	const ids: string[] = [];
+
+	for (let i = 0; i < collectionSize; i++) {
+		const doc = await mongoClient.insertOne({ key: 'value-' + Math.random(), i }, 'userId1', false);
+		// save every even doc
+		if (i % 2 === 0) {
+			ids.push(MongoUtils.oid(doc._id) as any);
+		}
+	}
+	let length = 0;
+	// filter on even docs, lower than 21, so 11 docs
+	await mongoClient.stream({ _id: { $in: ids }, $and: [{ i: { $lt: 21 } }] }, pageSize)
+		.forEach(async (item: TestItem) => {
+			if (item) {
+				length++;
+			} else {
+				t.fail('missing item');
+			}
+	});
+
+	t.is(length, 11, 'nb elements in collection');
+	await mongoClient.dropCollection();
+});
+
+test('[MONGO-READ-STREAM] Handle errors during query', async (t: Assertions) => {
+	const mongoClient = new MongoClient('test-' + Date.now(), TestItem, TestItem);
+	const pageSize = 10;
+
+	await t.throwsAsync(async () => {
+		// bad request: $and only accepts array values
+		await mongoClient.stream({ $and: {} }, pageSize)
+			.forEach(async (item: TestItem) => {
+				t.fail('Should never happen');
+			});
+	});
 });

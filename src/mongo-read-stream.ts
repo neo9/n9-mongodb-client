@@ -77,7 +77,9 @@ export class MongoReadStream<U extends BaseMongoObject, L extends BaseMongoObjec
 	 */
 	public async forEachPage(consumerFn: PageConsumer<Partial<U | L>>): Promise<void> {
 		return new Promise<void>((resolve, reject) => {
-			this.pipe(new PageConsumerWritable(this.pageSize, consumerFn))
+			this
+					.on('error', reject)
+					.pipe(new PageConsumerWritable(this.pageSize, consumerFn))
 					.on('error', reject)
 					.on('finish', resolve);
 		});
@@ -89,7 +91,9 @@ export class MongoReadStream<U extends BaseMongoObject, L extends BaseMongoObjec
 	 */
 	public async forEach(consumerFn: ItemConsumer<Partial<U | L>>): Promise<void> {
 		return new Promise<void>((resolve, reject) => {
-			this.pipe(new ItemConsumerWritable(consumerFn))
+			this
+				.on('error', reject)
+				.pipe(new ItemConsumerWritable(consumerFn))
 					.on('error', reject)
 					.on('finish', resolve);
 		});
@@ -103,24 +107,29 @@ export class MongoReadStream<U extends BaseMongoObject, L extends BaseMongoObjec
 	}
 
 	public async _read(size: number): Promise<void> {
-		if (!(this.cursor && await this.cursor.hasNext())) {
-			if (this.lastId) {
-				(this.query as any)['_id'] = { $gt: MongoUtils.oid(this.lastId) };
+		try {
+			if (!(this.cursor && await this.cursor.hasNext())) {
+				if (this.lastId) {
+					(this.query as any)['$and'] = (this.query as any)['$and'] || [];
+					(this.query as any)['$and'].push({ _id: { $gt: MongoUtils.oid(this.lastId) } });
+				}
+				if (this.customType) {
+					this.cursor = await this.mongoClient.findWithType(this.query, this.customType, 0, this.pageSize, { _id: 1 }, this.projection);
+				} else {
+					this.cursor = await this.mongoClient.find(this.query, 0, this.pageSize, { _id: 1 }, this.projection);
+				}
 			}
-			if (this.customType) {
-				this.cursor = await this.mongoClient.findWithType(this.query, this.customType, 0, this.pageSize, { _id: 1 }, this.projection);
-			} else {
-				this.cursor = await this.mongoClient.find(this.query, 0, this.pageSize, { _id: 1 }, this.projection);
+			let item = null;
+			if (await this.cursor.hasNext()) {
+				item = await this.cursor.next();
 			}
+			if (item) {
+				this.lastId = item._id;
+			}
+			this.push(item);
+		} catch (e) {
+			this.emit('error', e);
 		}
-		let item = null;
-		if (await this.cursor.hasNext()) {
-			item = await this.cursor.next();
-		}
-		if (item) {
-			this.lastId = item._id;
-		}
-		this.push(item);
 	}
 
 }
