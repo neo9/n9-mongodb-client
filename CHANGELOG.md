@@ -1,3 +1,12 @@
+## Version [0.11.1](https://github.com/neo9/n9-mongo-client/compare/0.11.0...0.11.1) (2019-12-20)
+
+
+### stream
+
+* Fix conditions on _id field ([44ac5eb](https://github.com/neo9/n9-mongo-client/commit/44ac5eb)) (Clement Petit)
+
+
+
 # Version [0.11.0](https://github.com/neo9/n9-mongo-client/compare/0.10.0...0.11.0) (2019-12-19)
 
 
@@ -9,6 +18,10 @@
 ### feat
 
 * Add array filters to FindOneAndUpdate ([d686952](https://github.com/neo9/n9-mongo-client/commit/d686952)) (Gabriel ROQUIGNY)
+
+### release
+
+* V 0.11.0 ([7a9a7bc](https://github.com/neo9/n9-mongo-client/commit/7a9a7bc)) (Benjamin Daniel)
 
 ### tests
 
