@@ -1,5 +1,18 @@
+## Version [0.11.2](https://github.com/neo9/n9-mongo-client/compare/0.11.1...0.11.2) (2020-01-11)
+
+
+### streams
+
+* Fix streams queries building ([8c122c7](https://github.com/neo9/n9-mongo-client/commit/8c122c7)) (Benjamin Daniel)
+
+
+
 ## Version [0.11.1](https://github.com/neo9/n9-mongo-client/compare/0.11.0...0.11.1) (2019-12-20)
 
+
+### release
+
+* V 0.11.1 ([0e4bb4d](https://github.com/neo9/n9-mongo-client/commit/0e4bb4d)) (Benjamin Daniel)
 
 ### stream
 
