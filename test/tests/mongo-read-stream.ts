@@ -26,8 +26,15 @@ test('[MONGO-READ-STREAM] Read page by page', async (t: Assertions) => {
 
 	let length = 0;
 	let pages = 0;
-	await mongoClient.stream({}, pageSize).forEachPage(async (page: TestItem[]) => {
+	const stream = await mongoClient.stream({}, pageSize);
+	await stream.forEachPage(async (page: TestItem[]) => {
 		length += page.length;
+
+		if (pages > 0) {
+			t.truthy(stream.query['$and'], '$and added to query');
+			t.is((stream.query['$and'] as object[]).filter((condition) => Object.keys(condition).includes('_id')).length, 1, '$and has only 1 _id condition');
+		}
+
 		pages++;
 	});
 

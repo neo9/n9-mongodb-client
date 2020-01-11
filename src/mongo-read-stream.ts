@@ -5,6 +5,7 @@ import { MongoClient } from './client';
 import { ClassType } from './models/class-type.models';
 import { MongoUtils } from './mongo-utils';
 import { BaseMongoObject } from './models';
+import * as _ from 'lodash';
 
 export type PageConsumer<T> = (data: T[]) => Promise<void>;
 export type ItemConsumer<T> = (data: T) => Promise<void>;
@@ -59,10 +60,15 @@ export class MongoReadStream<U extends BaseMongoObject, L extends BaseMongoObjec
 
 	private lastId: string = null;
 	private cursor: Cursor<Partial<U | L>> = null;
+	private hasAlreadyAddedIdConditionOnce: boolean = false;
+
+	get query(): object {
+		return _.cloneDeep(this._query);
+	}
 
 	constructor(
 			private mongoClient: MongoClient<U, L>,
-			private query: object,
+			private _query: object,
 			private pageSize: number,
 			private projection: object = {},
 			private customType?: ClassType<Partial<U | L>>,
@@ -110,13 +116,20 @@ export class MongoReadStream<U extends BaseMongoObject, L extends BaseMongoObjec
 		try {
 			if (!(this.cursor && await this.cursor.hasNext())) {
 				if (this.lastId) {
-					(this.query as any)['$and'] = (this.query as any)['$and'] || [];
-					(this.query as any)['$and'].push({ _id: { $gt: MongoUtils.oid(this.lastId) } });
+					this._query['$and'] = this._query['$and'] || [];
+					const andConditions: object[] = (this._query as any)['$and'];
+					// avoid to add multiple time the _id condition
+					if (this.hasAlreadyAddedIdConditionOnce) {
+						andConditions[andConditions.length - 1]['_id']['$gt'] = MongoUtils.oid(this.lastId);
+					} else {
+						andConditions.push({ _id: { $gt: MongoUtils.oid(this.lastId) } });
+						this.hasAlreadyAddedIdConditionOnce = true;
+					}
 				}
 				if (this.customType) {
-					this.cursor = await this.mongoClient.findWithType(this.query, this.customType, 0, this.pageSize, { _id: 1 }, this.projection);
+					this.cursor = await this.mongoClient.findWithType(this._query, this.customType, 0, this.pageSize, { _id: 1 }, this.projection);
 				} else {
-					this.cursor = await this.mongoClient.find(this.query, 0, this.pageSize, { _id: 1 }, this.projection);
+					this.cursor = await this.mongoClient.find(this._query, 0, this.pageSize, { _id: 1 }, this.projection);
 				}
 			}
 			let item = null;
