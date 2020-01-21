@@ -1,3 +1,12 @@
+## Version [0.12.1](https://github.com/neo9/n9-mongo-client/compare/0.12.0...0.12.1) (2020-01-21)
+
+
+### aggregate
+
+* Add concat aggregation builder ([c773fa4](https://github.com/neo9/n9-mongo-client/commit/c773fa4)) (Benjamin Daniel)
+
+
+
 # Version [0.12.0](https://github.com/neo9/n9-mongo-client/compare/0.11.2...0.12.0) (2020-01-21)
 
 
@@ -9,6 +18,10 @@
 ### lockfields
 
 * Add excluded fields filter ([1cfb726](https://github.com/neo9/n9-mongo-client/commit/1cfb726)) (Benjamin Daniel)
+
+### release
+
+* V 0.12.0 ([9f5ac26](https://github.com/neo9/n9-mongo-client/commit/9f5ac26)) (Benjamin Daniel)
 
 
 
