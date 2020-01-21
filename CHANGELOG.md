@@ -1,9 +1,22 @@
+## Version [0.12.2](https://github.com/neo9/n9-mongo-client/compare/0.12.1...0.12.2) (2020-01-21)
+
+
+### aggregate
+
+* Fix merge stage type ([d39b07f](https://github.com/neo9/n9-mongo-client/commit/d39b07f)) (Benjamin Daniel)
+
+
+
 ## Version [0.12.1](https://github.com/neo9/n9-mongo-client/compare/0.12.0...0.12.1) (2020-01-21)
 
 
 ### aggregate
 
 * Add concat aggregation builder ([c773fa4](https://github.com/neo9/n9-mongo-client/commit/c773fa4)) (Benjamin Daniel)
+
+### release
+
+* V 0.12.1 ([ef90f5c](https://github.com/neo9/n9-mongo-client/commit/ef90f5c)) (Benjamin Daniel)
 
 
 
