@@ -51,3 +51,54 @@ test('[AGG] Insert some and aggregate it 2', async (t: Assertions) => {
 	t.deepEqual(aggResultAsArray, [{ _id: 'string2', count: 3 }, { _id: 'string1', count: 2 }], 'All is exactly right');
 	await mongoClient.dropCollection();
 });
+
+test('[AGG] Insert some and aggregate with output', async (t: Assertions) => {
+	const aggregationCollectionSourceName = 'test-' + Math.round(Math.random() * 100000) + Date.now();
+	const mongoClientRead = new MongoClient(aggregationCollectionSourceName, SampleType, null);
+	const mongoClientOut = new MongoClient('test-output-' + Date.now(), SampleType, null, {
+		aggregationCollectionSource: aggregationCollectionSourceName,
+	});
+	const size = await mongoClientRead.count();
+	t.true(size === 0, 'collection should be empty');
+
+	await mongoClientRead.insertOne({ field1String: 'string1' }, 'userId1');
+	await mongoClientRead.insertOne({ field1String: 'string2' }, 'userId1');
+	await mongoClientRead.insertOne({ field1String: 'string3' }, 'userId1');
+	await mongoClientRead.insertOne({ field1String: 'string4' }, 'userId1');
+	await mongoClientRead.insertOne({ field1String: 'string5' }, 'userId1');
+
+	const sizeWithElementIn = await mongoClientRead.count();
+	t.is(sizeWithElementIn, 5, 'nb element in collection');
+	const sizeWithElementInOutput = await mongoClientOut.count();
+	t.is(sizeWithElementInOutput, 0, 'nb element in collection output');
+
+	const query = mongoClientOut.newAggregationBuilder()
+			.match({
+				field1String: {
+					$regex: /string[2345]/,
+				},
+			})
+			.sort({
+				field1String: 1,
+			})
+			.concatAggregationBuilder(
+					mongoClientOut.newAggregationBuilder()
+							.skip(1)
+							.limit(2),
+			)
+			.out()
+			.build();
+
+	const aggResult = await mongoClientOut.aggregate<AggregationResult>(query);
+
+	t.truthy(aggResult instanceof AggregationCursor, 'return  AggregationCursor');
+	const aggResultAsArray = await aggResult.toArray();
+
+	t.is(aggResultAsArray.length, 0, 'no output');
+
+	const outputContent = await (await mongoClientOut.find({}, 0, 0, undefined, { _id: 0, field1String: 1 })).toArray();
+	t.deepEqual(outputContent, [{ field1String: 'string3' }, { field1String: 'string4' }], 'All is exactly right');
+
+	await mongoClientOut.dropCollection();
+	await mongoClientRead.dropCollection();
+});

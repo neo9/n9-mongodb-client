@@ -157,6 +157,14 @@ export class AggregationBuilder<U> {
 		return this.doAddStage(stage as AggregationPipelineStage);
 	}
 
+	public concatAggregationBuilder(aggregationBuilder: AggregationBuilder<U>): AggregationBuilder<U> {
+		const stagesToAdd = aggregationBuilder.build();
+		for (const stageToAdd of stagesToAdd) {
+			this.doAddStage(stageToAdd);
+		}
+		return this;
+	}
+
 	/**
 	 * Return the built aggregation
 	 */
