@@ -3,8 +3,17 @@ import { N9Error } from '@neo9/n9-node-utils';
 import * as deepDiff from 'deep-diff';
 import * as _ from 'lodash';
 import {
-	AggregationCursor, CollationDocument, Collection, CollectionAggregationOptions,
-	CollectionInsertManyOptions, Cursor, Db, FilterQuery, IndexOptions, ObjectID, ObjectId,
+	AggregationCursor,
+	CollationDocument,
+	Collection,
+	CollectionAggregationOptions,
+	CollectionInsertManyOptions,
+	Cursor,
+	Db,
+	FilterQuery,
+	IndexOptions,
+	ObjectID,
+	ObjectId,
 	UpdateQuery,
 } from 'mongodb';
 import { BaseMongoObject, EntityHistoric, LockField, StringMap, UpdateManyQuery } from './models';
@@ -12,6 +21,7 @@ import { ClassType } from './models/class-type.models';
 import { UpdateManyAtOnceOptions } from './models/update-many-at-once-options.models';
 import { MongoReadStream } from './mongo-read-stream';
 import { MongoUtils } from './mongo-utils';
+import { AggregationBuilder } from './aggregation-utils';
 
 export interface MongoClientConfiguration {
 	keepHistoric?: boolean;
@@ -19,6 +29,7 @@ export interface MongoClientConfiguration {
 		excludedFields?: string[],
 		arrayWithReferences?: StringMap<string>
 	};
+	aggregationCollectionSource?: string;
 }
 
 const defaultConfiguration: MongoClientConfiguration = {
@@ -56,13 +67,13 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				&& !_.isArray(existingEntityElement);
 	}
 
+	private readonly collection: Collection<U>;
+	private readonly collectionSourceForAggregation: Collection<U>;
 	private readonly logger: N9Log;
 	private readonly db: Db;
-
 	private readonly type: ClassType<U>;
 	private readonly typeList: ClassType<L>;
 	private readonly conf: MongoClientConfiguration;
-	private readonly collection: Collection<U>;
 	private readonly collectionHistoric: Collection<EntityHistoric<U>>;
 
 	constructor(collection: Collection<U> | string, type: ClassType<U>, typeList: ClassType<L>, conf: MongoClientConfiguration = {}) {
@@ -83,6 +94,12 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		} else {
 			this.collection = collection;
 			this.collectionHistoric = this.db.collection(collection.collectionName + 'Historic');
+		}
+
+		if (this.conf.aggregationCollectionSource) {
+			this.collectionSourceForAggregation = this.db.collection(this.conf.aggregationCollectionSource);
+		} else {
+			this.collectionSourceForAggregation = this.collection;
 		}
 
 		this.type = type;
@@ -247,12 +264,12 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 	}
 
 	public async findOneAndUpdateById(
-		id: string,
-		updateQuery: { [id: string]: object, $set?: object },
-		userId: string,
-		internalCall: boolean = false,
-		returnNewValue: boolean = true,
-		arrayFilters: FilterQuery<U>[] = [],
+			id: string,
+			updateQuery: { [id: string]: object, $set?: object },
+			userId: string,
+			internalCall: boolean = false,
+			returnNewValue: boolean = true,
+			arrayFilters: FilterQuery<U>[] = [],
 	): Promise<U> {
 		const query: StringMap<any> = {
 			_id: MongoUtils.oid(id),
@@ -370,12 +387,12 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 
 	// wrapper around findOneAndUpdate
 	public async findOneAndUpsert(
-		query: FilterQuery<U>,
-		updateQuery: { [id: string]: object, $set?: object },
-		userId: string,
-		internalCall: boolean = false,
-		returnNewValue: boolean = true,
-		arrayFilters: FilterQuery<U>[] = [],
+			query: FilterQuery<U>,
+			updateQuery: { [id: string]: object, $set?: object },
+			userId: string,
+			internalCall: boolean = false,
+			returnNewValue: boolean = true,
+			arrayFilters: FilterQuery<U>[] = [],
 	): Promise<U> {
 		return this.findOneAndUpdate(query, updateQuery, userId, internalCall, true, returnNewValue, arrayFilters);
 	}
@@ -508,7 +525,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 	public async updateManyAtOnce(
 			entities: Partial<U>[],
 			userId: string,
-			options: UpdateManyAtOnceOptions<U> = {}
+			options: UpdateManyAtOnceOptions<U> = {},
 	): Promise<Cursor<U>> {
 		options.upsert = _.isBoolean(options.upsert) ? options.upsert : false;
 		options.lockNewFields = _.isBoolean(options.lockNewFields) ? options.lockNewFields : true;
@@ -517,7 +534,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		const updateQueries = await this.buildUpdatesQueries(
 				entities,
 				userId,
-				options
+				options,
 		);
 		// console.log(`-- client.ts>updateManyAtOnce updateQueries --`, JSON.stringify(updateQueries, null, 2));
 		return await this.updateMany(updateQueries, userId, options.upsert);
@@ -553,9 +570,15 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 	 * @param options : options to send to the client
 	 */
 	public async aggregate<T = void>(aggregateSteps: object[], options?: CollectionAggregationOptions): Promise<AggregationCursor<T>> {
-		// TODO: add more specialised types for aggregateSteps, like { $match: object } ....
-		// TODO: add aggregation query builder
-		return await this.collection.aggregate(aggregateSteps, options);
+		return await this.collectionSourceForAggregation.aggregate<T>(aggregateSteps, options);
+	}
+
+	public async aggregateWithBuilder<T = void>(aggregationBuilder: AggregationBuilder<U>, options?: CollectionAggregationOptions): Promise<AggregationCursor<T>> {
+		return await this.aggregate<T>(aggregationBuilder.build(), options);
+	}
+
+	public newAggregationBuilder(): AggregationBuilder<U> {
+		return new AggregationBuilder<U>(this.collection.collectionName);
 	}
 
 	public async findHistoricByEntityId(id: string, page: number = 0, size: number = 10): Promise<Cursor<EntityHistoric<U>>> {
@@ -633,7 +656,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 	private async buildUpdatesQueries(
 			entities: Partial<U>[],
 			userId: string,
-			options: UpdateManyAtOnceOptions<U>
+			options: UpdateManyAtOnceOptions<U>,
 	): Promise<UpdateManyQuery[]> {
 		const updates: UpdateManyQuery[] = [];
 		for (let entity of entities) {
