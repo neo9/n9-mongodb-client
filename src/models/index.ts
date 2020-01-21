@@ -1,3 +1,4 @@
+export * from './aggregate.models';
 export * from './base-mongo-object.models';
 export * from './base-mongo-object-infos.models';
 export * from './historic.models';

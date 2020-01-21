@@ -4,6 +4,7 @@ import { AggregationCursor } from 'mongodb';
 
 import { MongoClient } from '../../src';
 import { BaseMongoObject } from '../../src/models';
+import { aggregate } from "../../src/aggregation-utils";
 import { init } from './fixtures/utils';
 
 class SampleType extends BaseMongoObject {
@@ -19,7 +20,7 @@ global.log = new N9Log('tests');
 
 init(test);
 
-test('[AGG] Insert some and aggregate it', async (t: Assertions) => {
+test('[AGG] Insert some and aggregate it 2', async (t: Assertions) => {
 	const mongoClient = new MongoClient('test-' + Date.now(), SampleType, null);
 	const size = await mongoClient.count();
 
@@ -34,16 +35,15 @@ test('[AGG] Insert some and aggregate it', async (t: Assertions) => {
 	const sizeWithElementIn = await mongoClient.count();
 	t.is(sizeWithElementIn, 5, 'nb element in collection');
 
-	const aggResult = await mongoClient.aggregate<AggregationResult>([{
-		$group: {
-			_id: '$field1String',
-			count: { $sum: 1 },
-		},
-	}, {
-		$sort: {
-			count: -1,
-		},
-	}]);
+	const aggResult = await mongoClient.aggregate<AggregationResult>(
+		aggregate()
+			.group({
+				_id: '$field1String',
+				count: { $sum: 1 },
+			})
+			.sort({ count: -1 })
+			.build()
+	);
 
 	t.truthy(aggResult instanceof AggregationCursor, 'return  AggregationCursor');
 	const aggResultAsArray = await aggResult.toArray();
