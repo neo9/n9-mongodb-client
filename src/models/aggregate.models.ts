@@ -1,4 +1,5 @@
-import { FilterQuery } from "mongodb";
+import { FilterQuery } from 'mongodb';
+import { StringMap } from './maps.models';
 
 export enum AggregationPipelineStageOperator {
 	ADD_FIELDS = '$addFields',
@@ -18,6 +19,7 @@ export enum AggregationPipelineStageOperator {
 	LOOKUP = '$lookup',
 	OUT = '$out',
 	MATCH = '$match',
+	MERGE = '$merge',
 	PROJECT = '$project',
 	REDACT = '$redact',
 	REPLACE_ROOT = '$replaceRoot',
@@ -457,6 +459,33 @@ export interface MatchPipelineStage<T = any> {
 	[AggregationPipelineStageOperator.MATCH]: FilterQuery<T>;
 }
 
+/**
+ *  into: <collection> -or- { db: <db>, coll: <collection> },
+ *  on: <identifier field> -or- [ <identifier field1>, ...],  // Optional
+ *  let: <variables>,                                         // Optional
+ *  whenMatched: <replace|keepExisting|merge|fail|pipeline>,  // Optional
+ *  whenNotMatched: <insert|discard|fail>                     // Optional
+ */
+export interface MergePipelineStage {
+	[AggregationPipelineStageOperator.MERGE]: MergePipelineStageValue;
+}
+
+export interface MergePipelineStageValue {
+	into: string | {
+		db: string;
+		coll: string;
+	};
+	on: string | string[];
+	let: StringMap<string>;
+	whenMatched: 'replace' | 'keepExisting'|'merge'|'fail'| MergeMatchedAggregationPipelineStage;
+	whenNotMatched: 'insert' | 'discard' | 'fail';
+}
+
+export type MergeMatchedAggregationPipelineStage =
+		AddFieldsPipelineStage
+		| ProjectPipelineStage
+		| ReplaceRootPipelineStage;
+
 /* OUT */
 export interface OutPipelineStage {
 	[AggregationPipelineStageOperator.OUT]: string;
@@ -552,6 +581,7 @@ export type AggregationPipelineStage =
 	| ListLocalSessionsPipelineStage
 	| LookupPipelineStage
 	| MatchPipelineStage
+	| MergePipelineStage
 	| OutPipelineStage
 	| ProjectPipelineStage
 	| RedactPipelineStage

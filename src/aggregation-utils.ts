@@ -7,15 +7,18 @@ import {
 	CollStatsPipelineStageValue,
 	CurrentOpPipelineStage,
 	Expression,
-	FacetPipelineStageValue, GeoNearPipelineStageValue,
-	GraphLookupPipelineStageValue, GroupPipelineStageValue,
+	FacetPipelineStageValue,
+	GeoNearPipelineStageValue,
+	GraphLookupPipelineStageValue,
+	GroupPipelineStageValue,
 	LookupPipelineStageValue,
+	MergePipelineStageValue,
 	ReplaceRootPipelineValue,
 	SamplePipelineValue,
 	SortPipelineStageValue,
-	UnwindPipelineStageValue
-} from "./models/aggregate.models";
-import { FilterQuery } from "mongodb";
+	UnwindPipelineStageValue,
+} from './models/aggregate.models';
+import { FilterQuery } from 'mongodb';
 
 export class AggregationBuilder {
 
@@ -93,6 +96,10 @@ export class AggregationBuilder {
 
 	public match<T = any>(stageValue: FilterQuery<T>): AggregationBuilder {
 		return this.doAddStage({ [AggregationPipelineStageOperator.MATCH]: stageValue });
+	}
+
+	public merge(stageValue: MergePipelineStageValue): AggregationBuilder {
+		return this.doAddStage({ [AggregationPipelineStageOperator.MERGE]: stageValue });
 	}
 
 	public out(stageValue: string): AggregationBuilder {
