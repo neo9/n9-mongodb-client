@@ -4,7 +4,6 @@ import { AggregationCursor } from 'mongodb';
 
 import { MongoClient } from '../../src';
 import { BaseMongoObject } from '../../src/models';
-import { aggregate } from "../../src/aggregation-utils";
 import { init } from './fixtures/utils';
 
 class SampleType extends BaseMongoObject {
@@ -35,14 +34,13 @@ test('[AGG] Insert some and aggregate it 2', async (t: Assertions) => {
 	const sizeWithElementIn = await mongoClient.count();
 	t.is(sizeWithElementIn, 5, 'nb element in collection');
 
-	const aggResult = await mongoClient.aggregate<AggregationResult>(
-		aggregate()
+	const aggResult = await mongoClient.aggregateWithBuilder<AggregationResult>(
+			mongoClient.newAggregationBuilder()
 			.group({
 				_id: '$field1String',
 				count: { $sum: 1 },
 			})
 			.sort({ count: -1 })
-			.build()
 	);
 
 	t.truthy(aggResult instanceof AggregationCursor, 'return  AggregationCursor');
