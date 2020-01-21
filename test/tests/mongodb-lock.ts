@@ -1,19 +1,11 @@
 import { N9Log } from '@neo9/n9-node-log';
 import test, { Assertions } from 'ava';
-import * as mongodb from 'mongodb';
-import { MongoUtils, N9MongoLock } from '../../src';
+import { N9MongoLock } from '../../src';
+import { init } from './fixtures/utils';
 
 global.log = new N9Log('tests').module('lock-fields');
 
-test.before(async () => {
-	await MongoUtils.connect('mongodb://localhost:27017/test-n9-mongo-client');
-});
-
-test.after(async () => {
-	global.log.info(`DROP DB after tests OK`);
-	await (global.db as mongodb.Db).dropDatabase();
-	await MongoUtils.disconnect();
-});
+init(test);
 
 test('[LOCK] Test a simple lock', async (t: Assertions) => {
 	const codeRegexp = new RegExp(/^[0-9a-f]{32}$/);

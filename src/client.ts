@@ -4,10 +4,12 @@ import * as deepDiff from 'deep-diff';
 import * as _ from 'lodash';
 import {
 	AggregationCursor, CollationDocument, Collection, CollectionAggregationOptions,
-	CollectionInsertManyOptions, Cursor, Db, FilterQuery, IndexOptions, ObjectID, ObjectId, UpdateQuery,
+	CollectionInsertManyOptions, Cursor, Db, FilterQuery, IndexOptions, ObjectID, ObjectId,
+	UpdateQuery,
 } from 'mongodb';
 import { BaseMongoObject, EntityHistoric, LockField, StringMap, UpdateManyQuery } from './models';
 import { ClassType } from './models/class-type.models';
+import { UpdateManyAtOnceOptions } from './models/update-many-at-once-options.models';
 import { MongoReadStream } from './mongo-read-stream';
 import { MongoUtils } from './mongo-utils';
 
@@ -101,6 +103,10 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		await this.createIndex(fieldOrSpec, { ...options, unique: true });
 	}
 
+	public async createExpirationIndex(ttlInDays: number, options?: IndexOptions): Promise<void> {
+		await this.ensureExpirationIndex(this.collection, ttlInDays, options);
+	}
+
 	public async initHistoricIndexes(): Promise<void> {
 		await this.createHistoricIndex('entityId');
 	}
@@ -111,6 +117,10 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 
 	public async createHistoricUniqueIndex(fieldOrSpec: string | any = 'code'): Promise<void> {
 		await this.createHistoricIndex(fieldOrSpec, { unique: true });
+	}
+
+	public async createHistoricExpirationIndex(ttlInDays: number, options?: IndexOptions): Promise<void> {
+		await this.ensureExpirationIndex(this.collectionHistoric, ttlInDays, options);
 	}
 
 	public async insertOne(newEntity: U, userId: string, lockFields: boolean = true, returnNewValue: boolean = true): Promise<U> {
@@ -236,11 +246,18 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		return !!found;
 	}
 
-	public async findOneAndUpdateById(id: string, updateQuery: { [id: string]: object, $set?: object }, userId: string, internalCall: boolean = false, returnNewValue: boolean = true): Promise<U> {
+	public async findOneAndUpdateById(
+		id: string,
+		updateQuery: { [id: string]: object, $set?: object },
+		userId: string,
+		internalCall: boolean = false,
+		returnNewValue: boolean = true,
+		arrayFilters: FilterQuery<U>[] = [],
+	): Promise<U> {
 		const query: StringMap<any> = {
 			_id: MongoUtils.oid(id),
 		};
-		return await this.findOneAndUpdate(query, updateQuery, userId, internalCall, false, returnNewValue);
+		return await this.findOneAndUpdate(query, updateQuery, userId, internalCall, false, returnNewValue, arrayFilters);
 	}
 
 	public async findOneAndUpdateByKey(
@@ -249,15 +266,40 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			userId: string,
 			keyName: string = 'code',
 			internalCall: boolean = false,
-			returnNewValue: boolean = true): Promise<U> {
+			returnNewValue: boolean = true,
+			arrayFilters: FilterQuery<U>[] = [],
+	): Promise<U> {
 		const query: StringMap<any> = {
 			[MongoUtils.escapeSpecialCharacters(keyName)]: keyValue,
 		};
-		return await this.findOneAndUpdate(query, updateQuery, userId, internalCall, false, returnNewValue);
+		return await this.findOneAndUpdate(query, updateQuery, userId, internalCall, false, returnNewValue, arrayFilters);
 	}
 
 	/**
 	 * To upsert you should use findOneAndUpsert
+	 *
+	 * @param query The selection criteria for the update. The same query selectors as in the find() method are available.
+	 *
+	 * @param updateQuery The update document
+	 *
+	 * @param userId user identifier
+	 *
+	 * @param internalCall activate the lock field management.
+	 *
+	 * @param upsert Optional. When true, findOneAndUpdate() either:<ul><li>Creates a new document
+	 * if no documents match the filter. For more details see upsert behavior. Returns null after
+	 * inserting the new document, unless returnNewDocument is true.</li><li>Updates a single
+	 * document that matches the filter.</li></ul><br/>To avoid multiple upserts, ensure that the
+	 * filter fields are uniquely indexed.<br/> Defaults to false.
+	 *
+	 * @param returnNewValue Optional. When true, returns the updated document instead of the
+	 * original document.<br/> Defaults to true.
+	 *
+	 * @param arrayFilters Optional. An array of filter documents that determine which array
+	 * elements to modify for an update operation on an array field. <br/> In the update document,
+	 * use the $[<identifier>] filtered positional operator to define an identifier, which you then
+	 * reference in the array filter documents. You cannot have an array filter document for an
+	 * identifier if the identifier is not included in the update document.
 	 */
 	public async findOneAndUpdate(
 			query: FilterQuery<U>,
@@ -265,7 +307,9 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			userId: string,
 			internalCall: boolean = false,
 			upsert: boolean = false,
-			returnNewValue: boolean = true): Promise<U> {
+			returnNewValue: boolean = true,
+			arrayFilters: FilterQuery<U>[] = [],
+	): Promise<U> {
 		if (!internalCall) {
 			this.ifHasLockFieldsThrow();
 		}
@@ -299,7 +343,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			saveOldValue = await this.findOne(query);
 		}
 
-		let newEntity = (await this.collection.findOneAndUpdate(query, updateQuery, { returnOriginal: !returnNewValue, upsert })).value as U;
+		let newEntity = (await this.collection.findOneAndUpdate(query, updateQuery, { returnOriginal: !returnNewValue, upsert, arrayFilters })).value as U;
 		if (returnNewValue || this.conf.keepHistoric) {
 			newEntity = MongoUtils.mapObjectToClass(this.type, MongoUtils.unRemoveSpecialCharactersInKeys(newEntity));
 		}
@@ -325,8 +369,15 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 	}
 
 	// wrapper around findOneAndUpdate
-	public async findOneAndUpsert(query: FilterQuery<U>, updateQuery: { [id: string]: object, $set?: object }, userId: string, internalCall: boolean = false, returnNewValue: boolean = true): Promise<U> {
-		return this.findOneAndUpdate(query, updateQuery, userId, internalCall, true, returnNewValue);
+	public async findOneAndUpsert(
+		query: FilterQuery<U>,
+		updateQuery: { [id: string]: object, $set?: object },
+		userId: string,
+		internalCall: boolean = false,
+		returnNewValue: boolean = true,
+		arrayFilters: FilterQuery<U>[] = [],
+	): Promise<U> {
+		return this.findOneAndUpdate(query, updateQuery, userId, internalCall, true, returnNewValue, arrayFilters);
 	}
 
 	public async findOneByIdAndRemoveLock(id: string, lockFieldPath: string, userId: string): Promise<U> {
@@ -447,29 +498,29 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		await this.collection.deleteMany(query);
 	}
 
+	/**
+	 * Update multiple entities in one update. The update will be performed through a bulkWrite.
+	 *
+	 * @param entities list of entities to update
+	 * @param userId id of the user that is performing the operation. Will be stored in objectInfos.
+	 * @param options see UpdateManyAtOnceOptions for more details
+	 */
 	public async updateManyAtOnce(
 			entities: Partial<U>[],
 			userId: string,
-			upsert: boolean = false,
-			lockNewFields: boolean = true,
-			query?: string | StringMap<(keyValue: any, entity: Partial<U>, key: string) => any>,
-			mapFunction?: (entity: Partial<U>, existingEntity?: U) => Promise<Partial<U>>,
-			onlyInsertFieldsKey?: string[],
-			forceEditLockFields: boolean = false,
-			unsetUndefined: boolean = true
+			options: UpdateManyAtOnceOptions<U> = {}
 	): Promise<Cursor<U>> {
+		options.upsert = _.isBoolean(options.upsert) ? options.upsert : false;
+		options.lockNewFields = _.isBoolean(options.lockNewFields) ? options.lockNewFields : true;
+		options.forceEditLockFields = _.isBoolean(options.forceEditLockFields) ? options.forceEditLockFields : false;
+		options.unsetUndefined = _.isBoolean(options.unsetUndefined) ? options.unsetUndefined : true;
 		const updateQueries = await this.buildUpdatesQueries(
 				entities,
 				userId,
-				lockNewFields,
-				query,
-				mapFunction,
-				onlyInsertFieldsKey,
-				forceEditLockFields,
-				unsetUndefined
+				options
 		);
 		// console.log(`-- client.ts>updateManyAtOnce updateQueries --`, JSON.stringify(updateQueries, null, 2));
-		return await this.updateMany(updateQueries, userId, upsert);
+		return await this.updateMany(updateQueries, userId, options.upsert);
 	}
 
 	public async updateManyToSameValue(query: FilterQuery<U>, updateQuery: UpdateQuery<U>, userId: string): Promise<Cursor<U>> {
@@ -575,34 +626,33 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		await this.collection.drop();
 	}
 
+	public async dropHistory(): Promise<void> {
+		await this.collectionHistoric.drop();
+	}
+
 	private async buildUpdatesQueries(
 			entities: Partial<U>[],
 			userId: string,
-			lockNewFields: boolean,
-			query?: string | StringMap<(keyValue: any, entity: Partial<U>, key: string) => any>,
-			mapFunction?: (entity: Partial<U>, existingEntity?: U) => Promise<Partial<U>>,
-			onlyInsertFieldsKey?: string[],
-			forceEditLockFields?: boolean,
-			unsetUndefined?: boolean
+			options: UpdateManyAtOnceOptions<U>
 	): Promise<UpdateManyQuery[]> {
 		const updates: UpdateManyQuery[] = [];
 		for (let entity of entities) {
 			let currentValue: U;
-			if (query) {
-				if (_.isString(query)) {
-					currentValue = await this.findOneByKey(_.get(entity, query), query);
+			if (options.query) {
+				if (_.isString(options.query)) {
+					currentValue = await this.findOneByKey(_.get(entity, options.query), options.query);
 				} else {
-					currentValue = await this.findOne(_.mapValues(query, (val, key) => val && val.call(null, _.get(entity, key), entity, key)));
+					currentValue = await this.findOne(options.query.call(null, entity));
 				}
 			}
 			if (currentValue) {
-				if (!!mapFunction) {
-					entity = await mapFunction(entity, currentValue);
+				if (!!options.mapFunction) {
+					entity = await options.mapFunction(entity, currentValue);
 				}
 				MongoClient.removeEmptyDeep(entity, false, false, true);
 
 				if (this.conf.lockFields) {
-					if (!forceEditLockFields) {
+					if (!options.forceEditLockFields) {
 						entity = this.pruneEntityWithLockFields(entity, currentValue.objectInfos.lockFields);
 						const newEntityMerged = this.mergeOldEntityWithNewOne(entity, currentValue, '', currentValue.objectInfos.lockFields);
 						// console.log(`--  newEntityMerged --`, JSON.stringify(newEntityMerged, null, 2));
@@ -613,7 +663,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 						// TODO : add function parameter to allow validation here
 					}
 
-					if (lockNewFields) {
+					if (options.lockNewFields) {
 						const lockFields = currentValue.objectInfos.lockFields || [];
 						const newLockFields = this.getAllLockFieldsFromEntity(entity, new Date(), userId, currentValue);
 
@@ -624,8 +674,8 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 					}
 				}
 
-				const toSet = _.omit(entity, onlyInsertFieldsKey);
-				const toSetOnInsert = _.pick(entity, onlyInsertFieldsKey);
+				const toSet = _.omit(entity, options.onlyInsertFieldsKey);
+				const toSetOnInsert = _.pick(entity, options.onlyInsertFieldsKey);
 
 				let setOnInsert;
 				if (!_.isEmpty(toSetOnInsert)) {
@@ -638,7 +688,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 
 				// Unset only level 1, other are override by $set on objects
 				let unsetQuery;
-				if (unsetUndefined) {
+				if (options.unsetUndefined) {
 					const toUnset: object = _.omit(currentValue, [..._.keys(entity), '_id', 'objectInfos']);
 					if (!_.isEmpty(toUnset)) {
 						unsetQuery = {
@@ -662,13 +712,13 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 					updateQuery: update,
 				});
 			} else { // on insert for upsert
-				if (!!mapFunction) {
-					entity = await mapFunction(entity);
+				if (!!options.mapFunction) {
+					entity = await options.mapFunction(entity);
 				}
 				MongoClient.removeEmptyDeep(entity);
 
-				const toSet = _.omit(entity, onlyInsertFieldsKey);
-				const toSetOnInsert = _.pick(entity, onlyInsertFieldsKey);
+				const toSet = _.omit(entity, options.onlyInsertFieldsKey);
+				const toSetOnInsert = _.pick(entity, options.onlyInsertFieldsKey);
 
 				let setOnInsert;
 				if (!_.isEmpty(toSetOnInsert)) {
@@ -688,14 +738,14 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 					},
 				};
 
-				if (query) {
-					if (_.isString(query)) {
+				if (options.query) {
+					if (_.isString(options.query)) {
 						update.key = {
-							name: query,
-							value: _.get(entity, query),
+							name: options.query,
+							value: _.get(entity, options.query),
 						};
 					} else {
-						update.query = _.mapValues(query, (val, key) => val && val.call(null, _.get(entity, key), entity, key));
+						update.query = options.query.call(null, entity);
 					}
 				}
 				updates.push(update);
@@ -1110,5 +1160,21 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			}
 		}
 		return ret;
+	}
+
+	private async ensureExpirationIndex(collection: Collection, ttlInDays: number, options: IndexOptions = {}): Promise<void> {
+		options.expireAfterSeconds = ttlInDays * 24 * 3600;
+		options.name = options.name || 'n9MongoClient_expiration';
+		try {
+			await collection.createIndex('objectInfos.creation.date', options);
+		} catch (e) {
+			// error 85 means the index already exists with different parameters
+			if (e.code === 85) {
+				await collection.dropIndex(options.name);
+				await collection.createIndex('objectInfos.creation.date', options);
+			} else {
+				throw e;
+			}
+		}
 	}
 }

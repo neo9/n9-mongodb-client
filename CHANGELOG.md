@@ -1,5 +1,95 @@
+## Version [0.11.2](https://github.com/neo9/n9-mongo-client/compare/0.11.1...0.11.2) (2020-01-11)
+
+
+### streams
+
+* Fix streams queries building ([8c122c7](https://github.com/neo9/n9-mongo-client/commit/8c122c7)) (Benjamin Daniel)
+
+
+
+## Version [0.11.1](https://github.com/neo9/n9-mongo-client/compare/0.11.0...0.11.1) (2019-12-20)
+
+
+### release
+
+* V 0.11.1 ([0e4bb4d](https://github.com/neo9/n9-mongo-client/commit/0e4bb4d)) (Benjamin Daniel)
+
+### stream
+
+* Fix conditions on _id field ([44ac5eb](https://github.com/neo9/n9-mongo-client/commit/44ac5eb)) (Clement Petit)
+
+
+
+# Version [0.11.0](https://github.com/neo9/n9-mongo-client/compare/0.10.0...0.11.0) (2019-12-19)
+
+
+### doc
+
+* Add build instructions to README.md ([12cc931](https://github.com/neo9/n9-mongo-client/commit/12cc931)) (Gabriel ROQUIGNY)
+* Add CONTRIBUTING.md ([980fc61](https://github.com/neo9/n9-mongo-client/commit/980fc61)) (Gabriel ROQUIGNY)
+
+### feat
+
+* Add array filters to FindOneAndUpdate ([d686952](https://github.com/neo9/n9-mongo-client/commit/d686952)) (Gabriel ROQUIGNY)
+
+### release
+
+* V 0.11.0 ([7a9a7bc](https://github.com/neo9/n9-mongo-client/commit/7a9a7bc)) (Benjamin Daniel)
+
+### tests
+
+* Add array filters to FindOneAndUpdate ([134b36b](https://github.com/neo9/n9-mongo-client/commit/134b36b)) (Gabriel ROQUIGNY)
+* Add mongo start in memory server ([b54b8cf](https://github.com/neo9/n9-mongo-client/commit/b54b8cf)) (Gabriel ROQUIGNY)
+* Use init function ([942db30](https://github.com/neo9/n9-mongo-client/commit/942db30)) (Gabriel ROQUIGNY)
+
+### yarn
+
+* Fix repository reference ([6fc6181](https://github.com/neo9/n9-mongo-client/commit/6fc6181)) (Benjamin Daniel)
+* Fix repository reference ([0ca82b8](https://github.com/neo9/n9-mongo-client/commit/0ca82b8)) (Benjamin Daniel)
+
+
+
+# Version [0.10.0](https://github.com/neo9/n9-mongo-client/compare/0.9.0...0.10.0) (2019-09-25)
+
+
+### client
+
+* Use options params for updateManyAtOnce ([01ce294](https://github.com/neo9/n9-mongo-client/commit/01ce294)) (Clement Petit)
+
+### release
+
+* V 0.10.0 ([9cda36f](https://github.com/neo9/n9-mongo-client/commit/9cda36f)) (Benjamin Daniel)
+
+
+
+# Version [0.9.0](https://github.com/neo9/n9-mongo-client/compare/0.8.2...0.9.0) (2019-09-19)
+
+
+### release
+
+* V 0.9.0 ([15521db](https://github.com/neo9/n9-mongo-client/commit/15521db)) (Benjamin Daniel)
+
+
+
+## Version [0.8.2](https://github.com/neo9/n9-mongo-client/compare/0.8.1...0.8.2) (2019-09-19)
+
+
+### client
+
+* Add createExpirationIndex and createHistoricExpirationIndex methods ([5d0a01c](https://github.com/neo9/n9-mongo-client/commit/5d0a01c)) (Clement Petit)
+
+### release
+
+* V 0.8.2 ([d2298ec](https://github.com/neo9/n9-mongo-client/commit/d2298ec)) (Benjamin Daniel)
+
+
+
 ## Version [0.8.1](https://github.com/neo9/n9-mongo-client/compare/0.8.0...0.8.1) (2019-09-04)
 
+
+### release
+
+* V 0.8.1 ([a268960](https://github.com/neo9/n9-mongo-client/commit/a268960)) (Benjamin Daniel)
 
 ### stream
 

@@ -1,6 +1,7 @@
 import { N9Log } from '@neo9/n9-node-log';
 import test, { Assertions } from 'ava';
 import * as mongodb from 'mongodb';
+import { MongoMemoryServer } from 'mongodb-memory-server';
 
 import { MongoClient, MongoUtils } from '../../../src';
 import { BaseMongoObject } from '../../../src/models';
@@ -21,14 +22,19 @@ class SampleType extends SampleTypeListing {
 
 global.log = new N9Log('tests').module('issues');
 
+let mongod: MongoMemoryServer;
+
 test.before(async () => {
-	await MongoUtils.connect('mongodb://localhost:27017/test-n9-mongo-client');
+	mongod = new MongoMemoryServer();
+	const uri = await mongod.getConnectionString();
+	await MongoUtils.connect(uri);
 });
 
 test.after(async () => {
 	global.log.info(`DROP DB after tests OK`);
 	await (global.db as mongodb.Db).dropDatabase();
 	await MongoUtils.disconnect();
+	await mongod.stop();
 });
 
 test('[ISSUE#1] updateManyAtOnce should remove properties if not specified', async (t: Assertions) => {
@@ -58,7 +64,11 @@ test('[ISSUE#1] updateManyAtOnce should remove properties if not specified', asy
 	t.is(foundObject.field5, 'string5', 'found right element string5');
 
 	global.log.debug(`updateManyAtOnce with savedObject without field1String field`);
-	const updateArray = await (await mongoClient.updateManyAtOnce([newValue], 'userId1', true, false, 'code')).toArray();
+	const updateArray = await (await mongoClient.updateManyAtOnce([newValue], 'userId1', {
+		upsert: true,
+		lockNewFields: false,
+		query: 'code',
+	})).toArray();
 
 	const updatedObject = updateArray[0];
 
@@ -106,7 +116,11 @@ test('[ISSUE#1] updateManyAtOnce should remove recursively properties if not spe
 	t.is(foundObject.sub.field4, 'string4', 'found right element string4');
 
 	global.log.debug(`updateManyAtOnce with savedObject without field1String field`);
-	const updateArray = await (await mongoClient.updateManyAtOnce([newValue], 'userId1', true, false, 'code')).toArray();
+	const updateArray = await (await mongoClient.updateManyAtOnce([newValue], 'userId1', {
+		upsert: true,
+		lockNewFields: false,
+		query: 'code',
+	})).toArray();
 
 	const updatedObject = updateArray[0];
 

@@ -2,9 +2,9 @@ import { N9Log } from '@neo9/n9-node-log';
 import test, { Assertions } from 'ava';
 import * as _ from 'lodash';
 import { ObjectID } from 'mongodb';
-import * as mongodb from 'mongodb';
-import { MongoClient, MongoUtils } from '../../src';
+import { MongoClient } from '../../src';
 import { BaseMongoObject, EntityHistoric, StringMap } from '../../src/models';
+import { init } from './fixtures/utils';
 
 export class AttributeEntity extends BaseMongoObject {
 	public type: 'select';
@@ -85,15 +85,7 @@ const getLockFieldsMongoClient = (keepHistoric: boolean = false) => {
 
 global.log = new N9Log('tests').module('lock-fields');
 
-test.before(async () => {
-	await MongoUtils.connect('mongodb://localhost:27017/test-n9-mongo-client');
-});
-
-test.after(async () => {
-	global.log.info(`DROP DB after tests OK`);
-	await (global.db as mongodb.Db).dropDatabase();
-	await MongoUtils.disconnect();
-});
+init(test);
 
 test('[LOCK-FIELDS] Insert one and check locks', async (t: Assertions) => {
 
@@ -261,7 +253,7 @@ test('[LOCK-FIELDS] Update many with locks', async (t: Assertions) => {
 		},
 	}];
 
-	await mongoClient.updateManyAtOnce(newValues, 'userId', false, true, 'text');
+	await mongoClient.updateManyAtOnce(newValues, 'userId', { query: 'text', });
 	const listing: Partial<SampleComplexType>[] = await (await mongoClient.find({}, 0, 0)).toArray();
 
 	t.is(listing.length, 2, 'found 2 elements');
@@ -376,7 +368,11 @@ test('[LOCK-FIELDS] Insert&update boolean', async (t: Assertions) => {
 		keepHistoric: true,
 	});
 
-	const attributesCreated: AttributeEntity[] = await (await mongoClient.updateManyAtOnce([attribute], 'userId1', true, false, 'code')).toArray();
+	const attributesCreated: AttributeEntity[] = await (await mongoClient.updateManyAtOnce([attribute], 'userId1', {
+		upsert: true,
+		lockNewFields: false,
+		query: 'code',
+	})).toArray();
 
 	const newAttributeValue = _.cloneDeep(attribute);
 	newAttributeValue.isEditable = !newAttributeValue.isEditable;
@@ -430,7 +426,11 @@ test('[LOCK-FIELDS] Insert&update array sub object element', async (t: Assertion
 		keepHistoric: true,
 	});
 
-	const attributesCreated: AttributeEntity[] = await (await mongoClient.updateManyAtOnce([attribute], 'userId1', true, false, 'code')).toArray();
+	const attributesCreated: AttributeEntity[] = await (await mongoClient.updateManyAtOnce([attribute], 'userId1', {
+		upsert: true,
+		lockNewFields: false,
+		query: 'code',
+	})).toArray();
 
 	const newAttributeValue = _.cloneDeep(attribute);
 	newAttributeValue.parameters.items[1].label['fr-FR'] = 'Autres tailles';
@@ -544,7 +544,11 @@ test('[LOCK-FIELDS] Insert&update attribute', async (t: Assertions) => {
 		keepHistoric: true,
 	});
 
-	const attributesCreated: AttributeEntity[] = await (await mongoClient.updateManyAtOnce([attribute], 'userId1', true, false, 'code')).toArray();
+	const attributesCreated: AttributeEntity[] = await (await mongoClient.updateManyAtOnce([attribute], 'userId1', {
+		upsert: true,
+		lockNewFields: false,
+		query: 'code',
+	})).toArray();
 	const attributeCreated = await mongoClient.findOneByKey(attribute.code);
 
 	t.deepEqual(attributesCreated[0], attributeCreated, `update many at once return new data`);
