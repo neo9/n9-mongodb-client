@@ -1107,6 +1107,11 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		for (const key of existingEntityKeys) {
 			const existingEntityElement = existingEntity[key];
 			const currentPath = MongoClient.getJoinPaths(basePath, key);
+
+			if (_.includes(this.conf.lockFields.excludedFields, currentPath)) {
+				continue;
+			}
+
 			if (MongoClient.isClassicObject(existingEntityElement)) {
 				ret[key] = this.pickOnlyNewValues(existingEntityElement, newEntity[key], currentPath);
 				if (_.isNil(ret[key])) {
