@@ -1,5 +1,23 @@
+# Version [0.12.0](https://github.com/neo9/n9-mongo-client/compare/0.11.2...0.12.0) (2020-01-21)
+
+
+### aggregate
+
+* Add merge step to pipeline aggregation builder ([2a0d55d](https://github.com/neo9/n9-mongo-client/commit/2a0d55d)) (Benjamin Daniel)
+* Force output collection for aggregation ([55d2231](https://github.com/neo9/n9-mongo-client/commit/55d2231)) (Benjamin Daniel)
+
+### lockfields
+
+* Add excluded fields filter ([1cfb726](https://github.com/neo9/n9-mongo-client/commit/1cfb726)) (Benjamin Daniel)
+
+
+
 ## Version [0.11.2](https://github.com/neo9/n9-mongo-client/compare/0.11.1...0.11.2) (2020-01-11)
 
+
+### release
+
+* V 0.11.2 ([e25228b](https://github.com/neo9/n9-mongo-client/commit/e25228b)) (Benjamin Daniel)
 
 ### streams
 
@@ -73,6 +91,10 @@
 
 ## Version [0.8.2](https://github.com/neo9/n9-mongo-client/compare/0.8.1...0.8.2) (2019-09-19)
 
+
+### aggregation
+
+* Add aggregation builder ([3fbe4e8](https://github.com/neo9/n9-mongo-client/commit/3fbe4e8)) (Clement Petit)
 
 ### client
 
