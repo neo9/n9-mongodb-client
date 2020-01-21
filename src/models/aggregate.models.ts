@@ -459,6 +459,10 @@ export interface MatchPipelineStage<T = any> {
 	[AggregationPipelineStageOperator.MATCH]: FilterQuery<T>;
 }
 
+export interface MergePipelineStage {
+	[AggregationPipelineStageOperator.MERGE]: MergePipelineStageValue;
+}
+
 /**
  *  into: <collection> -or- { db: <db>, coll: <collection> },
  *  on: <identifier field> -or- [ <identifier field1>, ...],  // Optional
@@ -466,19 +470,15 @@ export interface MatchPipelineStage<T = any> {
  *  whenMatched: <replace|keepExisting|merge|fail|pipeline>,  // Optional
  *  whenNotMatched: <insert|discard|fail>                     // Optional
  */
-export interface MergePipelineStage {
-	[AggregationPipelineStageOperator.MERGE]: MergePipelineStageValue;
-}
-
 export interface MergePipelineStageValue {
-	into: string | {
+	into?: string | {
 		db: string;
 		coll: string;
 	};
-	on: string | string[];
-	let: StringMap<string>;
-	whenMatched: 'replace' | 'keepExisting'|'merge'|'fail'| MergeMatchedAggregationPipelineStage;
-	whenNotMatched: 'insert' | 'discard' | 'fail';
+	on?: string | string[];
+	let?: StringMap<string>;
+	whenMatched?: 'replace' | 'keepExisting'|'merge'|'fail'| MergeMatchedAggregationPipelineStage;
+	whenNotMatched?: 'insert' | 'discard' | 'fail';
 }
 
 export type MergeMatchedAggregationPipelineStage =
