@@ -1,9 +1,22 @@
+## Version [0.12.3](https://github.com/neo9/n9-mongo-client/compare/0.12.2...0.12.3) (2020-01-23)
+
+
+### aggregate
+
+* Add option to force reading in main collection ([c22d6e6](https://github.com/neo9/n9-mongo-client/commit/c22d6e6)) (Benjamin Daniel)
+
+
+
 ## Version [0.12.2](https://github.com/neo9/n9-mongo-client/compare/0.12.1...0.12.2) (2020-01-21)
 
 
 ### aggregate
 
 * Fix merge stage type ([d39b07f](https://github.com/neo9/n9-mongo-client/commit/d39b07f)) (Benjamin Daniel)
+
+### release
+
+* V 0.12.2 ([44872e3](https://github.com/neo9/n9-mongo-client/commit/44872e3)) (Benjamin Daniel)
 
 
 
