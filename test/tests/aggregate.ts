@@ -99,6 +99,11 @@ test('[AGG] Insert some and aggregate with output', async (t: Assertions) => {
 	const outputContent = await (await mongoClientOut.find({}, 0, 0, undefined, { _id: 0, field1String: 1 })).toArray();
 	t.deepEqual(outputContent, [{ field1String: 'string3' }, { field1String: 'string4' }], 'All is exactly right');
 
+	const outputContentWithAggregationReading = await (
+			await mongoClientOut.aggregateWithBuilder<{ field1String: string }>(mongoClientOut.newAggregationBuilder().project( { _id: 0, field1String: 1 }), {}, true)
+	).toArray();
+	t.deepEqual(outputContentWithAggregationReading, [{ field1String: 'string3' }, { field1String: 'string4' }], 'All is exactly right with aggregation reading');
+
 	await mongoClientOut.dropCollection();
 	await mongoClientRead.dropCollection();
 });

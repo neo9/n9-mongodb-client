@@ -566,15 +566,24 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 
 	/**
 	 * Do an aggregation on mongodb, use it carefully
-	 * @param aggregateSteps: steps of the aggregation
-	 * @param options : options to send to the client
+	 * @param aggregateSteps steps of the aggregation
+	 * @param options options to send to the client
+	 * @param readInOutputCollection to read in the main mongoClient collection
 	 */
-	public async aggregate<T = void>(aggregateSteps: object[], options?: CollectionAggregationOptions): Promise<AggregationCursor<T>> {
-		return await this.collectionSourceForAggregation.aggregate<T>(aggregateSteps, options);
+	public async aggregate<T = void>(aggregateSteps: object[], options?: CollectionAggregationOptions, readInOutputCollection: boolean = false): Promise<AggregationCursor<T>> {
+		if (readInOutputCollection) {
+			return await this.collection.aggregate<T>(aggregateSteps, options);
+		} else {
+			return await this.collectionSourceForAggregation.aggregate<T>(aggregateSteps, options);
+		}
 	}
 
-	public async aggregateWithBuilder<T = void>(aggregationBuilder: AggregationBuilder<U>, options?: CollectionAggregationOptions): Promise<AggregationCursor<T>> {
-		return await this.aggregate<T>(aggregationBuilder.build(), options);
+	public async aggregateWithBuilder<T = void>(
+			aggregationBuilder: AggregationBuilder<U>,
+			options?: CollectionAggregationOptions,
+			readInOutputCollection: boolean = false,
+	): Promise<AggregationCursor<T>> {
+		return await this.aggregate<T>(aggregationBuilder.build(), options, readInOutputCollection);
 	}
 
 	public newAggregationBuilder(): AggregationBuilder<U> {
