@@ -54,7 +54,7 @@
     "conventional-changelog-cli": "^2.0.11",
     "deep-diff": "^1.0.2",
     "lodash": "^4.17.14",
-    "mongodb": "^3.1.10",
+    "mongodb": "^3.5.2",
     "mongodb-lock": "^1.0.1",
     "release-it": "7.4.8"
   },
@@ -63,11 +63,11 @@
     "@types/std-mocks": "^1.0.0",
     "ava": "^1.4.1",
     "husky": "^3.0.0",
+    "mongodb-memory-server": "6.0.2",
     "nyc": "^13.1.0",
     "std-mocks": "^1.0.1",
     "tslint": "^5.17.0",
-    "typescript": "^3.2.2",
-    "mongodb-memory-server": "6.0.2"
+    "typescript": "^3.2.2"
   },
   "bugs": {
     "url": "https://github.com/neo9/n9-mongo-client/issues"
