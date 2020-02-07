@@ -1,3 +1,8 @@
+## Version [0.12.5](https://github.com/neo9/n9-mongo-client/compare/0.12.4...0.12.5) (2020-02-07)
+
+
+
+
 ## Version [0.12.4](https://github.com/neo9/n9-mongo-client/compare/0.12.3...0.12.4) (2020-02-07)
 
 
@@ -8,6 +13,10 @@
 ### mongo
 
 * Update mongodb driver to 3.5.2 ([ccec9d0](https://github.com/neo9/n9-mongo-client/commit/ccec9d0)) (Clement Petit)
+
+### release
+
+* V 0.12.4 ([b5e12c3](https://github.com/neo9/n9-mongo-client/commit/b5e12c3)) (Clement Petit)
 
 
 
