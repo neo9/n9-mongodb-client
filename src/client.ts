@@ -120,8 +120,8 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		await this.createIndex(fieldOrSpec, { ...options, unique: true });
 	}
 
-	public async createExpirationIndex(ttlInDays: number, options?: IndexOptions): Promise<void> {
-		await this.ensureExpirationIndex(this.collection, ttlInDays, options);
+	public async createExpirationIndex(ttlInDays: number, fieldOrSpec: string | object = 'objectInfos.creation.date', options: IndexOptions = {}): Promise<void> {
+		await this.ensureExpirationIndex(this.collection, fieldOrSpec, ttlInDays, options);
 	}
 
 	public async initHistoricIndexes(): Promise<void> {
@@ -136,8 +136,8 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		await this.createHistoricIndex(fieldOrSpec, { unique: true });
 	}
 
-	public async createHistoricExpirationIndex(ttlInDays: number, options?: IndexOptions): Promise<void> {
-		await this.ensureExpirationIndex(this.collectionHistoric, ttlInDays, options);
+	public async createHistoricExpirationIndex(ttlInDays: number, fieldOrSpec: string | object = 'date', options: IndexOptions = {}): Promise<void> {
+		await this.ensureExpirationIndex(this.collectionHistoric, fieldOrSpec, ttlInDays, options);
 	}
 
 	public async insertOne(newEntity: U, userId: string, lockFields: boolean = true, returnNewValue: boolean = true): Promise<U> {
@@ -1199,16 +1199,19 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		return ret;
 	}
 
-	private async ensureExpirationIndex(collection: Collection, ttlInDays: number, options: IndexOptions = {}): Promise<void> {
+	private async ensureExpirationIndex(collection: Collection, fieldOrSpec: string | object, ttlInDays: number, options: IndexOptions = {}): Promise<void> {
 		options.expireAfterSeconds = ttlInDays * 24 * 3600;
 		options.name = options.name || 'n9MongoClient_expiration';
+
 		try {
-			await collection.createIndex('objectInfos.creation.date', options);
+			await collection.createIndex(fieldOrSpec, options);
 		} catch (e) {
-			// error 85 means the index already exists with different parameters
-			if (e.code === 85) {
+			// error 85 and 86 mean the index already exists with different parameters / fields
+			// 85 means different parameters
+			// 86 means different fields
+			if (e.code === 85 || e.code === 86) {
 				await collection.dropIndex(options.name);
-				await collection.createIndex('objectInfos.creation.date', options);
+				await collection.createIndex(fieldOrSpec, options);
 			} else {
 				throw e;
 			}
