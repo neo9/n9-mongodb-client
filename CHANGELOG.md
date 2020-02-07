@@ -1,9 +1,26 @@
+## Version [0.12.4](https://github.com/neo9/n9-mongo-client/compare/0.12.3...0.12.4) (2020-02-07)
+
+
+### expiration
+
+* Allow to override expiring field ([0620231](https://github.com/neo9/n9-mongo-client/commit/0620231)) (Clement Petit)
+
+### mongo
+
+* Update mongodb driver to 3.5.2 ([ccec9d0](https://github.com/neo9/n9-mongo-client/commit/ccec9d0)) (Clement Petit)
+
+
+
 ## Version [0.12.3](https://github.com/neo9/n9-mongo-client/compare/0.12.2...0.12.3) (2020-01-23)
 
 
 ### aggregate
 
 * Add option to force reading in main collection ([c22d6e6](https://github.com/neo9/n9-mongo-client/commit/c22d6e6)) (Benjamin Daniel)
+
+### release
+
+* V 0.12.3 ([2f8523b](https://github.com/neo9/n9-mongo-client/commit/2f8523b)) (Benjamin Daniel)
 
 
 
