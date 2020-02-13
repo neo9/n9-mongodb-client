@@ -1,5 +1,18 @@
+## Version [0.12.6](https://github.com/neo9/n9-mongo-client/compare/0.12.5...0.12.6) (2020-02-13)
+
+
+### mongo
+
+* Revert mongodb driver version to 3.2.5 NODE-2454 ([e403b42](https://github.com/neo9/n9-mongo-client/commit/e403b42)) (Clement Petit)
+
+
+
 ## Version [0.12.5](https://github.com/neo9/n9-mongo-client/compare/0.12.4...0.12.5) (2020-02-07)
 
+
+### release
+
+* V 0.12.5 ([88201c3](https://github.com/neo9/n9-mongo-client/commit/88201c3)) (Clement Petit)
 
 
 
