@@ -54,7 +54,7 @@
     "conventional-changelog-cli": "^2.0.11",
     "deep-diff": "^1.0.2",
     "lodash": "^4.17.14",
-    "mongodb": "^3.5.2",
+    "mongodb": "3.2.5",
     "mongodb-lock": "^1.0.1",
     "release-it": "7.4.8"
   },
