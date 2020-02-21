@@ -22,6 +22,7 @@ import { UpdateManyAtOnceOptions } from './models/update-many-at-once-options.mo
 import { MongoReadStream } from './mongo-read-stream';
 import { MongoUtils } from './mongo-utils';
 import { AggregationBuilder } from './aggregation-utils';
+import { TagOptions, AddTagOptions, RemoveTagOptions } from './models/tag-options.models';
 
 export interface MongoClientConfiguration {
 	keepHistoric?: boolean;
@@ -124,6 +125,10 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		await this.ensureExpirationIndex(this.collection, fieldOrSpec, ttlInDays, options);
 	}
 
+	public async initTagsIndex(): Promise<void> {
+		await this.collection.createIndex({ 'objectInfos.tags': 1 });
+	}
+
 	public async initHistoricIndexes(): Promise<void> {
 		await this.createHistoricIndex('entityId');
 	}
@@ -145,6 +150,10 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		const date = new Date();
 		newEntity.objectInfos = {
 			creation: {
+				date,
+				userId,
+			},
+			lastUpdate: {
 				date,
 				userId,
 			},
@@ -172,9 +181,14 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		if (_.isEmpty(newEntities)) return;
 
 		const entitiesToInsert = newEntities.map((newEntity) => {
+			const date = new Date();
 			newEntity.objectInfos = {
 				creation: {
-					date: new Date(),
+					date,
+					userId,
+				},
+				lastUpdate: {
+					date,
 					userId,
 				},
 			};
@@ -660,6 +674,88 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 
 	public async dropHistory(): Promise<void> {
 		await this.collectionHistoric.drop();
+	}
+
+	/**
+	 * Add a tag to an entity.
+	 * If the entity already has the tag, this method has no effect.
+	 *
+	 * @param query the query to select the entity to tag
+	 * @param userId id of the user performing the operation
+	 * @param options options to customize the tag
+	 */
+	public async addTagToOne(query: object, userId: string, options: AddTagOptions = {}): Promise<string> {
+		options.tag = options.tag || new ObjectId().toHexString();
+		const update = this.buildAddTagUpdate(userId, options);
+		await this.collection.findOneAndUpdate(
+			query,
+			update,
+			{ returnOriginal: false },
+		);
+		return options.tag;
+	}
+
+	/**
+	 * Same as addTagToOne, except the query is made by id.
+	 */
+	public async addTagToOneById(id: string, userId: string, options: AddTagOptions = {}): Promise<string> {
+		return await this.addTagToOne({ _id: MongoUtils.oid(id) }, userId, options);
+	}
+
+	/**
+	 * Same as addTagToOne, but for many entities
+	 */
+	public async addTagToMany(query: object, userId: string, options: AddTagOptions = {}): Promise<string> {
+		options.tag = options.tag || new ObjectId().toHexString();
+		const update = this.buildAddTagUpdate(userId, options);
+		await this.collection.updateMany(
+			query,
+			update,
+		);
+		return options.tag;
+	}
+
+	/**
+	 * Remove a tag from an entity.
+	 * If the entity doesn't have the tag, this method has no effect.
+	 *
+	 * @param query the query to select the entity to tag
+	 * @param tag the tag to remove
+	 * @param userId id of the user performing the operation
+	 * @param options options to customize the tag
+	 */
+	public async removeTagFromOne(query: object, tag: string, userId: string, options: RemoveTagOptions = {}): Promise<void> {
+		const update = this.buildRemoveTagUpdate(tag, userId, options);
+		await this.collection.findOneAndUpdate(
+			query,
+			update,
+			{ returnOriginal: false },
+		);
+	}
+
+	/**
+	 * Same as removeTagFromOne, except the query is made by id.
+	 */
+	public async removeTagFromOneById(id: string, tag: string, userId: string, options: RemoveTagOptions = {}): Promise<void> {
+		await this.removeTagFromOne({ _id: MongoUtils.oid(id) }, tag, userId, options);
+	}
+
+	/**vs
+	 * Same as removeTagFromOne, but for many entities
+	 */
+	public async removeTagFromMany(query: object, tag: string, userId: string, options: RemoveTagOptions = {}): Promise<void> {
+		const update = this.buildRemoveTagUpdate(tag, userId, options);
+		await this.collection.updateMany(
+			query,
+			update,
+		);
+	}
+
+	/**
+	 * Delete all entities with the given tag
+	 */
+	public async deleteManyWithTag(tag: string): Promise<void> {
+		await this.collection.deleteMany({ 'objectInfos.tags': tag });
 	}
 
 	private async buildUpdatesQueries(
@@ -1216,5 +1312,29 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				throw e;
 			}
 		}
+	}
+
+	private buildAddTagUpdate(userId: string, options: AddTagOptions): object {
+		const update = { $addToSet: { 'objectInfos.tags': options.tag } };
+		const updateLastUpdate = _.isBoolean(options.updateLastUpdate) ? options.updateLastUpdate : true;
+		if (updateLastUpdate) {
+			update['$set'] = {
+				'objectInfos.lastUpdate.date': new Date(),
+				'objectInfos.lastUpdate.userId': ObjectId.isValid(userId) ? MongoUtils.oid(userId) : userId,
+			};
+		}
+		return update;
+	}
+
+	private buildRemoveTagUpdate(tag: string, userId: string, options: RemoveTagOptions): object {
+		const update = { $pull: { 'objectInfos.tags': tag } };
+		const updateLastUpdate = _.isBoolean(options.updateLastUpdate) ? options.updateLastUpdate : true;
+		if (updateLastUpdate) {
+			update['$set'] = {
+				'objectInfos.lastUpdate.date': new Date(),
+				'objectInfos.lastUpdate.userId': ObjectId.isValid(userId) ? MongoUtils.oid(userId) : userId,
+			};
+		}
+		return update;
 	}
 }
