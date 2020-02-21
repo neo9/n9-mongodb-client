@@ -21,7 +21,7 @@ export class N9MongoLock {
 		if (!db) {
 			throw new N9Error('missing-db', 500);
 		}
-		this.lock = mongoDbLock(db.collection(collection), lockName);
+		this.lock = mongoDbLock(db.collection(collection), lockName, options);
 	}
 
 	/**
