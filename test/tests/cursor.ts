@@ -78,10 +78,11 @@ test('[Cursor] hasNext before piping into a stream ', async (t: Assertions) => {
 	cursor
 		.pipe(
 			new Transform({
-				objectMode: true,
+				readableObjectMode: false,
+				writableObjectMode: true,
 				transform: (chunk: any, encoding: string, next: any): void => {
 					items.push(chunk);
-					next(null, chunk);
+					next(null, JSON.stringify(chunk));
 				},
 			}),
 		)
@@ -111,10 +112,11 @@ test('[Cursor] sort and hasNext before piping into a stream ', async (t: Asserti
 	cursor
 		.pipe(
 			new Transform({
-				objectMode: true,
+				readableObjectMode: false,
+				writableObjectMode: true,
 				transform: (chunk: any, encoding: string, next: any): void => {
 					items.push(chunk);
-					next(null, chunk);
+					next(null, JSON.stringify(chunk));
 				},
 			}),
 		)
