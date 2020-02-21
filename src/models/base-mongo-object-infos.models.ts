@@ -23,4 +23,7 @@ export class BaseMongoObjectInfos {
 
 	@Expose()
 	public lockFields?: LockField[];
+
+	@Expose()
+	public tags?: string[];
 }
