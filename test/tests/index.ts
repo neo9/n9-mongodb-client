@@ -72,7 +72,7 @@ test('[CRUD] Find one and update', async (t: Assertions) => {
 	const intValue = 41;
 	const intValue2 = 42;
 
-	await mongoClient.insertOne({
+	const insertedDocument = await mongoClient.insertOne({
 		field1String: 'string1',
 		field2Number: intValue,
 	}, 'userId1');
@@ -88,6 +88,7 @@ test('[CRUD] Find one and update', async (t: Assertions) => {
 	let sizeAfterUpdate = await mongoClient.count();
 
 	t.is(founded.field2Number, updateQuery.$set.field2Number, 'Element has been updated');
+	t.true(founded.objectInfos.lastUpdate.date.getTime() > insertedDocument.objectInfos.lastUpdate.date.getTime(), 'Element update has last update date changed');
 	t.is(sizeAfterUpdate, sizeAfterInsert, 'No new element added');
 
 	const notFound = await mongoClient.findOneAndUpdate({
