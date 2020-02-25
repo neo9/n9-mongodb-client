@@ -1,9 +1,34 @@
+# Version [0.13.0](https://github.com/neo9/n9-mongo-client/compare/0.12.6...0.13.0) (2020-02-25)
+
+
+### client
+
+* Add tag / untag feature ([70a4844](https://github.com/neo9/n9-mongo-client/commit/70a4844)) (Clement Petit)
+
+### cursor
+
+* Fix unit test ([8c5618a](https://github.com/neo9/n9-mongo-client/commit/8c5618a)) (Clement Petit)
+
+### lock
+
+* Forward constructor options to mongoDbLock ([7894c79](https://github.com/neo9/n9-mongo-client/commit/7894c79)) (Clement Petit)
+
+### tests
+
+* Add tests on lastUpdate date ([15dbae5](https://github.com/neo9/n9-mongo-client/commit/15dbae5)) (Benjamin Daniel)
+
+
+
 ## Version [0.12.6](https://github.com/neo9/n9-mongo-client/compare/0.12.5...0.12.6) (2020-02-13)
 
 
 ### mongo
 
 * Revert mongodb driver version to 3.2.5 NODE-2454 ([e403b42](https://github.com/neo9/n9-mongo-client/commit/e403b42)) (Clement Petit)
+
+### release
+
+* V 0.12.6 ([3d22504](https://github.com/neo9/n9-mongo-client/commit/3d22504)) (Clement Petit)
 
 
 
