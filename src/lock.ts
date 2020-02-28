@@ -1,7 +1,7 @@
 import { N9Error, waitFor } from '@neo9/n9-node-utils';
 import { Db } from 'mongodb';
-import { LockOptions, MongodbLock } from 'mongodb-lock';
 import * as mongoDbLock from 'mongodb-lock';
+import { LockOptions, MongodbLock } from 'mongodb-lock';
 
 /**
  * Wrapper of mongodb-lock
@@ -14,9 +14,13 @@ export class N9MongoLock {
 	 *
 	 * @param collection Collection name to use to save lock, default : n9MongoLock
 	 * @param lockName : a key to identify the lock
-	 * @param options : timeout default to 30s and removeExpired default to false
+	 * @param options : timeout default to 30s and removeExpired default to true to avoid duplication keys on expiring
 	 */
-	constructor(collection: string = 'n9MongoLock', lockName: string = 'default-lock', options: LockOptions = { timeout: 30 * 1000, removeExpired: false }) {
+	constructor(
+		collection: string = 'n9MongoLock',
+		lockName: string = 'default-lock',
+		options: LockOptions = { timeout: 30 * 1000, removeExpired: true },
+	) {
 		const db = global.db as Db;
 		if (!db) {
 			throw new N9Error('missing-db', 500);
@@ -30,10 +34,10 @@ export class N9MongoLock {
 	 */
 	public async ensureIndexes(): Promise<void> {
 		return new Promise<void>((resolve, reject) => {
-			this.lock.ensureIndexes(((err: any, result: any) => {
+			this.lock.ensureIndexes((err: any, result: any) => {
 				if (err) return reject(err);
 				return resolve(result);
-			}));
+			});
 		});
 	}
 
@@ -42,10 +46,10 @@ export class N9MongoLock {
 	 */
 	public async acquire(): Promise<string | undefined> {
 		return new Promise<string>((resolve, reject) => {
-			this.lock.acquire(((err: any, code: string) => {
+			this.lock.acquire((err: any, code: string) => {
 				if (err) return reject(err);
 				return resolve(code);
-			}));
+			});
 		});
 	}
 
@@ -55,8 +59,8 @@ export class N9MongoLock {
 	 * @param waitDurationMs check timeout every waitDurationMs ms
 	 */
 	public async acquireBlockingUntilAvailable(
-			timeoutMs: number,
-			waitDurationMs: number = 100,
+		timeoutMs: number,
+		waitDurationMs: number = 100,
 	): Promise<string> {
 		const startTime = Date.now();
 		do {
@@ -71,10 +75,10 @@ export class N9MongoLock {
 	 */
 	public async release(code: string): Promise<boolean> {
 		return new Promise<boolean>((resolve, reject) => {
-			this.lock.release(code, ((err: any, ok: boolean) => {
+			this.lock.release(code, (err: any, ok: boolean) => {
 				if (err) return reject(err);
 				return resolve(ok);
-			}));
+			});
 		});
 	}
 }
