@@ -1,3 +1,12 @@
+## Version [0.13.1](https://github.com/neo9/n9-mongo-client/compare/0.13.0...0.13.1) (2020-02-28)
+
+
+### locks
+
+* Fix locks expiring ([eef34f8](https://github.com/neo9/n9-mongo-client/commit/eef34f8)) (Benjamin Daniel)
+
+
+
 # Version [0.13.0](https://github.com/neo9/n9-mongo-client/compare/0.12.6...0.13.0) (2020-02-25)
 
 
@@ -12,6 +21,10 @@
 ### lock
 
 * Forward constructor options to mongoDbLock ([7894c79](https://github.com/neo9/n9-mongo-client/commit/7894c79)) (Clement Petit)
+
+### release
+
+* V 0.13.0 ([b6d1f71](https://github.com/neo9/n9-mongo-client/commit/b6d1f71)) (Benjamin Daniel)
 
 ### tests
 
