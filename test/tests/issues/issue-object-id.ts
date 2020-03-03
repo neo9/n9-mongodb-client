@@ -1,6 +1,5 @@
 import { N9Log } from '@neo9/n9-node-log';
-import test, { Assertions } from 'ava';
-import { ObjectID } from 'mongodb';
+import ava, { Assertions } from 'ava';
 import * as mongodb from 'mongodb';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 
@@ -11,21 +10,21 @@ global.log = new N9Log('tests').module('issues');
 
 let mongod: MongoMemoryServer;
 
-test.before(async () => {
+ava.before(async () => {
 	mongod = new MongoMemoryServer();
 	const uri = await mongod.getConnectionString();
 	await MongoUtils.connect(uri);
 });
 
-test.after(async () => {
+ava.after(async () => {
 	global.log.info(`DROP DB after tests OK`);
 	await (global.db as mongodb.Db).dropDatabase();
 	await MongoUtils.disconnect();
 	await mongod.stop();
 });
 
-test('[ISSUE-OBJECT-ID] Object ID should be well compared', async (t: Assertions) => {
-	const mongoClient = new MongoClient('test-' + Date.now(), BaseMongoObject, BaseMongoObject, {
+ava('[ISSUE-OBJECT-ID] Object ID should be well compared', async (t: Assertions) => {
+	const mongoClient = new MongoClient(`test-${Date.now()}`, BaseMongoObject, BaseMongoObject, {
 		lockFields: {
 			excludedFields: ['sku', 'externalReferences'],
 			arrayWithReferences: {
@@ -41,14 +40,19 @@ test('[ISSUE-OBJECT-ID] Object ID should be well compared', async (t: Assertions
 	const initialValue: any = {
 		attributes: [
 			{
-				attributeId: '1', value: { 'fr-FR': 'description initiale', 'en-GB': 'english description' },
-			}, {
-				attributeId: '2', value: 'coton',
-			}, {
-				attributeId: '3', value: {},
+				attributeId: '1',
+				value: { 'fr-FR': 'description initiale', 'en-GB': 'english description' },
+			},
+			{
+				attributeId: '2',
+				value: 'coton',
+			},
+			{
+				attributeId: '3',
+				value: {},
 			},
 		],
-		otherId: new ObjectID('5cb7397c1a9299f144b71ac6'),
+		otherId: new mongodb.ObjectID('5cb7397c1a9299f144b71ac6'),
 		label: {
 			'fr-FR': 'produit à surcharger',
 			'en-GB': 'english label',
@@ -60,16 +64,23 @@ test('[ISSUE-OBJECT-ID] Object ID should be well compared', async (t: Assertions
 	const newValue: any = {
 		attributes: [
 			{
-				attributeId: '1', value: { 'en-GB': 'english description', 'fr-FR': 'description initiale' },
-			}, {
-				attributeId: '2', value: 'coton',
-			}, {
-				attributeId: '3', value: {},
-			}, {
-				attributeId: 'A', value: 'new value',
+				attributeId: '1',
+				value: { 'en-GB': 'english description', 'fr-FR': 'description initiale' },
+			},
+			{
+				attributeId: '2',
+				value: 'coton',
+			},
+			{
+				attributeId: '3',
+				value: {},
+			},
+			{
+				attributeId: 'A',
+				value: 'new value',
 			},
 		],
-		otherId: new ObjectID('5cb7397c1a9299f144b71ac6'),
+		otherId: new mongodb.ObjectID('5cb7397c1a9299f144b71ac6'),
 		label: {
 			'en-GB': 'english label',
 			'fr-FR': 'produit surchargé',
@@ -81,7 +92,12 @@ test('[ISSUE-OBJECT-ID] Object ID should be well compared', async (t: Assertions
 	const foundObject = await mongoClient.findOneById(savedObject._id);
 	t.truthy(foundObject, 'found by query');
 
-	const updatedObject = await mongoClient.findOneAndUpdateByIdWithLocks(savedObject._id, newValue, 'userId2', true);
+	const updatedObject = await mongoClient.findOneAndUpdateByIdWithLocks(
+		savedObject._id,
+		newValue,
+		'userId2',
+		true,
+	);
 
 	t.is<number>(updatedObject.objectInfos.lockFields.length, 2, '2 lock fields');
 	await mongoClient.dropCollection();

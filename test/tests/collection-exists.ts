@@ -1,5 +1,5 @@
 import { N9Log } from '@neo9/n9-node-log';
-import test, { Assertions } from 'ava';
+import ava, { Assertions } from 'ava';
 
 import { MongoClient } from '../../src';
 import { BaseMongoObject } from '../../src/models';
@@ -11,10 +11,10 @@ class SampleType extends BaseMongoObject {
 
 global.log = new N9Log('tests');
 
-init(test);
+init();
 
-test('[EXISTS] Create collection and test existence', async (t: Assertions) => {
-	const mongoClient = new MongoClient('test-' + Date.now(), SampleType, null);
+ava('[EXISTS] Create collection and test existence', async (t: Assertions) => {
+	const mongoClient = new MongoClient(`test-${Date.now()}`, SampleType, null);
 
 	await mongoClient.insertOne({ test: 'test' }, 'userId1');
 
@@ -23,21 +23,25 @@ test('[EXISTS] Create collection and test existence', async (t: Assertions) => {
 	await mongoClient.dropCollection();
 });
 
-test('[EXISTS] Do not create collection and test existence', async (t: Assertions) => {
-	const mongoClient = new MongoClient('test-' + Date.now(), SampleType, null);
+ava('[EXISTS] Do not create collection and test existence', async (t: Assertions) => {
+	const mongoClient = new MongoClient(`test-${Date.now()}`, SampleType, null);
 
 	t.false(await mongoClient.collectionExists(), 'collection does not exist');
 });
 
-test('[EXISTS] Create collection then drop it then test existence', async (t: Assertions) => {
-	const mongoClient = new MongoClient('test-' + Date.now(), SampleType, null);
+ava('[EXISTS] Create collection then drop it then test existence', async (t: Assertions) => {
+	const mongoClient = new MongoClient(`test-${Date.now()}`, SampleType, null);
 
 	await mongoClient.insertOne({ test: 'test' }, 'userId1');
 	await mongoClient.dropCollection();
 
 	t.false(await mongoClient.collectionExists(), 'collection does not exist');
 
-	await t.throwsAsync(async () => {
-		await mongoClient.dropCollection();
-	}, 'ns not found', 'should throw not found exception');
+	await t.throwsAsync(
+		async () => {
+			await mongoClient.dropCollection();
+		},
+		'ns not found',
+		'should throw not found exception',
+	);
 });

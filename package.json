@@ -11,7 +11,10 @@
   "scripts": {
     "build": "rimraf dist/ && tsc",
     "dev": "rimraf dist/ && tsc --watch",
-    "lint": "tslint --project tsconfig.json",
+    "format": "prettier --write '{,@(src|test)/**/}*.*'",
+    "lint": "tslint --project tsconfig.json --format verbose '{src,test}/**/*.ts'",
+    "lint:apply": "npm run format && tslint --fix --project tsconfig.json '{src,test}/**/*.ts'",
+    "lint:verbose": "tslint --fix --project tsconfig.json --format verbose '{src,test}/**/*.ts'",
     "test": "node test/run-tests.js dev",
     "test:dev": "node test/run-tests.js dev",
     "test:watch": "node test/run-tests.js watch",
@@ -26,6 +29,7 @@
   },
   "husky": {
     "hooks": {
+      "commit-msg": "commitlint -E HUSKY_GIT_PARAMS",
       "pre-commit": "npm run lint",
       "pre-push": "npm run test"
     }
@@ -51,23 +55,28 @@
     "@types/lodash": "^4.14.118",
     "@types/mongodb": "^3.1.14",
     "class-transformer": "^0.2.0",
-    "conventional-changelog-cli": "^2.0.11",
     "deep-diff": "^1.0.2",
     "lodash": "^4.17.14",
     "mongodb": "3.2.5",
-    "mongodb-lock": "^1.0.1",
-    "release-it": "7.4.8"
+    "mongodb-lock": "^1.0.1"
   },
   "devDependencies": {
+    "@commitlint/cli": "^8.3.5",
+    "@neo9/n9-coding-style": "^1.0.2",
     "@types/node": "^10.12.18",
     "@types/std-mocks": "^1.0.0",
     "ava": "^1.4.1",
-    "husky": "^3.0.0",
+    "conventional-changelog-cli": "^2.0.11",
+    "husky": "^4.2.3",
     "mongodb-memory-server": "6.0.2",
     "nyc": "^13.1.0",
+    "prettier": "^1.19.1",
+    "release-it": "7.4.8",
     "std-mocks": "^1.0.1",
-    "tslint": "^5.17.0",
-    "typescript": "^3.2.2"
+    "tslint": "5.20.0",
+    "tslint-config-prettier": "^1.18.0",
+    "tslint-plugin-prettier": "^2.1.0",
+    "typescript": "^3.8.3"
   },
   "bugs": {
     "url": "https://github.com/neo9/n9-mongo-client/issues"

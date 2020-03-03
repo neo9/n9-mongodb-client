@@ -11,8 +11,7 @@ export class BaseMongoObjectInfosUpdate {
 	public date: Date;
 }
 
-export class BaseMongoObjectInfosCreation extends BaseMongoObjectInfosUpdate {
-}
+export class BaseMongoObjectInfosCreation extends BaseMongoObjectInfosUpdate {}
 
 export class BaseMongoObjectInfos {
 	@Expose()

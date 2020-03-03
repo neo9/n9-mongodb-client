@@ -1,5 +1,5 @@
 import { N9Log } from '@neo9/n9-node-log';
-import test, { Assertions } from 'ava';
+import ava, { Assertions } from 'ava';
 import * as _ from 'lodash';
 import { ObjectID } from 'mongodb';
 import { MongoMemoryServer } from 'mongodb-memory-server';
@@ -10,11 +10,11 @@ global.log = new N9Log('tests').module('mongo-utils');
 
 let mongod: MongoMemoryServer;
 
-test('[MONGO-UTILS] disconnect without connect', async (t: Assertions) => {
+ava('[MONGO-UTILS] disconnect without connect', async (t: Assertions) => {
 	t.deepEqual(await MongoUtils.disconnect(), undefined, 'should not block disconnect');
 });
 
-test('[MONGO-UTILS] oid & oids', async (t: Assertions) => {
+ava('[MONGO-UTILS] oid & oids', async (t: Assertions) => {
 	const id = '01234567890123456789abcd';
 	const objectID = new ObjectID(id);
 	t.deepEqual(MongoUtils.oid(id), objectID, 'oid equals from string');
@@ -25,14 +25,14 @@ test('[MONGO-UTILS] oid & oids', async (t: Assertions) => {
 	t.is(MongoUtils.oids(undefined), undefined, 'oids of null is undefined');
 });
 
-test('[MONGO-UTILS] mapObjectToClass null', async (t: Assertions) => {
+ava('[MONGO-UTILS] mapObjectToClass null', async (t: Assertions) => {
 	t.deepEqual(MongoUtils.mapObjectToClass(null, null), null, 'should return null');
 	t.deepEqual(MongoUtils.mapObjectToClass(null, undefined), undefined, 'should return undefined');
-	t.deepEqual(MongoUtils.mapObjectToClass(null, 0), 0, 'should return 0');
-	t.deepEqual(MongoUtils.mapObjectToClass(null, ''), '', 'should return ""');
+	t.deepEqual(MongoUtils.mapObjectToClass(null, 0), 0 as any, 'should return 0');
+	t.deepEqual(MongoUtils.mapObjectToClass(null, ''), '' as any, 'should return ""');
 });
 
-test('[MONGO-UTILS] URI connection log', async (t: Assertions) => {
+ava('[MONGO-UTILS] URI connection log', async (t: Assertions) => {
 	mongod = new MongoMemoryServer();
 	const mongoURI = await mongod.getConnectionString();
 	const mongoURIregex = new RegExp(_.escapeRegExp(mongoURI));

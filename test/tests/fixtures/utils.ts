@@ -1,5 +1,4 @@
-import test from 'ava';
-import { TestInterface } from 'ava';
+import { default as ava, TestInterface } from 'ava';
 import * as mongodb from 'mongodb';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import { MongoClient, MongoUtils } from '../../../src';
@@ -12,12 +11,12 @@ export class ArrayElement {
 
 export class SampleEntityWithArray extends BaseMongoObject {
 	public parameters: {
-		items: ArrayElement[]
+		items: ArrayElement[];
 	};
 }
 
 export function generateMongoClient(): MongoClient<SampleEntityWithArray, null> {
-	const collectionName = 'test-' + Math.ceil(Math.random() * 10000)  + '-' + Date.now();
+	const collectionName = `test-${Math.ceil(Math.random() * 10000)}-${Date.now()}`;
 	return new MongoClient(collectionName, SampleEntityWithArray, null, {
 		lockFields: {
 			arrayWithReferences: {
@@ -28,16 +27,16 @@ export function generateMongoClient(): MongoClient<SampleEntityWithArray, null> 
 	});
 }
 
-export function init(tst: TestInterface): void {
+export function init(): void {
 	let mongod: MongoMemoryServer;
 
-	test.before(async () => {
+	ava.before(async () => {
 		mongod = new MongoMemoryServer();
 		const uri = await mongod.getConnectionString();
 		await MongoUtils.connect(uri);
 	});
 
-	test.after(async () => {
+	ava.after(async () => {
 		global.log.info(`DROP DB after tests OK`);
 		await (global.db as mongodb.Db).dropDatabase();
 		await MongoUtils.disconnect();

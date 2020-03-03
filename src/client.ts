@@ -16,19 +16,19 @@ import {
 	ObjectId,
 	UpdateQuery,
 } from 'mongodb';
+import { AggregationBuilder } from './aggregation-utils';
 import { BaseMongoObject, EntityHistoric, LockField, StringMap, UpdateManyQuery } from './models';
 import { ClassType } from './models/class-type.models';
+import { AddTagOptions, RemoveTagOptions } from './models/tag-options.models';
 import { UpdateManyAtOnceOptions } from './models/update-many-at-once-options.models';
 import { MongoReadStream } from './mongo-read-stream';
 import { MongoUtils } from './mongo-utils';
-import { AggregationBuilder } from './aggregation-utils';
-import { TagOptions, AddTagOptions, RemoveTagOptions } from './models/tag-options.models';
 
 export interface MongoClientConfiguration {
 	keepHistoric?: boolean;
 	lockFields?: {
-		excludedFields?: string[],
-		arrayWithReferences?: StringMap<string>
+		excludedFields?: string[];
+		arrayWithReferences?: StringMap<string>;
 	};
 	aggregationCollectionSource?: string;
 }
@@ -38,34 +38,54 @@ const defaultConfiguration: MongoClientConfiguration = {
 };
 
 export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
-	public static removeEmptyDeep<T>(obj: T, compactArrays: boolean = false, removeEmptyObjects: boolean = false, keepNullValues: boolean = false): T {
+	// tslint:disable-next-line:function-name
+	public static removeEmptyDeep<T>(
+		obj: T,
+		compactArrays: boolean = false,
+		removeEmptyObjects: boolean = false,
+		keepNullValues: boolean = false,
+	): T {
 		for (const key of Object.keys(obj)) {
 			const objElement = obj[key];
 			if (compactArrays && _.isArray(objElement)) {
 				obj[key] = _.filter(objElement, (elm) => !_.isNil(elm));
 			}
-			if (removeEmptyObjects && _.isObject(objElement) && !_.isArray(objElement) && _.isEmpty(objElement)) {
+			if (
+				removeEmptyObjects &&
+				_.isObject(objElement) &&
+				!_.isArray(objElement) &&
+				_.isEmpty(objElement)
+			) {
 				delete obj[key];
 			}
 			// @ts-ignore
-			if (objElement && typeof objElement === 'object') MongoClient.removeEmptyDeep(objElement, compactArrays, removeEmptyObjects, keepNullValues);
+			if (objElement && typeof objElement === 'object') {
+				MongoClient.removeEmptyDeep(objElement, compactArrays, removeEmptyObjects, keepNullValues);
+			}
 			// @ts-ignore
-			else if ((keepNullValues && _.isUndefined(objElement)) || (!keepNullValues && _.isNil(objElement))) delete obj[key];
+			else if (
+				(keepNullValues && _.isUndefined(objElement)) ||
+				(!keepNullValues && _.isNil(objElement))
+			) {
+				delete obj[key];
+			}
 		}
 		return obj;
 	}
 
 	private static getJoinPaths(basePath: string, key: string): string {
-		if (basePath) return basePath + '.' + key;
-		else return key;
+		if (basePath) return `${basePath}.${key}`;
+		return key;
 	}
 
 	private static isClassicObject(existingEntityElement: any): boolean {
-		return _.isObject(existingEntityElement)
-				&& !_.isFunction(existingEntityElement)
-				&& !(existingEntityElement instanceof ObjectID)
-				&& !(existingEntityElement instanceof Date)
-				&& !_.isArray(existingEntityElement);
+		return (
+			_.isObject(existingEntityElement) &&
+			!_.isFunction(existingEntityElement) &&
+			!(existingEntityElement instanceof ObjectID) &&
+			!(existingEntityElement instanceof Date) &&
+			!_.isArray(existingEntityElement)
+		);
 	}
 
 	private readonly collection: Collection<U>;
@@ -77,10 +97,18 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 	private readonly conf: MongoClientConfiguration;
 	private readonly collectionHistoric: Collection<EntityHistoric<U>>;
 
-	constructor(collection: Collection<U> | string, type: ClassType<U>, typeList: ClassType<L>, conf: MongoClientConfiguration = {}) {
+	constructor(
+		collection: Collection<U> | string,
+		type: ClassType<U>,
+		typeList: ClassType<L>,
+		conf: MongoClientConfiguration = {},
+	) {
 		this.conf = _.merge({}, defaultConfiguration, conf);
 		if (this.conf.lockFields) {
-			this.conf.lockFields.excludedFields = _.union(this.conf.lockFields.excludedFields, ['objectInfos', '_id']);
+			this.conf.lockFields.excludedFields = _.union(this.conf.lockFields.excludedFields, [
+				'objectInfos',
+				'_id',
+			]);
 		}
 		this.logger = (global.log as N9Log).module('mongo-client');
 		this.db = global.db as Db;
@@ -91,14 +119,16 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 
 		if (typeof collection === 'string') {
 			this.collection = this.db.collection(collection);
-			this.collectionHistoric = this.db.collection(collection + 'Historic');
+			this.collectionHistoric = this.db.collection(`${collection}Historic`);
 		} else {
 			this.collection = collection;
-			this.collectionHistoric = this.db.collection(collection.collectionName + 'Historic');
+			this.collectionHistoric = this.db.collection(`${collection.collectionName}Historic`);
 		}
 
 		if (this.conf.aggregationCollectionSource) {
-			this.collectionSourceForAggregation = this.db.collection(this.conf.aggregationCollectionSource);
+			this.collectionSourceForAggregation = this.db.collection(
+				this.conf.aggregationCollectionSource,
+			);
 		} else {
 			this.collectionSourceForAggregation = this.collection;
 		}
@@ -117,11 +147,18 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		}
 	}
 
-	public async createUniqueIndex(fieldOrSpec: string | any = 'code', options?: IndexOptions): Promise<void> {
+	public async createUniqueIndex(
+		fieldOrSpec: string | any = 'code',
+		options?: IndexOptions,
+	): Promise<void> {
 		await this.createIndex(fieldOrSpec, { ...options, unique: true });
 	}
 
-	public async createExpirationIndex(ttlInDays: number, fieldOrSpec: string | object = 'objectInfos.creation.date', options: IndexOptions = {}): Promise<void> {
+	public async createExpirationIndex(
+		ttlInDays: number,
+		fieldOrSpec: string | object = 'objectInfos.creation.date',
+		options: IndexOptions = {},
+	): Promise<void> {
 		await this.ensureExpirationIndex(this.collection, fieldOrSpec, ttlInDays, options);
 	}
 
@@ -133,7 +170,10 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		await this.createHistoricIndex('entityId');
 	}
 
-	public async createHistoricIndex(fieldOrSpec: string | any, options?: IndexOptions): Promise<void> {
+	public async createHistoricIndex(
+		fieldOrSpec: string | any,
+		options?: IndexOptions,
+	): Promise<void> {
 		await this.collectionHistoric.createIndex(fieldOrSpec, options);
 	}
 
@@ -141,11 +181,20 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		await this.createHistoricIndex(fieldOrSpec, { unique: true });
 	}
 
-	public async createHistoricExpirationIndex(ttlInDays: number, fieldOrSpec: string | object = 'date', options: IndexOptions = {}): Promise<void> {
+	public async createHistoricExpirationIndex(
+		ttlInDays: number,
+		fieldOrSpec: string | object = 'date',
+		options: IndexOptions = {},
+	): Promise<void> {
 		await this.ensureExpirationIndex(this.collectionHistoric, fieldOrSpec, ttlInDays, options);
 	}
 
-	public async insertOne(newEntity: U, userId: string, lockFields: boolean = true, returnNewValue: boolean = true): Promise<U> {
+	public async insertOne(
+		newEntity: U,
+		userId: string,
+		lockFields: boolean = true,
+		returnNewValue: boolean = true,
+	): Promise<U> {
 		if (!newEntity) return newEntity;
 		const date = new Date();
 		newEntity.objectInfos = {
@@ -161,23 +210,41 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		let newEntityWithoutForbiddenCharacters = MongoUtils.removeSpecialCharactersInKeys(newEntity);
 
 		if (this.conf.lockFields) {
-			if (!newEntityWithoutForbiddenCharacters.objectInfos.lockFields) newEntityWithoutForbiddenCharacters.objectInfos.lockFields = [];
+			if (!newEntityWithoutForbiddenCharacters.objectInfos.lockFields) {
+				newEntityWithoutForbiddenCharacters.objectInfos.lockFields = [];
+			}
 			if (lockFields) {
-				newEntityWithoutForbiddenCharacters.objectInfos.lockFields = this.getAllLockFieldsFromEntity(newEntityWithoutForbiddenCharacters, date, userId);
+				newEntityWithoutForbiddenCharacters.objectInfos.lockFields = this.getAllLockFieldsFromEntity(
+					newEntityWithoutForbiddenCharacters,
+					date,
+					userId,
+				);
 			}
 		}
 
-		newEntityWithoutForbiddenCharacters = MongoClient.removeEmptyDeep(newEntityWithoutForbiddenCharacters);
+		newEntityWithoutForbiddenCharacters = MongoClient.removeEmptyDeep(
+			newEntityWithoutForbiddenCharacters,
+		);
 		await this.collection.insertOne(newEntityWithoutForbiddenCharacters);
-		if (returnNewValue) return MongoUtils.mapObjectToClass(this.type, MongoUtils.unRemoveSpecialCharactersInKeys(newEntityWithoutForbiddenCharacters));
-		else return;
+		if (returnNewValue) {
+			return MongoUtils.mapObjectToClass(
+				this.type,
+				MongoUtils.unRemoveSpecialCharactersInKeys(newEntityWithoutForbiddenCharacters),
+			);
+		}
+		return;
 	}
 
 	public async count(query: object = {}): Promise<number> {
 		return await this.collection.countDocuments(query);
 	}
 
-	public async insertMany(newEntities: U[], userId: string, options?: CollectionInsertManyOptions, returnNewValue: boolean = true): Promise<U[]> {
+	public async insertMany(
+		newEntities: U[],
+		userId: string,
+		options?: CollectionInsertManyOptions,
+		returnNewValue: boolean = true,
+	): Promise<U[]> {
 		if (_.isEmpty(newEntities)) return;
 
 		const entitiesToInsert = newEntities.map((newEntity) => {
@@ -197,20 +264,24 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 
 		const insertResult = await this.collection.insertMany(entitiesToInsert, options);
 		if (returnNewValue) {
-			return (insertResult.ops || []).map((newEntity) => MongoUtils.mapObjectToClass(this.type, MongoUtils.unRemoveSpecialCharactersInKeys(newEntity)));
-		} else {
-			return;
+			return (insertResult.ops || []).map((newEntity) =>
+				MongoUtils.mapObjectToClass(
+					this.type,
+					MongoUtils.unRemoveSpecialCharactersInKeys(newEntity),
+				),
+			);
 		}
+		return;
 	}
 
 	public async findWithType<T extends Partial<U | L>>(
-			query: object,
-			type: ClassType<T>,
-			page: number = 0,
-			size: number = 10,
-			sort: object = {},
-			projection: object = {},
-			collation?: CollationDocument,
+		query: object,
+		type: ClassType<T>,
+		page: number = 0,
+		size: number = 10,
+		sort: object = {},
+		projection: object = {},
+		collation?: CollationDocument,
 	): Promise<Cursor<T>> {
 		let findCursor: Cursor<T> = this.collection.find<T>(query);
 
@@ -219,25 +290,41 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		}
 
 		return findCursor
-				.sort(sort)
-				.skip(page * size)
-				.limit(size)
-				.project(projection)
-				.map((a: Partial<U | L>) => {
-					const b = MongoUtils.unRemoveSpecialCharactersInKeys(a);
-					return MongoUtils.mapObjectToClass(type, b);
-				});
+			.sort(sort)
+			.skip(page * size)
+			.limit(size)
+			.project(projection)
+			.map((a: Partial<U | L>) => {
+				const b = MongoUtils.unRemoveSpecialCharactersInKeys(a);
+				return MongoUtils.mapObjectToClass(type, b);
+			});
 	}
 
-	public stream<T extends Partial<U | L>>(query: object, pageSize: number, projection: object = {}): MongoReadStream<Partial<U>, Partial<L>> {
+	public stream<T extends Partial<U | L>>(
+		query: object,
+		pageSize: number,
+		projection: object = {},
+	): MongoReadStream<Partial<U>, Partial<L>> {
 		return new MongoReadStream<U, L>(this, query, pageSize, projection);
 	}
 
-	public streamWithType<T extends Partial<U | L>>(query: object, type: ClassType<T>, pageSize: number, projection: object = {}): MongoReadStream<Partial<U>, Partial<L>> {
+	public streamWithType<T extends Partial<U | L>>(
+		query: object,
+		type: ClassType<T>,
+		pageSize: number,
+		projection: object = {},
+	): MongoReadStream<Partial<U>, Partial<L>> {
 		return new MongoReadStream<U, L>(this, query, pageSize, projection, type);
 	}
 
-	public async find(query: object, page: number = 0, size: number = 10, sort: object = {}, projection: object = {}, collation?: CollationDocument): Promise<Cursor<L>> {
+	public async find(
+		query: object,
+		page: number = 0,
+		size: number = 10,
+		sort: object = {},
+		projection: object = {},
+		collation?: CollationDocument,
+	): Promise<Cursor<L>> {
 		return this.findWithType<any>(query, this.typeList, page, size, sort, projection, collation);
 	}
 
@@ -245,7 +332,11 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		return this.findOneByKey(MongoUtils.oid(id), '_id', projection);
 	}
 
-	public async findOneByKey(keyValue: any, keyName: string = 'code', projection?: object): Promise<U> {
+	public async findOneByKey(
+		keyValue: any,
+		keyName: string = 'code',
+		projection?: object,
+	): Promise<U> {
 		const query: StringMap<any> = {
 			[MongoUtils.escapeSpecialCharacters(keyName)]: keyValue,
 		};
@@ -278,32 +369,48 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 	}
 
 	public async findOneAndUpdateById(
-			id: string,
-			updateQuery: { [id: string]: object, $set?: object },
-			userId: string,
-			internalCall: boolean = false,
-			returnNewValue: boolean = true,
-			arrayFilters: FilterQuery<U>[] = [],
+		id: string,
+		updateQuery: { [id: string]: object; $set?: object },
+		userId: string,
+		internalCall: boolean = false,
+		returnNewValue: boolean = true,
+		arrayFilters: FilterQuery<U>[] = [],
 	): Promise<U> {
 		const query: StringMap<any> = {
 			_id: MongoUtils.oid(id),
 		};
-		return await this.findOneAndUpdate(query, updateQuery, userId, internalCall, false, returnNewValue, arrayFilters);
+		return await this.findOneAndUpdate(
+			query,
+			updateQuery,
+			userId,
+			internalCall,
+			false,
+			returnNewValue,
+			arrayFilters,
+		);
 	}
 
 	public async findOneAndUpdateByKey(
-			keyValue: any,
-			updateQuery: { [id: string]: object, $set?: object },
-			userId: string,
-			keyName: string = 'code',
-			internalCall: boolean = false,
-			returnNewValue: boolean = true,
-			arrayFilters: FilterQuery<U>[] = [],
+		keyValue: any,
+		updateQuery: { [id: string]: object; $set?: object },
+		userId: string,
+		keyName: string = 'code',
+		internalCall: boolean = false,
+		returnNewValue: boolean = true,
+		arrayFilters: FilterQuery<U>[] = [],
 	): Promise<U> {
 		const query: StringMap<any> = {
 			[MongoUtils.escapeSpecialCharacters(keyName)]: keyValue,
 		};
-		return await this.findOneAndUpdate(query, updateQuery, userId, internalCall, false, returnNewValue, arrayFilters);
+		return await this.findOneAndUpdate(
+			query,
+			updateQuery,
+			userId,
+			internalCall,
+			false,
+			returnNewValue,
+			arrayFilters,
+		);
 	}
 
 	/**
@@ -333,26 +440,26 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 	 * identifier if the identifier is not included in the update document.
 	 */
 	public async findOneAndUpdate(
-			query: FilterQuery<U>,
-			updateQuery: { [id: string]: object, $set?: object, $unset?: object },
-			userId: string,
-			internalCall: boolean = false,
-			upsert: boolean = false,
-			returnNewValue: boolean = true,
-			arrayFilters: FilterQuery<U>[] = [],
+		query: FilterQuery<U>,
+		updateQuery: { [id: string]: object; $set?: object; $unset?: object },
+		userId: string,
+		internalCall: boolean = false,
+		upsert: boolean = false,
+		returnNewValue: boolean = true,
+		arrayFilters: FilterQuery<U>[] = [],
 	): Promise<U> {
 		if (!internalCall) {
 			this.ifHasLockFieldsThrow();
 		}
 
-		if (!updateQuery['$set']) {
-			updateQuery['$set'] = {};
+		if (!updateQuery.$set) {
+			updateQuery.$set = {};
 		}
 
 		const now = new Date();
 
-		updateQuery['$set'] = {
-			...updateQuery['$set'] as object,
+		updateQuery.$set = {
+			...(updateQuery.$set as object),
 			'objectInfos.lastUpdate': {
 				date: now,
 				userId: ObjectId.isValid(userId) ? MongoUtils.oid(userId) : userId,
@@ -360,11 +467,11 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		};
 
 		if (upsert) {
-			updateQuery['$setOnInsert'] = {
-				...updateQuery['$setOnInsert'] as object,
+			updateQuery.$setOnInsert = {
+				...(updateQuery.$setOnInsert as object),
 				'objectInfos.creation': {
-					date: new Date(),
 					userId,
+					date: new Date(),
 				},
 			};
 		}
@@ -374,20 +481,31 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			saveOldValue = await this.findOne(query);
 		}
 
-		let newEntity = (await this.collection.findOneAndUpdate(query, updateQuery, { returnOriginal: !returnNewValue, upsert, arrayFilters })).value as U;
+		let newEntity = (
+			await this.collection.findOneAndUpdate(query, updateQuery, {
+				upsert,
+				arrayFilters,
+				returnOriginal: !returnNewValue,
+			})
+		).value as U;
 		if (returnNewValue || this.conf.keepHistoric) {
-			newEntity = MongoUtils.mapObjectToClass(this.type, MongoUtils.unRemoveSpecialCharactersInKeys(newEntity));
+			newEntity = MongoUtils.mapObjectToClass(
+				this.type,
+				MongoUtils.unRemoveSpecialCharactersInKeys(newEntity),
+			);
 		}
 
 		if (this.conf.keepHistoric) {
 			const diffs = deepDiff.diff(saveOldValue, newEntity, (path: string[], key: string) => {
-				return ['objectInfos.creation', 'objectInfos.lastUpdate'].includes([...path, key].join('.'));
+				return ['objectInfos.creation', 'objectInfos.lastUpdate'].includes(
+					[...path, key].join('.'),
+				);
 			});
 			if (diffs) {
 				const change: EntityHistoric<U> = {
 					entityId: MongoUtils.oid(newEntity._id) as any,
 					date: now,
-					userId: ObjectId.isValid(userId) ? MongoUtils.oid(userId) as any : userId,
+					userId: ObjectId.isValid(userId) ? (MongoUtils.oid(userId) as any) : userId,
 					dataEdited: diffs,
 					snapshot: MongoUtils.removeSpecialCharactersInKeys(saveOldValue),
 				};
@@ -396,50 +514,88 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		}
 
 		if (returnNewValue) return newEntity;
-		else return;
+		return;
 	}
 
 	// wrapper around findOneAndUpdate
 	public async findOneAndUpsert(
-			query: FilterQuery<U>,
-			updateQuery: { [id: string]: object, $set?: object },
-			userId: string,
-			internalCall: boolean = false,
-			returnNewValue: boolean = true,
-			arrayFilters: FilterQuery<U>[] = [],
+		query: FilterQuery<U>,
+		updateQuery: { [id: string]: object; $set?: object },
+		userId: string,
+		internalCall: boolean = false,
+		returnNewValue: boolean = true,
+		arrayFilters: FilterQuery<U>[] = [],
 	): Promise<U> {
-		return this.findOneAndUpdate(query, updateQuery, userId, internalCall, true, returnNewValue, arrayFilters);
+		return this.findOneAndUpdate(
+			query,
+			updateQuery,
+			userId,
+			internalCall,
+			true,
+			returnNewValue,
+			arrayFilters,
+		);
 	}
 
-	public async findOneByIdAndRemoveLock(id: string, lockFieldPath: string, userId: string): Promise<U> {
+	public async findOneByIdAndRemoveLock(
+		id: string,
+		lockFieldPath: string,
+		userId: string,
+	): Promise<U> {
 		const query: StringMap<any> = {
 			_id: MongoUtils.oid(id),
 		};
 		return await this.findOneAndRemoveLock(query, lockFieldPath, userId);
 	}
 
-	public async findOneByKeyAndRemoveLock(keyValue: any, lockFieldPath: string, userId: string, keyName: string = 'code'): Promise<U> {
+	public async findOneByKeyAndRemoveLock(
+		keyValue: any,
+		lockFieldPath: string,
+		userId: string,
+		keyName: string = 'code',
+	): Promise<U> {
 		const query: StringMap<any> = {
 			[keyName]: keyValue,
 		};
 		return await this.findOneAndRemoveLock(query, lockFieldPath, userId);
 	}
 
-	public async findOneAndRemoveLock(query: FilterQuery<U>, lockFieldPath: string, userId: string): Promise<U> {
+	public async findOneAndRemoveLock(
+		query: FilterQuery<U>,
+		lockFieldPath: string,
+		userId: string,
+	): Promise<U> {
 		if (!this.conf.lockFields) {
-			throw new N9Error('invalid-function-call', 500, { name: 'findOneByIdAndRemoveLock', query, lockFieldPath });
+			throw new N9Error('invalid-function-call', 500, {
+				query,
+				lockFieldPath,
+				name: 'findOneByIdAndRemoveLock',
+			});
 		}
 
-		return await this.findOneAndUpdate(query, {
-			$pull: {
-				'objectInfos.lockFields': {
-					path: lockFieldPath,
+		return await this.findOneAndUpdate(
+			query,
+			{
+				$pull: {
+					'objectInfos.lockFields': {
+						path: lockFieldPath,
+					},
 				},
 			},
-		}, userId, true, false, true);
+			userId,
+			true,
+			false,
+			true,
+		);
 	}
 
-	public async findOneAndUpdateByIdWithLocks(id: string, newEntity: Partial<U>, userId: string, lockNewFields: boolean = true, forceEditLockFields: boolean = false): Promise<U> {
+	public async findOneAndUpdateByIdWithLocks(
+		id: string,
+		newEntity: Partial<U>,
+		userId: string,
+		lockNewFields: boolean = true,
+		forceEditLockFields: boolean = false,
+	): Promise<U> {
 		if (this.conf.lockFields) {
 			const existingEntity = await this.findOneById(id);
 			if (!existingEntity) {
@@ -457,9 +613,17 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				newEntityWithOnlyDataToUpdate = newEntity;
 				newEntityToSave = this.mergeOldEntityWithNewOne(newEntity, existingEntity, '', []);
 			} else {
-				newEntityWithOnlyDataToUpdate = this.pruneEntityWithLockFields(newEntity, existingEntity.objectInfos.lockFields);
+				newEntityWithOnlyDataToUpdate = this.pruneEntityWithLockFields(
+					newEntity,
+					existingEntity.objectInfos.lockFields,
+				);
 				// console.log('-- client.ts ', newEntityWithOnlyDataToUpdate, ` <<-- newEntityWithOnlyDataToUpdate`);
-				newEntityToSave = this.mergeOldEntityWithNewOne(newEntity, existingEntity, '', existingEntity.objectInfos.lockFields);
+				newEntityToSave = this.mergeOldEntityWithNewOne(
+					newEntity,
+					existingEntity,
+					'',
+					existingEntity.objectInfos.lockFields,
+				);
 				// TODO : add function in parameters or in mongoClient conf to allow validation here
 			}
 
@@ -470,7 +634,12 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				if (!_.get(newEntityToSave, 'objectInfos.lockFields')) {
 					_.set(newEntityToSave, 'objectInfos.lockFields', []);
 				}
-				const allLockFieldsFromEntity = this.getAllLockFieldsFromEntity(newEntityWithOnlyDataToUpdate, new Date(), userId, existingEntity);
+				const allLockFieldsFromEntity = this.getAllLockFieldsFromEntity(
+					newEntityWithOnlyDataToUpdate,
+					new Date(),
+					userId,
+					existingEntity,
+				);
 
 				if (!_.isEmpty(allLockFieldsFromEntity)) {
 					const lockFields = [];
@@ -500,11 +669,10 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			// console.log(`--   --    --   --    --   --    --   --`);
 
 			return updatedValue;
-		} else {
-			delete newEntity._id;
-			delete newEntity.objectInfos;
-			return await this.findOneAndUpdateById(id, { $set: newEntity }, userId, true);
 		}
+		delete newEntity._id;
+		delete newEntity.objectInfos;
+		return await this.findOneAndUpdateById(id, { $set: newEntity }, userId, true);
 	}
 
 	public async deleteOneById(id: string): Promise<U> {
@@ -537,34 +705,36 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 	 * @param options see UpdateManyAtOnceOptions for more details
 	 */
 	public async updateManyAtOnce(
-			entities: Partial<U>[],
-			userId: string,
-			options: UpdateManyAtOnceOptions<U> = {},
+		entities: Partial<U>[],
+		userId: string,
+		options: UpdateManyAtOnceOptions<U> = {},
 	): Promise<Cursor<U>> {
 		options.upsert = _.isBoolean(options.upsert) ? options.upsert : false;
 		options.lockNewFields = _.isBoolean(options.lockNewFields) ? options.lockNewFields : true;
-		options.forceEditLockFields = _.isBoolean(options.forceEditLockFields) ? options.forceEditLockFields : false;
+		options.forceEditLockFields = _.isBoolean(options.forceEditLockFields)
+			? options.forceEditLockFields
+			: false;
 		options.unsetUndefined = _.isBoolean(options.unsetUndefined) ? options.unsetUndefined : true;
-		const updateQueries = await this.buildUpdatesQueries(
-				entities,
-				userId,
-				options,
-		);
+		const updateQueries = await this.buildUpdatesQueries(entities, userId, options);
 		// console.log(`-- client.ts>updateManyAtOnce updateQueries --`, JSON.stringify(updateQueries, null, 2));
 		return await this.updateMany(updateQueries, userId, options.upsert);
 	}
 
-	public async updateManyToSameValue(query: FilterQuery<U>, updateQuery: UpdateQuery<U>, userId: string): Promise<Cursor<U>> {
+	public async updateManyToSameValue(
+		query: FilterQuery<U>,
+		updateQuery: UpdateQuery<U>,
+		userId: string,
+	): Promise<Cursor<U>> {
 		this.ifHasLockFieldsThrow();
 
-		if (!updateQuery['$set']) {
-			updateQuery['$set'] = {};
+		if (!updateQuery.$set) {
+			updateQuery.$set = {};
 		}
 
 		const now = new Date();
 
-		updateQuery['$set'] = {
-			...updateQuery['$set'] as object,
+		updateQuery.$set = {
+			...(updateQuery.$set as object),
 			'objectInfos.lastUpdate': {
 				date: now,
 				userId: ObjectId.isValid(userId) ? MongoUtils.oid(userId) : userId,
@@ -572,7 +742,9 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		};
 
 		if (this.conf.keepHistoric) {
-			throw new N9Error('not-supported-operation-for-collection-with-historic', 501, { conf: this.conf });
+			throw new N9Error('not-supported-operation-for-collection-with-historic', 501, {
+				conf: this.conf,
+			});
 		}
 		const updateResult = await this.collection.updateMany(query, updateQuery);
 		return this.findWithType(query, this.type, 0, updateResult.matchedCount);
@@ -584,18 +756,21 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 	 * @param options options to send to the client
 	 * @param readInOutputCollection to read in the main mongoClient collection
 	 */
-	public async aggregate<T = void>(aggregateSteps: object[], options?: CollectionAggregationOptions, readInOutputCollection: boolean = false): Promise<AggregationCursor<T>> {
+	public async aggregate<T = void>(
+		aggregateSteps: object[],
+		options?: CollectionAggregationOptions,
+		readInOutputCollection: boolean = false,
+	): Promise<AggregationCursor<T>> {
 		if (readInOutputCollection) {
 			return await this.collection.aggregate<T>(aggregateSteps, options);
-		} else {
-			return await this.collectionSourceForAggregation.aggregate<T>(aggregateSteps, options);
 		}
+		return await this.collectionSourceForAggregation.aggregate<T>(aggregateSteps, options);
 	}
 
 	public async aggregateWithBuilder<T = void>(
-			aggregationBuilder: AggregationBuilder<U>,
-			options?: CollectionAggregationOptions,
-			readInOutputCollection: boolean = false,
+		aggregationBuilder: AggregationBuilder<U>,
+		options?: CollectionAggregationOptions,
+		readInOutputCollection: boolean = false,
 	): Promise<AggregationCursor<T>> {
 		return await this.aggregate<T>(aggregationBuilder.build(), options, readInOutputCollection);
 	}
@@ -604,46 +779,70 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		return new AggregationBuilder<U>(this.collection.collectionName);
 	}
 
-	public async findHistoricByEntityId(id: string, page: number = 0, size: number = 10): Promise<Cursor<EntityHistoric<U>>> {
-		return await this.collectionHistoric.find<EntityHistoric<U>>({ entityId: MongoUtils.oid(id) })
-				.sort('_id', -1)
-				.skip(page * size)
-				.limit(size)
-				.map((a: EntityHistoric<U>) => MongoUtils.mapObjectToClass<EntityHistoric<U>, EntityHistoric<U>>(EntityHistoric, MongoUtils.unRemoveSpecialCharactersInKeys(a)));
+	public async findHistoricByEntityId(
+		id: string,
+		page: number = 0,
+		size: number = 10,
+	): Promise<Cursor<EntityHistoric<U>>> {
+		return await this.collectionHistoric
+			.find<EntityHistoric<U>>({ entityId: MongoUtils.oid(id) })
+			.sort('_id', -1)
+			.skip(page * size)
+			.limit(size)
+			.map((a: EntityHistoric<U>) =>
+				MongoUtils.mapObjectToClass<EntityHistoric<U>, EntityHistoric<U>>(
+					EntityHistoric,
+					MongoUtils.unRemoveSpecialCharactersInKeys(a),
+				),
+			);
 	}
 
-	public async findOneHistoricByUserIdMostRecent(entityId: string, userId: string): Promise<EntityHistoric<U>> {
+	public async findOneHistoricByUserIdMostRecent(
+		entityId: string,
+		userId: string,
+	): Promise<EntityHistoric<U>> {
 		const cursor = await this.collectionHistoric
-				.find<EntityHistoric<U>>({
-					entityId: MongoUtils.oid(entityId),
-					userId: ObjectId.isValid(userId) ? MongoUtils.oid(userId) : userId,
-				})
-				.sort('_id', -1)
-				.limit(1)
-				.map((a: EntityHistoric<U>) => MongoUtils.mapObjectToClass<EntityHistoric<U>, EntityHistoric<U>>(EntityHistoric, MongoUtils.unRemoveSpecialCharactersInKeys(a)));
+			.find<EntityHistoric<U>>({
+				entityId: MongoUtils.oid(entityId),
+				userId: ObjectId.isValid(userId) ? MongoUtils.oid(userId) : userId,
+			})
+			.sort('_id', -1)
+			.limit(1)
+			.map((a: EntityHistoric<U>) =>
+				MongoUtils.mapObjectToClass<EntityHistoric<U>, EntityHistoric<U>>(
+					EntityHistoric,
+					MongoUtils.unRemoveSpecialCharactersInKeys(a),
+				),
+			);
 		if (await cursor.hasNext()) {
 			return await cursor.next();
-		} else {
-			return;
 		}
+		return;
 	}
 
-	public async findOneHistoricByJustAfterAnother(entityId: string, historicId: string): Promise<EntityHistoric<U>> {
+	public async findOneHistoricByJustAfterAnother(
+		entityId: string,
+		historicId: string,
+	): Promise<EntityHistoric<U>> {
 		const cursor = await this.collectionHistoric
-				.find<EntityHistoric<U>>({
-					entityId: MongoUtils.oid(entityId),
-					_id: {
-						$gt: MongoUtils.oid(historicId),
-					},
-				})
-				.sort('_id', 1)
-				.limit(1)
-				.map((a: EntityHistoric<U>) => MongoUtils.mapObjectToClass<EntityHistoric<U>, EntityHistoric<U>>(EntityHistoric, MongoUtils.unRemoveSpecialCharactersInKeys(a)));
+			.find<EntityHistoric<U>>({
+				entityId: MongoUtils.oid(entityId),
+				_id: {
+					$gt: MongoUtils.oid(historicId),
+				},
+			})
+			.sort('_id', 1)
+			.limit(1)
+			.map((a: EntityHistoric<U>) =>
+				MongoUtils.mapObjectToClass<EntityHistoric<U>, EntityHistoric<U>>(
+					EntityHistoric,
+					MongoUtils.unRemoveSpecialCharactersInKeys(a),
+				),
+			);
 		if (await cursor.hasNext()) {
 			return await cursor.next();
-		} else {
-			return;
 		}
+		return;
 	}
 
 	public async countHistoricByEntityId(id: string): Promise<number> {
@@ -655,7 +854,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			entityId: MongoUtils.oid(entityId),
 		};
 		if (historicIdReference) {
-			query['_id'] = {
+			query._id = {
 				$gt: MongoUtils.oid(historicIdReference),
 			};
 		}
@@ -684,34 +883,39 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 	 * @param userId id of the user performing the operation
 	 * @param options options to customize the tag
 	 */
-	public async addTagToOne(query: object, userId: string, options: AddTagOptions = {}): Promise<string> {
+	public async addTagToOne(
+		query: object,
+		userId: string,
+		options: AddTagOptions = {},
+	): Promise<string> {
 		options.tag = options.tag || new ObjectId().toHexString();
 		const update = this.buildAddTagUpdate(userId, options);
-		await this.collection.findOneAndUpdate(
-			query,
-			update,
-			{ returnOriginal: false },
-		);
+		await this.collection.findOneAndUpdate(query, update, { returnOriginal: false });
 		return options.tag;
 	}
 
 	/**
 	 * Same as addTagToOne, except the query is made by id.
 	 */
-	public async addTagToOneById(id: string, userId: string, options: AddTagOptions = {}): Promise<string> {
+	public async addTagToOneById(
+		id: string,
+		userId: string,
+		options: AddTagOptions = {},
+	): Promise<string> {
 		return await this.addTagToOne({ _id: MongoUtils.oid(id) }, userId, options);
 	}
 
 	/**
 	 * Same as addTagToOne, but for many entities
 	 */
-	public async addTagToMany(query: object, userId: string, options: AddTagOptions = {}): Promise<string> {
+	public async addTagToMany(
+		query: object,
+		userId: string,
+		options: AddTagOptions = {},
+	): Promise<string> {
 		options.tag = options.tag || new ObjectId().toHexString();
 		const update = this.buildAddTagUpdate(userId, options);
-		await this.collection.updateMany(
-			query,
-			update,
-		);
+		await this.collection.updateMany(query, update);
 		return options.tag;
 	}
 
@@ -724,31 +928,39 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 	 * @param userId id of the user performing the operation
 	 * @param options options to customize the tag
 	 */
-	public async removeTagFromOne(query: object, tag: string, userId: string, options: RemoveTagOptions = {}): Promise<void> {
+	public async removeTagFromOne(
+		query: object,
+		tag: string,
+		userId: string,
+		options: RemoveTagOptions = {},
+	): Promise<void> {
 		const update = this.buildRemoveTagUpdate(tag, userId, options);
-		await this.collection.findOneAndUpdate(
-			query,
-			update,
-			{ returnOriginal: false },
-		);
+		await this.collection.findOneAndUpdate(query, update, { returnOriginal: false });
 	}
 
 	/**
 	 * Same as removeTagFromOne, except the query is made by id.
 	 */
-	public async removeTagFromOneById(id: string, tag: string, userId: string, options: RemoveTagOptions = {}): Promise<void> {
+	public async removeTagFromOneById(
+		id: string,
+		tag: string,
+		userId: string,
+		options: RemoveTagOptions = {},
+	): Promise<void> {
 		await this.removeTagFromOne({ _id: MongoUtils.oid(id) }, tag, userId, options);
 	}
 
 	/**vs
 	 * Same as removeTagFromOne, but for many entities
 	 */
-	public async removeTagFromMany(query: object, tag: string, userId: string, options: RemoveTagOptions = {}): Promise<void> {
+	public async removeTagFromMany(
+		query: object,
+		tag: string,
+		userId: string,
+		options: RemoveTagOptions = {},
+	): Promise<void> {
 		const update = this.buildRemoveTagUpdate(tag, userId, options);
-		await this.collection.updateMany(
-			query,
-			update,
-		);
+		await this.collection.updateMany(query, update);
 	}
 
 	/**
@@ -759,9 +971,9 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 	}
 
 	private async buildUpdatesQueries(
-			entities: Partial<U>[],
-			userId: string,
-			options: UpdateManyAtOnceOptions<U>,
+		entities: Partial<U>[],
+		userId: string,
+		options: UpdateManyAtOnceOptions<U>,
 	): Promise<UpdateManyQuery[]> {
 		const updates: UpdateManyQuery[] = [];
 		for (let entity of entities) {
@@ -782,7 +994,12 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				if (this.conf.lockFields) {
 					if (!options.forceEditLockFields) {
 						entity = this.pruneEntityWithLockFields(entity, currentValue.objectInfos.lockFields);
-						const newEntityMerged = this.mergeOldEntityWithNewOne(entity, currentValue, '', currentValue.objectInfos.lockFields);
+						const newEntityMerged = this.mergeOldEntityWithNewOne(
+							entity,
+							currentValue,
+							'',
+							currentValue.objectInfos.lockFields,
+						);
 						// console.log(`--  newEntityMerged --`, JSON.stringify(newEntityMerged, null, 2));
 						delete newEntityMerged.objectInfos;
 						delete newEntityMerged._id;
@@ -793,7 +1010,12 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 
 					if (options.lockNewFields) {
 						const lockFields = currentValue.objectInfos.lockFields || [];
-						const newLockFields = this.getAllLockFieldsFromEntity(entity, new Date(), userId, currentValue);
+						const newLockFields = this.getAllLockFieldsFromEntity(
+							entity,
+							new Date(),
+							userId,
+							currentValue,
+						);
 
 						if (!_.isEmpty(newLockFields)) {
 							lockFields.push(...newLockFields);
@@ -809,7 +1031,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				if (!_.isEmpty(toSetOnInsert)) {
 					setOnInsert = {
 						$setOnInsert: {
-							...toSetOnInsert as object,
+							...(toSetOnInsert as object),
 						},
 					};
 				}
@@ -829,7 +1051,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 
 				const update = {
 					$set: {
-						...toSet as object,
+						...(toSet as object),
 					},
 					...unsetQuery,
 					...setOnInsert,
@@ -839,7 +1061,8 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 					id: currentValue._id,
 					updateQuery: update,
 				});
-			} else { // on insert for upsert
+			} else {
+				// on insert for upsert
 				if (!!options.mapFunction) {
 					entity = await options.mapFunction(entity);
 				}
@@ -852,7 +1075,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				if (!_.isEmpty(toSetOnInsert)) {
 					setOnInsert = {
 						$setOnInsert: {
-							...toSetOnInsert as object,
+							...(toSetOnInsert as object),
 						},
 					};
 				}
@@ -860,7 +1083,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				const update: UpdateManyQuery = {
 					updateQuery: {
 						$set: {
-							...toSet as object,
+							...(toSet as object),
 						},
 						...setOnInsert,
 					},
@@ -882,21 +1105,27 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		return updates;
 	}
 
-	private async updateMany(newEntities: UpdateManyQuery[], userId: string, upsert?: boolean): Promise<Cursor<U>> {
+	private async updateMany(
+		newEntities: UpdateManyQuery[],
+		userId: string,
+		upsert?: boolean,
+	): Promise<Cursor<U>> {
 		if (_.isEmpty(newEntities)) {
 			return await this.getEmptyCursor<U>(this.type);
 		}
 
-		const bulkOperations: { updateOne: { filter: StringMap<any>, update: StringMap<any>, upsert?: boolean } } [] = [];
+		const bulkOperations: {
+			updateOne: { filter: StringMap<any>; update: StringMap<any>; upsert?: boolean };
+		}[] = [];
 		const now = new Date();
 		for (const newEnt of newEntities) {
 			const updateQuery = newEnt.updateQuery;
-			if (!updateQuery['$set']) {
-				updateQuery['$set'] = {};
+			if (!updateQuery.$set) {
+				updateQuery.$set = {};
 			}
 
-			updateQuery['$set'] = {
-				...updateQuery['$set'] as object,
+			updateQuery.$set = {
+				...(updateQuery.$set as object),
 				'objectInfos.lastUpdate': {
 					date: now,
 					userId: ObjectId.isValid(userId) ? MongoUtils.oid(userId) : userId,
@@ -904,11 +1133,11 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			};
 
 			if (upsert) {
-				updateQuery['$setOnInsert'] = {
-					...updateQuery['$setOnInsert'] as object,
+				updateQuery.$setOnInsert = {
+					...(updateQuery.$setOnInsert as object),
 					'objectInfos.creation': {
-						date: new Date(),
 						userId,
+						date: new Date(),
 					},
 				};
 			}
@@ -930,18 +1159,28 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			bulkOperations.push({
 				updateOne: {
 					filter,
-					update: updateQuery,
 					upsert,
+					update: updateQuery,
 				},
 			});
 		}
 		let oldValuesSaved: StringMap<U>;
 		if (this.conf.keepHistoric) {
-			oldValuesSaved = _.keyBy(await (await this.findWithType({
-				_id: {
-					$in: MongoUtils.oids(_.map(newEntities, 'id')),
-				},
-			}, this.type, 0, _.size(newEntities))).toArray(), '_id');
+			oldValuesSaved = _.keyBy(
+				await (
+					await this.findWithType(
+						{
+							_id: {
+								$in: MongoUtils.oids(_.map(newEntities, 'id')),
+							},
+						},
+						this.type,
+						0,
+						_.size(newEntities),
+					)
+				).toArray(),
+				'_id',
+			);
 		}
 
 		// for (const bulkOperation of bulkOperations) {
@@ -951,11 +1190,22 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		// }
 
 		const bulkResult = await this.collection.bulkWrite(bulkOperations);
-		const newValues: Cursor<U> = await this.findWithType({
-			_id: {
-				$in: MongoUtils.oids(_.concat(_.map(newEntities, 'id'), _.values(bulkResult.insertedIds), _.values(bulkResult.upsertedIds))),
+		const newValues: Cursor<U> = await this.findWithType(
+			{
+				_id: {
+					$in: MongoUtils.oids(
+						_.concat(
+							_.map(newEntities, 'id'),
+							_.values(bulkResult.insertedIds),
+							_.values(bulkResult.upsertedIds),
+						),
+					),
+				},
 			},
-		}, this.type, 0, _.size(newEntities));
+			this.type,
+			0,
+			_.size(newEntities),
+		);
 
 		if (this.conf.keepHistoric) {
 			while (await newValues.hasNext()) {
@@ -964,13 +1214,15 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 
 				if (oldValueSaved) {
 					const diffs = deepDiff.diff(oldValueSaved, newEntity, (path: string[], key: string) => {
-						return ['objectInfos.creation', 'objectInfos.lastUpdate'].includes([...path, key].join('.'));
+						return ['objectInfos.creation', 'objectInfos.lastUpdate'].includes(
+							[...path, key].join('.'),
+						);
 					});
 					if (diffs) {
 						const change: EntityHistoric<U> = {
 							entityId: MongoUtils.oid(newEntity._id) as any,
 							date: now,
-							userId: ObjectId.isValid(userId) ? MongoUtils.oid(userId) as any : userId,
+							userId: ObjectId.isValid(userId) ? (MongoUtils.oid(userId) as any) : userId,
 							dataEdited: diffs,
 							snapshot: oldValueSaved,
 						};
@@ -983,7 +1235,12 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		return newValues;
 	}
 
-	private getAllLockFieldsFromEntity(newEntity: Partial<U>, date: Date, userId: string, existingEntity?: U): LockField[] {
+	private getAllLockFieldsFromEntity(
+		newEntity: Partial<U>,
+		date: Date,
+		userId: string,
+		existingEntity?: U,
+	): LockField[] {
 		let keys: string[];
 		if (existingEntity) {
 			const entityWithOnlyNewValues = this.pickOnlyNewValues(existingEntity, newEntity, '');
@@ -1007,7 +1264,11 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		return ret;
 	}
 
-	private generateAllLockFields(newEntity: any, basePath: string, ignoreOnePath?: string): string[] {
+	private generateAllLockFields(
+		newEntity: any,
+		basePath: string,
+		ignoreOnePath?: string,
+	): string[] {
 		const keys: string[] = [];
 		if (_.isNil(newEntity)) return keys;
 
@@ -1015,7 +1276,11 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			const joinedPath = MongoClient.getJoinPaths(basePath, key);
 			// excluded fields
 			const newEntityElement = newEntity[key];
-			if (key === ignoreOnePath || _.includes(this.conf.lockFields.excludedFields, joinedPath) || _.isNil(newEntityElement)) {
+			if (
+				key === ignoreOnePath ||
+				_.includes(this.conf.lockFields.excludedFields, joinedPath) ||
+				_.isNil(newEntityElement)
+			) {
 				continue;
 			}
 
@@ -1030,7 +1295,12 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 						if (!_.isNil(element)) {
 							const arrayPath = `${joinedPath}[${arrayKey}=${element[arrayKey]}]`;
 							if (_.isNil(element[arrayKey])) {
-								throw new N9Error('wrong-array-definition', 400, { newEntity, basePath, ignoreOnePath, arrayPath });
+								throw new N9Error('wrong-array-definition', 400, {
+									newEntity,
+									basePath,
+									ignoreOnePath,
+									arrayPath,
+								});
 							}
 							if (MongoClient.isClassicObject(element)) {
 								if (_.isEmpty(_.omit(element, arrayKey))) {
@@ -1038,12 +1308,14 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 								} else {
 									keys.push(...this.generateAllLockFields(element, arrayPath, arrayKey));
 								}
-							} else { // TODO: if _.isArray(newEntity[key])
+							} else {
+								// TODO: if _.isArray(newEntity[key])
 								keys.push(arrayPath);
 							}
 						}
 					}
-				} else { // a["elementValue"]
+				} else {
+					// a["elementValue"]
 					for (const element of newEntityElement) {
 						const arrayPath = `${joinedPath}[${JSON.stringify(element)}]`;
 						keys.push(arrayPath);
@@ -1071,7 +1343,8 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		if (!_.isEmpty(lockFields)) {
 			for (const lockField of lockFields) {
 				let path = lockField.path;
-				if (path.includes('[')) { // path : a.b.c
+				if (path.includes('[')) {
+					// path : a.b.c
 					path = this.translatePathToLodashPath(path, entity);
 				}
 				if (path) {
@@ -1129,19 +1402,32 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		return newPath;
 	}
 
-	private mergeOldEntityWithNewOne(newEntity: any, existingEntity: any, basePath: string, lockFields: LockField[]): any {
+	private mergeOldEntityWithNewOne(
+		newEntity: any,
+		existingEntity: any,
+		basePath: string,
+		lockFields: LockField[],
+	): any {
 		let ret;
 		if (MongoClient.isClassicObject(newEntity) && MongoClient.isClassicObject(existingEntity)) {
 			const keys = _.uniq([..._.keys(newEntity), ..._.keys(existingEntity)]);
 			for (const key of keys) {
-				newEntity[key] = this.mergeOldEntityWithNewOne(newEntity[key], existingEntity[key], MongoClient.getJoinPaths(basePath, key), lockFields);
+				newEntity[key] = this.mergeOldEntityWithNewOne(
+					newEntity[key],
+					existingEntity[key],
+					MongoClient.getJoinPaths(basePath, key),
+					lockFields,
+				);
 			}
 			ret = {
 				...existingEntity,
 				...newEntity,
 			};
-		} else if (_.isArray(newEntity) && _.isArray((existingEntity))) {
-			if (!_.isEmpty(lockFields) && lockFields.find((lockField) => lockField.path.startsWith(basePath))) {
+		} else if (_.isArray(newEntity) && _.isArray(existingEntity)) {
+			if (
+				!_.isEmpty(lockFields) &&
+				lockFields.find((lockField) => lockField.path.startsWith(basePath))
+			) {
 				// console.log(`--  key --`, basePath, lockFields.find((lockField) => lockField.path.startsWith(basePath)));
 				// console.log('--  ', JSON.stringify(existingEntity, null, 1), ` <<-- existingEntity`);
 				// console.log('--  ', JSON.stringify(newEntity, null, 1), ` <<-- newEntity`);
@@ -1155,7 +1441,9 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 					} else {
 						elementPath = `${basePath}["${existingEntityElement}"]`;
 					}
-					const lockFieldForCurrentElement = lockFields.find((lockField) => lockField.path.startsWith(elementPath));
+					const lockFieldForCurrentElement = lockFields.find((lockField) =>
+						lockField.path.startsWith(elementPath),
+					);
 					if (lockFieldForCurrentElement) {
 						// push only if existingEntityElement is locked
 						mergedArray.push(existingEntityElement);
@@ -1165,30 +1453,48 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 
 				for (const newEntityElement of newEntity) {
 					// merge newEntityElement with associated existingEntityElement
-					if (fieldCodeName) { // array of objects
+					if (fieldCodeName) {
+						// array of objects
 						const elementPath = `${basePath}[${fieldCodeName}=${newEntityElement[fieldCodeName]}]`;
 						const alreadyAddedElementIndex = mergedArray.findIndex((mergedArrayElement) => {
-							return !_.isNil(mergedArrayElement[fieldCodeName]) && mergedArrayElement[fieldCodeName] === newEntityElement[fieldCodeName];
+							return (
+								!_.isNil(mergedArrayElement[fieldCodeName]) &&
+								mergedArrayElement[fieldCodeName] === newEntityElement[fieldCodeName]
+							);
 						});
 						if (alreadyAddedElementIndex !== -1) {
-							mergedArray[alreadyAddedElementIndex] = this.mergeOldEntityWithNewOne(mergedArray[alreadyAddedElementIndex], newEntityElement, elementPath, lockFields);
+							mergedArray[alreadyAddedElementIndex] = this.mergeOldEntityWithNewOne(
+								mergedArray[alreadyAddedElementIndex],
+								newEntityElement,
+								elementPath,
+								lockFields,
+							);
 						} else {
 							mergedArray.push(newEntityElement);
 						}
-					} else { // array of non objects values
+					} else {
+						// array of non objects values
 						const elementPath = `${basePath}["${newEntityElement[fieldCodeName]}"]`;
-						const alreadyAddedElementIndex = mergedArray.findIndex((mergedArrayElement) => !_.isNil(mergedArrayElement[fieldCodeName]) && mergedArrayElement === newEntityElement);
+						const alreadyAddedElementIndex = mergedArray.findIndex(
+							(mergedArrayElement) =>
+								!_.isNil(mergedArrayElement[fieldCodeName]) &&
+								mergedArrayElement === newEntityElement,
+						);
 						if (alreadyAddedElementIndex !== -1) {
-							mergedArray[alreadyAddedElementIndex] = this.mergeOldEntityWithNewOne(mergedArray[alreadyAddedElementIndex], newEntityElement, elementPath, lockFields);
+							mergedArray[alreadyAddedElementIndex] = this.mergeOldEntityWithNewOne(
+								mergedArray[alreadyAddedElementIndex],
+								newEntityElement,
+								elementPath,
+								lockFields,
+							);
 						} else {
 							mergedArray.push(newEntityElement);
 						}
 					}
 				}
 				return mergedArray;
-			} else {
-				return newEntity;
 			}
+			return newEntity;
 		} else if (_.isUndefined(newEntity)) {
 			ret = existingEntity;
 		} else {
@@ -1197,7 +1503,11 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		return ret;
 	}
 
-	private pickOnlyNewValues(existingEntity: U | string | number, newEntity: Partial<U> | string | number, basePath: string): Partial<U> | string | number {
+	private pickOnlyNewValues(
+		existingEntity: U | string | number,
+		newEntity: Partial<U> | string | number,
+		basePath: string,
+	): Partial<U> | string | number {
 		if (_.isEmpty(newEntity)) return;
 		const existingEntityKeys = _.keys(existingEntity);
 		if (!_.isObject(existingEntity)) {
@@ -1205,7 +1515,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				throw new N9Error('invalid-type', 400, { existingEntity, newEntity });
 			}
 			if (existingEntity !== newEntity) return newEntity;
-			else return;
+			return;
 		}
 
 		const ret: any = {};
@@ -1223,7 +1533,11 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 					delete ret[key];
 				}
 			} else if (_.isArray(existingEntityElement)) {
-				ret[key] = this.pickOnlyNewValuesInArray(existingEntityElement, newEntity[key], currentPath);
+				ret[key] = this.pickOnlyNewValuesInArray(
+					existingEntityElement,
+					newEntity[key],
+					currentPath,
+				);
 
 				if (_.isEmpty(ret[key])) delete ret[key];
 			} else {
@@ -1237,7 +1551,10 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 					newEntityElementToCompare = newEntityElementToCompare.toHexString();
 				}
 
-				if (existingEntityElementToCompare !== newEntityElementToCompare && !_.isNil(newEntity[key])) {
+				if (
+					existingEntityElementToCompare !== newEntityElementToCompare &&
+					!_.isNil(newEntity[key])
+				) {
 					ret[key] = newEntity[key];
 				}
 			}
@@ -1262,11 +1579,19 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		return ret;
 	}
 
-	private pickOnlyNewValuesInArray(existingEntityArray: any[], newEntityElement: any[], currentPath: string): any[] {
+	private pickOnlyNewValuesInArray(
+		existingEntityArray: any[],
+		newEntityElement: any[],
+		currentPath: string,
+	): any[] {
 		const ret = [];
-		for (let i = 0; i < Math.max(_.size(existingEntityArray), _.size(newEntityElement)); i++) {
+		for (let i = 0; i < Math.max(_.size(existingEntityArray), _.size(newEntityElement)); i += 1) {
 			const existingEntityElementArrayElement = existingEntityArray[i];
-			const newValue = this.pickOnlyNewValues(existingEntityElementArrayElement, _.get(newEntityElement, [i]), currentPath);
+			const newValue = this.pickOnlyNewValues(
+				existingEntityElementArrayElement,
+				_.get(newEntityElement, [i]),
+				currentPath,
+			);
 			const codeKeyName = this.conf.lockFields.arrayWithReferences[currentPath];
 
 			if (!_.isNil(newValue)) {
@@ -1283,7 +1608,9 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				const codeKeyName = this.conf.lockFields.arrayWithReferences[currentPath];
 
 				if (codeKeyName) {
-					const existingElementIndex = _.findIndex(ret, { [codeKeyName]: _.get(newEntityElementArrayElement, codeKeyName) });
+					const existingElementIndex = _.findIndex(ret, {
+						[codeKeyName]: _.get(newEntityElementArrayElement, codeKeyName),
+					});
 					if (existingElementIndex === -1) {
 						ret.push(newEntityElementArrayElement);
 					}
@@ -1295,7 +1622,12 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		return ret;
 	}
 
-	private async ensureExpirationIndex(collection: Collection, fieldOrSpec: string | object, ttlInDays: number, options: IndexOptions = {}): Promise<void> {
+	private async ensureExpirationIndex(
+		collection: Collection,
+		fieldOrSpec: string | object,
+		ttlInDays: number,
+		options: IndexOptions = {},
+	): Promise<void> {
 		options.expireAfterSeconds = ttlInDays * 24 * 3600;
 		options.name = options.name || 'n9MongoClient_expiration';
 
@@ -1315,10 +1647,12 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 	}
 
 	private buildAddTagUpdate(userId: string, options: AddTagOptions): object {
-		const update = { $addToSet: { 'objectInfos.tags': options.tag } };
-		const updateLastUpdate = _.isBoolean(options.updateLastUpdate) ? options.updateLastUpdate : true;
+		const update: UpdateQuery<any> = { $addToSet: { 'objectInfos.tags': options.tag } };
+		const updateLastUpdate = _.isBoolean(options.updateLastUpdate)
+			? options.updateLastUpdate
+			: true;
 		if (updateLastUpdate) {
-			update['$set'] = {
+			update.$set = {
 				'objectInfos.lastUpdate.date': new Date(),
 				'objectInfos.lastUpdate.userId': ObjectId.isValid(userId) ? MongoUtils.oid(userId) : userId,
 			};
@@ -1327,10 +1661,12 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 	}
 
 	private buildRemoveTagUpdate(tag: string, userId: string, options: RemoveTagOptions): object {
-		const update = { $pull: { 'objectInfos.tags': tag } };
-		const updateLastUpdate = _.isBoolean(options.updateLastUpdate) ? options.updateLastUpdate : true;
+		const update: UpdateQuery<any> = { $pull: { 'objectInfos.tags': tag } };
+		const updateLastUpdate = _.isBoolean(options.updateLastUpdate)
+			? options.updateLastUpdate
+			: true;
 		if (updateLastUpdate) {
-			update['$set'] = {
+			update.$set = {
 				'objectInfos.lastUpdate.date': new Date(),
 				'objectInfos.lastUpdate.userId': ObjectId.isValid(userId) ? MongoUtils.oid(userId) : userId,
 			};

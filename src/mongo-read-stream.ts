@@ -1,26 +1,27 @@
 import { N9Error } from '@neo9/n9-node-utils';
-import { Cursor } from 'mongodb';
+import * as _ from 'lodash';
+import { Cursor, FilterQuery } from 'mongodb';
 import { Readable, Writable } from 'stream';
 import { MongoClient } from './client';
+import { BaseMongoObject } from './models';
 import { ClassType } from './models/class-type.models';
 import { MongoUtils } from './mongo-utils';
-import { BaseMongoObject } from './models';
-import * as _ from 'lodash';
 
 export type PageConsumer<T> = (data: T[]) => Promise<void>;
 export type ItemConsumer<T> = (data: T) => Promise<void>;
 
 export class PageConsumerWritable<T> extends Writable {
-
 	private buffer: T[] = [];
 
-	constructor(
-			private pageSize: number,
-			private consumerFn: PageConsumer<T>) {
+	constructor(private pageSize: number, private consumerFn: PageConsumer<T>) {
 		super({ objectMode: true });
 	}
 
-	public async _write(chunk: T, encoding: string, callback?: (error?: any) => void): Promise<boolean> {
+	public async _write(
+		chunk: T,
+		encoding: string,
+		callback?: (error?: any) => void,
+	): Promise<boolean> {
 		try {
 			this.buffer.push(chunk);
 			if (this.buffer.length >= this.pageSize) {
@@ -45,7 +46,11 @@ export class ItemConsumerWritable<T> extends Writable {
 		super({ objectMode: true });
 	}
 
-	public async _write(chunk: T, encoding: string, callback?: (error?: any) => void): Promise<boolean> {
+	public async _write(
+		chunk: T,
+		encoding: string,
+		callback?: (error?: any) => void,
+	): Promise<boolean> {
 		try {
 			await this.consumerFn(chunk);
 		} catch (err) {
@@ -56,25 +61,29 @@ export class ItemConsumerWritable<T> extends Writable {
 	}
 }
 
-export class MongoReadStream<U extends BaseMongoObject, L extends BaseMongoObject> extends Readable {
-
+export class MongoReadStream<
+	U extends BaseMongoObject,
+	L extends BaseMongoObject
+> extends Readable {
 	private lastId: string = null;
 	private cursor: Cursor<Partial<U | L>> = null;
 	private hasAlreadyAddedIdConditionOnce: boolean = false;
 
-	get query(): object {
+	get query(): FilterQuery<any> {
 		return _.cloneDeep(this._query);
 	}
 
 	constructor(
-			private mongoClient: MongoClient<U, L>,
-			private _query: object,
-			private pageSize: number,
-			private projection: object = {},
-			private customType?: ClassType<Partial<U | L>>,
+		private mongoClient: MongoClient<U, L>,
+		private _query: FilterQuery<any>,
+		private pageSize: number,
+		private projection: object = {},
+		private customType?: ClassType<Partial<U | L>>,
 	) {
 		super({ objectMode: true });
-		if (projection['_id'] === 0) throw new N9Error('can-t-create-projection-without-_id', 400, { projection });
+		if ((projection as FilterQuery<any>)._id === 0) {
+			throw new N9Error('can-t-create-projection-without-_id', 400, { projection });
+		}
 	}
 
 	/**
@@ -83,11 +92,10 @@ export class MongoReadStream<U extends BaseMongoObject, L extends BaseMongoObjec
 	 */
 	public async forEachPage(consumerFn: PageConsumer<Partial<U | L>>): Promise<void> {
 		return new Promise<void>((resolve, reject) => {
-			this
-					.on('error', reject)
-					.pipe(new PageConsumerWritable(this.pageSize, consumerFn))
-					.on('error', reject)
-					.on('finish', resolve);
+			this.on('error', reject)
+				.pipe(new PageConsumerWritable(this.pageSize, consumerFn))
+				.on('error', reject)
+				.on('finish', resolve);
 		});
 	}
 
@@ -97,11 +105,10 @@ export class MongoReadStream<U extends BaseMongoObject, L extends BaseMongoObjec
 	 */
 	public async forEach(consumerFn: ItemConsumer<Partial<U | L>>): Promise<void> {
 		return new Promise<void>((resolve, reject) => {
-			this
-				.on('error', reject)
+			this.on('error', reject)
 				.pipe(new ItemConsumerWritable(consumerFn))
-					.on('error', reject)
-					.on('finish', resolve);
+				.on('error', reject)
+				.on('finish', resolve);
 		});
 	}
 
@@ -114,22 +121,35 @@ export class MongoReadStream<U extends BaseMongoObject, L extends BaseMongoObjec
 
 	public async _read(size: number): Promise<void> {
 		try {
-			if (!(this.cursor && await this.cursor.hasNext())) {
+			if (!(this.cursor && (await this.cursor.hasNext()))) {
 				if (this.lastId) {
-					this._query['$and'] = this._query['$and'] || [];
-					const andConditions: object[] = (this._query as any)['$and'];
+					this._query.$and = this._query.$and || [];
+					const andConditions: FilterQuery<any>[] = (this._query as any).$and;
 					// avoid to add multiple time the _id condition
 					if (this.hasAlreadyAddedIdConditionOnce) {
-						andConditions[andConditions.length - 1]['_id']['$gt'] = MongoUtils.oid(this.lastId);
+						andConditions[andConditions.length - 1]._id.$gt = MongoUtils.oid(this.lastId);
 					} else {
 						andConditions.push({ _id: { $gt: MongoUtils.oid(this.lastId) } });
 						this.hasAlreadyAddedIdConditionOnce = true;
 					}
 				}
 				if (this.customType) {
-					this.cursor = await this.mongoClient.findWithType(this._query, this.customType, 0, this.pageSize, { _id: 1 }, this.projection);
+					this.cursor = await this.mongoClient.findWithType(
+						this._query,
+						this.customType,
+						0,
+						this.pageSize,
+						{ _id: 1 },
+						this.projection,
+					);
 				} else {
-					this.cursor = await this.mongoClient.find(this._query, 0, this.pageSize, { _id: 1 }, this.projection);
+					this.cursor = await this.mongoClient.find(
+						this._query,
+						0,
+						this.pageSize,
+						{ _id: 1 },
+						this.projection,
+					);
 				}
 			}
 			let item = null;
@@ -144,5 +164,4 @@ export class MongoReadStream<U extends BaseMongoObject, L extends BaseMongoObjec
 			this.emit('error', e);
 		}
 	}
-
 }

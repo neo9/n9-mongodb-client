@@ -1,5 +1,4 @@
 declare module 'mongodb-lock' {
-
 	import { Collection } from 'mongodb';
 
 	namespace mongoDbLock {
@@ -14,7 +13,11 @@ declare module 'mongodb-lock' {
 		}
 	}
 
-	function mongoDbLock(collection: Collection, lockName: string, options?: mongodbLock.LockOptions): mongodbLock.MongodbLock;
+	function mongoDbLock(
+		collection: Collection,
+		lockName: string,
+		options?: mongodbLock.LockOptions,
+	): mongodbLock.MongodbLock;
 
 	export = mongoDbLock;
 }

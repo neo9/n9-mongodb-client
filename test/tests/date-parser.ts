@@ -1,11 +1,11 @@
 import { N9Log } from '@neo9/n9-node-log';
-import test, { Assertions } from 'ava';
+import ava, { Assertions } from 'ava';
 import { Transform } from 'class-transformer';
 import * as _ from 'lodash';
 import { MongoClient } from '../../src';
 import { BaseMongoObject } from '../../src/models';
-import { init } from './fixtures/utils';
 import * as DateParser from '../../src/transformers/date-parser.transformer';
+import { init } from './fixtures/utils';
 
 export class WithDateEntity extends BaseMongoObject {
 	@Transform(DateParser.transform, { toClassOnly: true })
@@ -18,14 +18,14 @@ export class WithDateAndNoTransformerEntity extends BaseMongoObject {
 
 global.log = new N9Log('tests').module('date-parser');
 
-init(test);
+init();
 
-test('[DATE-PARSER] Insert&update entity with date', async (t: Assertions) => {
+ava('[DATE-PARSER] Insert&update entity with date', async (t: Assertions) => {
 	const entity: WithDateEntity = {
 		date: '2019-01-02',
 	};
 
-	const mongoClient = new MongoClient('test' + Date.now(), WithDateEntity, null);
+	const mongoClient = new MongoClient(`test-${Date.now()}`, WithDateEntity, null);
 
 	const createdEntity = await mongoClient.insertOne(entity, 'userId');
 
@@ -37,8 +37,8 @@ test('[DATE-PARSER] Insert&update entity with date', async (t: Assertions) => {
 	t.is(entityFound.date.constructor.name, 'Date', 'date found has Date constructor');
 });
 
-test('[DATE-PARSER] Insert&update entity with date and no transformer', async (t: Assertions) => {
-	const collectionName = 'test' + Date.now();
+ava('[DATE-PARSER] Insert&update entity with date and no transformer', async (t: Assertions) => {
+	const collectionName = `test-${Date.now()}`;
 	const entity: WithDateAndNoTransformerEntity = {
 		date: new Date('2019-01-02'),
 	};

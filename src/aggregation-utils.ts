@@ -1,3 +1,4 @@
+import { FilterQuery } from 'mongodb';
 import {
 	AggregationPipeline,
 	AggregationPipelineStage,
@@ -18,14 +19,11 @@ import {
 	SortPipelineStageValue,
 	UnwindPipelineStageValue,
 } from './models/aggregate.models';
-import { FilterQuery } from 'mongodb';
 
 export class AggregationBuilder<U> {
-
 	private stages: AggregationPipeline = [];
 
-	public constructor(private readonly collectionName: string) {
-	}
+	public constructor(private readonly collectionName: string) {}
 
 	/*
 	 * PIPELINE STAGES
@@ -94,7 +92,10 @@ export class AggregationBuilder<U> {
 		return this.doAddStage({ [AggregationPipelineStageOperator.MATCH]: stageValue });
 	}
 
-	public merge(stageValue: MergePipelineStageValue, forceOutput: boolean = false): AggregationBuilder<U> {
+	public merge(
+		stageValue: MergePipelineStageValue,
+		forceOutput: boolean = false,
+	): AggregationBuilder<U> {
 		if (!forceOutput) {
 			stageValue.into = this.collectionName;
 		}
@@ -138,12 +139,10 @@ export class AggregationBuilder<U> {
 	}
 
 	/*
-	* CUSTOM PIPELINE STAGES
-	*/
+	 * CUSTOM PIPELINE STAGES
+	 */
 	public unwindAndReplaceRootWithField(fieldName: string): AggregationBuilder<U> {
-		return this
-				.unwind(fieldName)
-				.replaceRoot({ newRoot: fieldName });
+		return this.unwind(fieldName).replaceRoot({ newRoot: fieldName });
 	}
 
 	/*
@@ -157,7 +156,9 @@ export class AggregationBuilder<U> {
 		return this.doAddStage(stage as AggregationPipelineStage);
 	}
 
-	public concatAggregationBuilder(aggregationBuilder: AggregationBuilder<U>): AggregationBuilder<U> {
+	public concatAggregationBuilder(
+		aggregationBuilder: AggregationBuilder<U>,
+	): AggregationBuilder<U> {
 		const stagesToAdd = aggregationBuilder.build();
 		for (const stageToAdd of stagesToAdd) {
 			this.doAddStage(stageToAdd);
@@ -185,11 +186,17 @@ export class AggregationBuilder<U> {
  * UTILS
  */
 
-export const mergeObjects = (...objects: (Expression | object)[]): Expression => ({ $mergeObjects: objects });
+export const mergeObjects = (...objects: (Expression | object)[]): Expression => ({
+	$mergeObjects: objects,
+});
 
-export const concatArrays = (...arrays: (Expression | any[])[]): Expression => ({ $concatArrays: arrays });
+export const concatArrays = (...arrays: (Expression | any[])[]): Expression => ({
+	$concatArrays: arrays,
+});
 
-export const arrayToObject = (expression: Expression): Expression => ({ $arrayToObject: expression });
+export const arrayToObject = (expression: Expression): Expression => ({
+	$arrayToObject: expression,
+});
 
 export interface MapOptions {
 	input: string;

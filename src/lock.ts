@@ -1,14 +1,13 @@
 import { N9Error, waitFor } from '@neo9/n9-node-utils';
-import { Db } from 'mongodb';
+import * as mongodb from 'mongodb';
 import * as mongoDbLock from 'mongodb-lock';
-import { LockOptions, MongodbLock } from 'mongodb-lock';
 
 /**
  * Wrapper of mongodb-lock
  * https://www.npmjs.com/package/mongodb-lock
  */
 export class N9MongoLock {
-	private lock: MongodbLock;
+	private lock: mongoDbLock.MongodbLock;
 
 	/**
 	 *
@@ -19,9 +18,9 @@ export class N9MongoLock {
 	constructor(
 		collection: string = 'n9MongoLock',
 		lockName: string = 'default-lock',
-		options: LockOptions = { timeout: 30 * 1000, removeExpired: true },
+		options: mongoDbLock.LockOptions = { timeout: 30 * 1000, removeExpired: true },
 	) {
-		const db = global.db as Db;
+		const db = global.db as mongodb.Db;
 		if (!db) {
 			throw new N9Error('missing-db', 500);
 		}
@@ -66,7 +65,7 @@ export class N9MongoLock {
 		do {
 			const code = await this.acquire();
 			if (code) return code;
-			else await waitFor(waitDurationMs);
+			await waitFor(waitDurationMs);
 		} while (Date.now() - startTime < timeoutMs);
 	}
 

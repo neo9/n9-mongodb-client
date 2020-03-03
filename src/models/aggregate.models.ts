@@ -27,7 +27,7 @@ export enum AggregationPipelineStageOperator {
 	SKIP = '$skip',
 	SORT = '$sort',
 	SORT_BY_COUNT = '$sortByCount',
-	UNWIND = '$unwind'
+	UNWIND = '$unwind',
 }
 
 export type Expression = string | object;
@@ -80,7 +80,20 @@ export interface BucketPipelineStage {
 }
 
 /* BUCKET AUTO */
-export type Granularity = "R5" | "R10" | "R20" | "R40" | "R80" | "1-2-5" | "E6" | "E12" | "E24" | "E48" | "E96" | "E192" | "POWERSOF2";
+export type Granularity =
+	| 'R5'
+	| 'R10'
+	| 'R20'
+	| 'R40'
+	| 'R80'
+	| '1-2-5'
+	| 'E6'
+	| 'E12'
+	| 'E24'
+	| 'E48'
+	| 'E96'
+	| 'E192'
+	| 'POWERSOF2';
 
 export interface BucketAutoPipelineStageValue {
 	/**
@@ -150,7 +163,7 @@ export interface CurrentOpPipelineStage {
 
 /* FACET */
 export type FacetAggregationPipelineStage =
-	AddFieldsPipelineStage
+	| AddFieldsPipelineStage
 	| BucketPipelineStage
 	| BucketAutoPipelineStage
 	| CountPipelineStage
@@ -187,42 +200,42 @@ export type CoordinatePair = [number, number];
 export type LegacyCoordinatePair = CoordinatePair | { [key: string]: number };
 
 export interface PointGeoJsonObject {
-	type: "Point";
+	type: 'Point';
 	coordinates: CoordinatePair;
 }
 
 export interface LineStringGeoJsonObject {
-	type: "LineString";
+	type: 'LineString';
 	coordinates: CoordinatePair[];
 }
 
 export interface PolygonGeoJsonObject {
-	type: "Polygon";
+	type: 'Polygon';
 	coordinates: CoordinatePair[][];
 }
 
 export interface MultiPointGeoJsonObject {
-	type: "MultiPoint";
+	type: 'MultiPoint';
 	coordinates: CoordinatePair[];
 }
 
 export interface MultiLineStringGeoJsonObject {
-	type: "MultiLineString";
+	type: 'MultiLineString';
 	coordinates: CoordinatePair[][];
 }
 
 export interface MultiPolygonGeoJsonObject {
-	type: "MultiPolygon";
+	type: 'MultiPolygon';
 	coordinates: CoordinatePair[][][];
 }
 
 export interface GeometryCollectionGeoJsonObject {
-	type: "GeometryCollection";
+	type: 'GeometryCollection';
 	geometries: GeoJsonObject[];
 }
 
 export type GeoJsonObject =
-	PointGeoJsonObject
+	| PointGeoJsonObject
 	| LineStringGeoJsonObject
 	| PolygonGeoJsonObject
 	| MultiPointGeoJsonObject
@@ -448,7 +461,9 @@ export interface SubPipelineLookupPipelineStageValue {
 	as: string;
 }
 
-export type LookupPipelineStageValue = EqualityLookupPipelineStageValue | SubPipelineLookupPipelineStageValue;
+export type LookupPipelineStageValue =
+	| EqualityLookupPipelineStageValue
+	| SubPipelineLookupPipelineStageValue;
 
 export interface LookupPipelineStage {
 	[AggregationPipelineStageOperator.LOOKUP]: LookupPipelineStageValue;
@@ -471,20 +486,27 @@ export interface MergePipelineStage {
  *  whenNotMatched: <insert|discard|fail>                     // Optional
  */
 export interface MergePipelineStageValue {
-	into?: string | {
-		db: string;
-		coll: string;
-	};
+	into?:
+		| string
+		| {
+				db: string;
+				coll: string;
+		  };
 	on?: string | string[];
 	let?: StringMap<string>;
-	whenMatched?: 'replace' | 'keepExisting'|'merge'|'fail'| MergeMatchedAggregationPipelineStage;
+	whenMatched?:
+		| 'replace'
+		| 'keepExisting'
+		| 'merge'
+		| 'fail'
+		| MergeMatchedAggregationPipelineStage;
 	whenNotMatched?: 'insert' | 'discard' | 'fail';
 }
 
 export type MergeMatchedAggregationPipelineStage =
-		AddFieldsPipelineStage
-		| ProjectPipelineStage
-		| ReplaceRootPipelineStage;
+	| AddFieldsPipelineStage
+	| ProjectPipelineStage
+	| ReplaceRootPipelineStage;
 
 /* OUT */
 export interface OutPipelineStage {
@@ -561,11 +583,11 @@ export interface UnwindPipelineStageValue {
 }
 
 export interface UnwindPipelineStage {
-	[AggregationPipelineStageOperator.UNWIND]: string|UnwindPipelineStageValue;
+	[AggregationPipelineStageOperator.UNWIND]: string | UnwindPipelineStageValue;
 }
 
 export type AggregationPipelineStage =
-	AddFieldsPipelineStage
+	| AddFieldsPipelineStage
 	| BucketPipelineStage
 	| BucketAutoPipelineStage
 	| CollStatsPipelineStage

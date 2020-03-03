@@ -4,5 +4,5 @@ export function toDate(value: string): Date {
 
 export function transform(value: Date | string): Date | string {
 	if (typeof value === 'string') return toDate(value);
-	else return value;
+	return value;
 }

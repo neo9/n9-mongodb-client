@@ -1,12 +1,12 @@
 import { N9Log } from '@neo9/n9-node-log';
-import test, { Assertions } from 'ava';
+import ava, { Assertions } from 'ava';
 import { ObjectID } from 'bson';
 import * as _ from 'lodash';
 import { MongoUtils } from '../../src';
 
 global.log = new N9Log('tests').module('treat-special-character');
 
-test('[SPECIAL-CHARACTERS] Transform object and keep types', async (t: Assertions) => {
+ava('[SPECIAL-CHARACTERS] Transform object and keep types', async (t: Assertions) => {
 	const origin = {
 		a: new Date(),
 		string: 'string test',

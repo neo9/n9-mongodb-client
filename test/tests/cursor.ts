@@ -1,12 +1,11 @@
 import { N9Log } from '@neo9/n9-node-log';
-import test, { Assertions } from 'ava';
-import { AggregationCursor, Collection } from 'mongodb';
+import ava, { Assertions } from 'ava';
 
+import { waitFor } from '@neo9/n9-node-utils';
+import { Transform } from 'stream';
 import { MongoClient } from '../../src';
 import { BaseMongoObject } from '../../src/models';
 import { init } from './fixtures/utils';
-import { Transform } from 'stream';
-import { waitFor } from '@neo9/n9-node-utils';
 
 class SampleType extends BaseMongoObject {
 	public field1String: string;
@@ -14,10 +13,10 @@ class SampleType extends BaseMongoObject {
 
 global.log = new N9Log('tests');
 
-init(test);
+init();
 
-test('[Cursor] call hasNext before using in a for async', async (t: Assertions) => {
-	const mongoClient = new MongoClient('test-' + Date.now(), SampleType, null);
+ava('[Cursor] call hasNext before using in a for async', async (t: Assertions) => {
+	const mongoClient = new MongoClient(`test-${Date.now()}`, SampleType, null);
 
 	await mongoClient.insertOne({ field1String: 'string1' }, 'userId1');
 	await mongoClient.insertOne({ field1String: 'string2' }, 'userId1');
@@ -36,8 +35,8 @@ test('[Cursor] call hasNext before using in a for async', async (t: Assertions) 
 	await mongoClient.dropCollection();
 });
 
-test('[Cursor] sort and call hasNext before using in a for async', async (t: Assertions) => {
-	const mongoClient = new MongoClient('test-' + Date.now(), SampleType, null);
+ava('[Cursor] sort and call hasNext before using in a for async', async (t: Assertions) => {
+	const mongoClient = new MongoClient(`test-${Date.now()}`, SampleType, null);
 
 	await mongoClient.insertOne({ field1String: 'string1' }, 'userId1');
 	await mongoClient.insertOne({ field1String: 'string2' }, 'userId1');
@@ -52,18 +51,18 @@ test('[Cursor] sort and call hasNext before using in a for async', async (t: Ass
 		items.push(item);
 	}
 
-	t.is(items[0].field1String, 'string1', 'item 1 is \'string1\'');
-	t.is(items[1].field1String, 'string2', 'item 2 is \'string1\'');
-	t.is(items[2].field1String, 'string3', 'item 3 is \'string1\'');
-	t.is(items[3].field1String, 'string4', 'item 4 is \'string1\'');
-	t.is(items[4].field1String, 'string5', 'item 5 is \'string1\'');
+	t.is(items[0].field1String, 'string1', "item 1 is 'string1'");
+	t.is(items[1].field1String, 'string2', "item 2 is 'string1'");
+	t.is(items[2].field1String, 'string3', "item 3 is 'string1'");
+	t.is(items[3].field1String, 'string4', "item 4 is 'string1'");
+	t.is(items[4].field1String, 'string5', "item 5 is 'string1'");
 
 	await mongoClient.dropCollection();
 });
 
 // Test for https://jira.mongodb.org/browse/NODE-2454
-test('[Cursor] hasNext before piping into a stream ', async (t: Assertions) => {
-	const mongoClient = new MongoClient('test-' + Date.now(), SampleType, null);
+ava('[Cursor] hasNext before piping into a stream ', async (t: Assertions) => {
+	const mongoClient = new MongoClient(`test-${Date.now()}`, SampleType, null);
 
 	await mongoClient.insertOne({ field1String: 'string1' }, 'userId1');
 	await mongoClient.insertOne({ field1String: 'string2' }, 'userId1');
@@ -96,8 +95,8 @@ test('[Cursor] hasNext before piping into a stream ', async (t: Assertions) => {
 });
 
 // Test for https://jira.mongodb.org/browse/NODE-2454
-test('[Cursor] sort and hasNext before piping into a stream ', async (t: Assertions) => {
-	const mongoClient = new MongoClient('test-' + Date.now(), SampleType, null);
+ava('[Cursor] sort and hasNext before piping into a stream ', async (t: Assertions) => {
+	const mongoClient = new MongoClient(`test-${Date.now()}`, SampleType, null);
 
 	await mongoClient.insertOne({ field1String: 'string1' }, 'userId1');
 	await mongoClient.insertOne({ field1String: 'string2' }, 'userId1');
@@ -124,11 +123,11 @@ test('[Cursor] sort and hasNext before piping into a stream ', async (t: Asserti
 
 	await waitFor(1000);
 
-	t.is(items[0].field1String, 'string1', 'item 1 is \'string1\'');
-	t.is(items[1].field1String, 'string2', 'item 2 is \'string1\'');
-	t.is(items[2].field1String, 'string3', 'item 3 is \'string1\'');
-	t.is(items[3].field1String, 'string4', 'item 4 is \'string1\'');
-	t.is(items[4].field1String, 'string5', 'item 5 is \'string1\'');
+	t.is(items[0].field1String, 'string1', "item 1 is 'string1'");
+	t.is(items[1].field1String, 'string2', "item 2 is 'string1'");
+	t.is(items[2].field1String, 'string3', "item 3 is 'string1'");
+	t.is(items[3].field1String, 'string4', "item 4 is 'string1'");
+	t.is(items[4].field1String, 'string5', "item 5 is 'string1'");
 
 	await mongoClient.dropCollection();
 });
