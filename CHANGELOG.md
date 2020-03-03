@@ -1,9 +1,26 @@
+## Version [0.13.2](https://github.com/neo9/n9-mongo-client/compare/0.13.1...0.13.2) (2020-03-03)
+
+
+### format
+
+* Format before commit ([7174244](https://github.com/neo9/n9-mongo-client/commit/7174244)) (Benjamin Daniel)
+
+### lint
+
+* Use neo9 coding style and prettier ([bc8710c](https://github.com/neo9/n9-mongo-client/commit/bc8710c)) (Benjamin Daniel)
+
+
+
 ## Version [0.13.1](https://github.com/neo9/n9-mongo-client/compare/0.13.0...0.13.1) (2020-02-28)
 
 
 ### locks
 
 * Fix locks expiring ([eef34f8](https://github.com/neo9/n9-mongo-client/commit/eef34f8)) (Benjamin Daniel)
+
+### release
+
+* V 0.13.1 ([198a9b1](https://github.com/neo9/n9-mongo-client/commit/198a9b1)) (Benjamin Daniel)
 
 
 
