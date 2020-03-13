@@ -17,21 +17,20 @@ import {
 	UpdateQuery,
 } from 'mongodb';
 import { AggregationBuilder } from './aggregation-utils';
-import { BaseMongoObject, EntityHistoric, LockField, StringMap, UpdateManyQuery } from './models';
-import { ClassType } from './models/class-type.models';
-import { AddTagOptions, RemoveTagOptions } from './models/tag-options.models';
-import { UpdateManyAtOnceOptions } from './models/update-many-at-once-options.models';
+import {
+	AddTagOptions,
+	BaseMongoObject,
+	ClassType,
+	EntityHistoric,
+	LockField,
+	MongoClientConfiguration,
+	RemoveTagOptions,
+	StringMap,
+	UpdateManyAtOnceOptions,
+	UpdateManyQuery,
+} from './models';
 import { MongoReadStream } from './mongo-read-stream';
 import { MongoUtils } from './mongo-utils';
-
-export interface MongoClientConfiguration {
-	keepHistoric?: boolean;
-	lockFields?: {
-		excludedFields?: string[];
-		arrayWithReferences?: StringMap<string>;
-	};
-	aggregationCollectionSource?: string;
-}
 
 const defaultConfiguration: MongoClientConfiguration = {
 	keepHistoric: false,
