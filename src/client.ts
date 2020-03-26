@@ -369,7 +369,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 
 	public async findOneAndUpdateById(
 		id: string,
-		updateQuery: { [id: string]: object; $set?: object },
+		updateQuery: UpdateQuery<U>,
 		userId: string,
 		internalCall: boolean = false,
 		returnNewValue: boolean = true,
@@ -391,7 +391,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 
 	public async findOneAndUpdateByKey(
 		keyValue: any,
-		updateQuery: { [id: string]: object; $set?: object },
+		updateQuery: UpdateQuery<U>,
 		userId: string,
 		keyName: string = 'code',
 		internalCall: boolean = false,
@@ -440,7 +440,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 	 */
 	public async findOneAndUpdate(
 		query: FilterQuery<U>,
-		updateQuery: { [id: string]: object; $set?: object; $unset?: object },
+		updateQuery: UpdateQuery<U>,
 		userId: string,
 		internalCall: boolean = false,
 		upsert: boolean = false,
@@ -519,7 +519,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 	// wrapper around findOneAndUpdate
 	public async findOneAndUpsert(
 		query: FilterQuery<U>,
-		updateQuery: { [id: string]: object; $set?: object },
+		updateQuery: UpdateQuery<U>,
 		userId: string,
 		internalCall: boolean = false,
 		returnNewValue: boolean = true,
@@ -574,13 +574,13 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 
 		return await this.findOneAndUpdate(
 			query,
-			{
+			({
 				$pull: {
 					'objectInfos.lockFields': {
 						path: lockFieldPath,
 					},
 				},
-			},
+			} as any) as UpdateQuery<U>,
 			userId,
 			true,
 			false,
