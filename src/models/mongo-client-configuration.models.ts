@@ -18,6 +18,23 @@ export interface LockFieldConfiguration {
 	arrayWithReferences?: StringMap<string>;
 }
 
+export interface UpdateOnlyOnChangeConfiguration {
+	/**
+	 * Options to filter the fields to determine if a field has changed.
+	 * Can be one of pick or omit. If both are set, only pick will be taken into account.
+	 */
+	changeFilters?: {
+		/**
+		 * List of fields to analyse for change detection. All other fields will not be analysed.
+		 */
+		pick?: string[];
+		/**
+		 * List of fields to ignore for change detection. All other fields will be analysed.
+		 */
+		omit?: string[];
+	};
+}
+
 /**
  * Options to pass to n9-mongo-client to configure its behaviour
  */
@@ -34,6 +51,12 @@ export interface MongoClientConfiguration {
 	 * Defaults to undefined.
 	 */
 	lockFields?: LockFieldConfiguration;
+
+	/**
+	 * If set, entities will not be updated if they didn't change (ie: if the update would not change the document in db).
+	 * Defaults to undefined.
+	 */
+	updateOnlyOnChange?: UpdateOnlyOnChangeConfiguration;
 
 	/**
 	 * Name of the collection to use as source for aggregations.

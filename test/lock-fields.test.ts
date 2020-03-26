@@ -304,6 +304,7 @@ ava('[LOCK-FIELDS] Update many with locks', async (t: Assertions) => {
 		_.unset(i, '_id');
 		_.unset(i, 'text');
 		_.unset(i, 'objectInfos.creation.date');
+		_.unset(i, 'objectInfos.lastModification.date');
 		for (const lockField of i.objectInfos.lockFields) {
 			_.unset(lockField, 'metaDatas.date');
 		}

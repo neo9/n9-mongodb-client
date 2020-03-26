@@ -21,6 +21,9 @@ export class BaseMongoObjectInfos {
 	public lastUpdate?: BaseMongoObjectInfosUpdate;
 
 	@Expose()
+	public lastModification?: BaseMongoObjectInfosUpdate;
+
+	@Expose()
 	public lockFields?: LockField[];
 
 	@Expose()
