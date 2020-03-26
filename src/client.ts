@@ -1,6 +1,6 @@
 import { N9Log } from '@neo9/n9-node-log';
 import { N9Error } from '@neo9/n9-node-utils';
-import * as deepDiff from 'deep-diff';
+import { Diff, diff as deepDiff } from 'deep-diff';
 import * as _ from 'lodash';
 import {
 	AggregationCursor,
@@ -11,7 +11,9 @@ import {
 	Cursor,
 	Db,
 	FilterQuery,
+	FindAndModifyWriteOpResultObject,
 	IndexOptions,
+	MongoClient as MongodbClient,
 	ObjectId,
 	UpdateQuery,
 } from 'mongodb';
@@ -44,6 +46,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 	private readonly collectionSourceForAggregation: Collection<U>;
 	private readonly logger: N9Log;
 	private readonly db: Db;
+	private readonly mongoClient: MongodbClient;
 	private readonly type: ClassType<U>;
 	private readonly typeList: ClassType<L>;
 	private readonly conf: MongoClientConfiguration;
@@ -63,10 +66,15 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			this.lockFieldsManager = new LockFieldsManager(this.conf.lockFields);
 		}
 		this.logger = (global.log as N9Log).module('mongo-client');
-		this.db = global.db as Db;
 
+		this.db = global.db as Db;
 		if (!this.db) {
 			throw new N9Error('missing-db', 500);
+		}
+
+		this.mongoClient = global.dbClient as MongodbClient;
+		if (!this.mongoClient) {
+			throw new N9Error('missing-db-client', 500);
 		}
 
 		this.type = type;
@@ -164,6 +172,10 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				date,
 				userId,
 			},
+			lastModification: {
+				date,
+				userId,
+			},
 		};
 		let newEntityWithoutForbiddenCharacters = MongoUtils.removeSpecialCharactersInKeys(newEntity);
 
@@ -213,6 +225,10 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 					userId,
 				},
 				lastUpdate: {
+					date,
+					userId,
+				},
+				lastModification: {
 					date,
 					userId,
 				},
@@ -415,27 +431,34 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		}
 
 		const now = new Date();
+		const formattedUserId = (ObjectId.isValid(userId) ? MongoUtils.oid(userId) : userId) as string;
 
 		updateQuery.$set = {
 			...(updateQuery.$set as object),
 			'objectInfos.lastUpdate': {
 				date: now,
-				userId: ObjectId.isValid(userId) ? MongoUtils.oid(userId) : userId,
+				userId: formattedUserId,
 			},
 		};
+		if (!this.conf.updateOnlyOnChange) {
+			updateQuery.$set['objectInfos.lastModification'] = {
+				date: now,
+				userId: formattedUserId,
+			};
+		}
 
 		if (upsert) {
 			updateQuery.$setOnInsert = {
 				...(updateQuery.$setOnInsert as object),
 				'objectInfos.creation': {
-					userId,
-					date: new Date(),
+					date: now,
+					userId: formattedUserId,
 				},
 			};
 		}
 
 		let saveOldValue;
-		if (this.conf.keepHistoric) {
+		if (this.conf.keepHistoric || this.conf.updateOnlyOnChange) {
 			saveOldValue = await this.findOne(query);
 		}
 
@@ -446,24 +469,42 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				returnOriginal: !returnNewValue,
 			})
 		).value as U;
-		if (returnNewValue || this.conf.keepHistoric) {
+		if (returnNewValue || this.conf.keepHistoric || this.conf.updateOnlyOnChange) {
 			newEntity = MongoUtils.mapObjectToClass(
 				this.type,
 				MongoUtils.unRemoveSpecialCharactersInKeys(newEntity),
 			);
 		}
 
-		if (this.conf.keepHistoric) {
-			const diffs = deepDiff.diff(saveOldValue, newEntity, (path: string[], key: string) => {
-				return ['objectInfos.creation', 'objectInfos.lastUpdate'].includes(
-					[...path, key].join('.'),
-				);
+		if (this.conf.keepHistoric || this.conf.updateOnlyOnChange) {
+			const diffs = deepDiff(saveOldValue, newEntity, (path: string[], key: string) => {
+				return [
+					'objectInfos.creation',
+					'objectInfos.lastUpdate',
+					'objectInfos.lastModification',
+				].includes([...path, key].join('.'));
 			});
 			if (diffs) {
 				await this.historicManager.insertOne(newEntity._id, diffs, saveOldValue, now, userId);
+
+				if (this.conf.updateOnlyOnChange) {
+					const newUpdate = await this.updateLastModificationDate(
+						newEntity._id,
+						diffs,
+						now,
+						userId,
+					);
+
+					if (returnNewValue && newUpdate) {
+						newEntity = newUpdate.value;
+						newEntity = MongoUtils.mapObjectToClass(
+							this.type,
+							MongoUtils.unRemoveSpecialCharactersInKeys(newEntity),
+						);
+					}
+				}
 			}
 		}
-
 		if (returnNewValue) return newEntity;
 		return;
 	}
@@ -1112,10 +1153,12 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				const oldValueSaved: U = oldValuesSaved[newEntity._id];
 
 				if (oldValueSaved) {
-					const diffs = deepDiff.diff(oldValueSaved, newEntity, (path: string[], key: string) => {
-						return ['objectInfos.creation', 'objectInfos.lastUpdate'].includes(
-							[...path, key].join('.'),
-						);
+					const diffs = deepDiff(oldValueSaved, newEntity, (path: string[], key: string) => {
+						return [
+							'objectInfos.creation',
+							'objectInfos.lastUpdate',
+							'objectInfos.lastModification',
+						].includes([...path, key].join('.'));
 					});
 					if (diffs) {
 						await this.historicManager.insertOne(newEntity._id, diffs, oldValueSaved, now, userId);
@@ -1135,5 +1178,47 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 
 	private async getEmptyCursor<X extends U>(type: ClassType<X>): Promise<Cursor<X>> {
 		return await this.findWithType<X>({ $and: [{ _id: false }, { _id: true }] }, type, -1, 0);
+	}
+
+	private async updateLastModificationDate(
+		entityId: string,
+		diffs: Diff<U, U>[],
+		updateDate: Date,
+		userId: string,
+	): Promise<FindAndModifyWriteOpResultObject<U>> {
+		// determine if the document has changed
+		// if pick is not empty, field names must be in pick to be taken into account
+		// if omit is not empty, field names must not be in omit to be taken into account
+		const omit = this.conf.updateOnlyOnChange?.changeFilters?.omit ?? [];
+		const pick = this.conf.updateOnlyOnChange?.changeFilters?.pick ?? [];
+		let hasChanged = false;
+		for (const diff of diffs) {
+			const path = diff.path.join('.');
+			const isOmitted = omit.length && omit.includes(path);
+			const isPicked = !pick.length || pick.includes(path);
+			if (!isOmitted && isPicked) {
+				hasChanged = true;
+				break;
+			}
+		}
+		// if no change were detected, don't update lastModification
+		if (!hasChanged) {
+			return;
+		}
+
+		return await this.collection.findOneAndUpdate(
+			{ _id: MongoUtils.oid(entityId) },
+			{
+				$set: {
+					'objectInfos.lastModification': {
+						date: updateDate,
+						userId: (ObjectId.isValid(userId) ? MongoUtils.oid(userId) : userId) as string,
+					},
+				},
+			},
+			{
+				returnOriginal: false,
+			},
+		);
 	}
 }
