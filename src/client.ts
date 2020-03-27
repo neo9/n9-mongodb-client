@@ -17,6 +17,8 @@ import {
 	UpdateQuery,
 } from 'mongodb';
 import { AggregationBuilder } from './aggregation-utils';
+import { HistoricManager } from './historic-manager';
+import { IndexManager } from './index-manager';
 import {
 	AddTagOptions,
 	BaseMongoObject,
@@ -94,7 +96,8 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 	private readonly type: ClassType<U>;
 	private readonly typeList: ClassType<L>;
 	private readonly conf: MongoClientConfiguration;
-	private readonly collectionHistoric: Collection<EntityHistoric<U>>;
+	private readonly indexManager: IndexManager;
+	private readonly historicManager: HistoricManager<U>;
 
 	constructor(
 		collection: Collection<U> | string,
@@ -116,13 +119,16 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			throw new N9Error('missing-db', 500);
 		}
 
+		this.type = type;
+		this.typeList = typeList;
+
 		if (typeof collection === 'string') {
 			this.collection = this.db.collection(collection);
-			this.collectionHistoric = this.db.collection(`${collection}Historic`);
 		} else {
 			this.collection = collection;
-			this.collectionHistoric = this.db.collection(`${collection.collectionName}Historic`);
 		}
+		this.indexManager = new IndexManager(this.collection);
+		this.historicManager = new HistoricManager(this.collection);
 
 		if (this.conf.aggregationCollectionSource) {
 			this.collectionSourceForAggregation = this.db.collection(
@@ -131,26 +137,21 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		} else {
 			this.collectionSourceForAggregation = this.collection;
 		}
-
-		this.type = type;
-		this.typeList = typeList;
 	}
 
 	public async createIndex(fieldOrSpec: string | any, options?: IndexOptions): Promise<void> {
-		await this.collection.createIndex(fieldOrSpec, options);
+		await this.indexManager.createIndex(fieldOrSpec, options);
 	}
 
 	public async dropIndex(indexName: string): Promise<void> {
-		if (await this.collection.indexExists(indexName)) {
-			await this.collection.dropIndex(indexName);
-		}
+		await this.indexManager.dropIndex(indexName);
 	}
 
 	public async createUniqueIndex(
 		fieldOrSpec: string | any = 'code',
 		options?: IndexOptions,
 	): Promise<void> {
-		await this.createIndex(fieldOrSpec, { ...options, unique: true });
+		await this.indexManager.createUniqueIndex(fieldOrSpec, options);
 	}
 
 	public async createExpirationIndex(
@@ -158,26 +159,29 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		fieldOrSpec: string | object = 'objectInfos.creation.date',
 		options: IndexOptions = {},
 	): Promise<void> {
-		await this.ensureExpirationIndex(this.collection, fieldOrSpec, ttlInDays, options);
+		await this.indexManager.ensureExpirationIndex(fieldOrSpec, ttlInDays, options);
 	}
 
 	public async initTagsIndex(): Promise<void> {
-		await this.collection.createIndex({ 'objectInfos.tags': 1 });
+		await this.indexManager.createIndex({ 'objectInfos.tags': 1 });
 	}
 
 	public async initHistoricIndexes(): Promise<void> {
-		await this.createHistoricIndex('entityId');
+		await this.historicManager.initIndexes();
 	}
 
 	public async createHistoricIndex(
 		fieldOrSpec: string | any,
 		options?: IndexOptions,
 	): Promise<void> {
-		await this.collectionHistoric.createIndex(fieldOrSpec, options);
+		await this.historicManager.createIndex(fieldOrSpec, options);
 	}
 
-	public async createHistoricUniqueIndex(fieldOrSpec: string | any = 'code'): Promise<void> {
-		await this.createHistoricIndex(fieldOrSpec, { unique: true });
+	public async createHistoricUniqueIndex(
+		fieldOrSpec: string | any = 'code',
+		options?: IndexOptions,
+	): Promise<void> {
+		await this.historicManager.createUniqueIndex(fieldOrSpec, options);
 	}
 
 	public async createHistoricExpirationIndex(
@@ -185,7 +189,11 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		fieldOrSpec: string | object = 'date',
 		options: IndexOptions = {},
 	): Promise<void> {
-		await this.ensureExpirationIndex(this.collectionHistoric, fieldOrSpec, ttlInDays, options);
+		await this.historicManager.ensureExpirationIndex(ttlInDays, fieldOrSpec, options);
+	}
+
+	public async dropHistoryIndex(indexName: string): Promise<void> {
+		await this.historicManager.dropIndex(indexName);
 	}
 
 	public async insertOne(
@@ -501,14 +509,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				);
 			});
 			if (diffs) {
-				const change: EntityHistoric<U> = {
-					entityId: MongoUtils.oid(newEntity._id) as any,
-					date: now,
-					userId: ObjectId.isValid(userId) ? (MongoUtils.oid(userId) as any) : userId,
-					dataEdited: diffs,
-					snapshot: MongoUtils.removeSpecialCharactersInKeys(saveOldValue),
-				};
-				await this.collectionHistoric.insertOne(change);
+				await this.historicManager.insertOne(newEntity._id, diffs, saveOldValue, now, userId);
 			}
 		}
 
@@ -783,81 +784,29 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		page: number = 0,
 		size: number = 10,
 	): Promise<Cursor<EntityHistoric<U>>> {
-		return await this.collectionHistoric
-			.find<EntityHistoric<U>>({ entityId: MongoUtils.oid(id) })
-			.sort('_id', -1)
-			.skip(page * size)
-			.limit(size)
-			.map((a: EntityHistoric<U>) =>
-				MongoUtils.mapObjectToClass<EntityHistoric<U>, EntityHistoric<U>>(
-					EntityHistoric,
-					MongoUtils.unRemoveSpecialCharactersInKeys(a),
-				),
-			);
+		return await this.historicManager.findByEntityId(id, page, size);
 	}
 
 	public async findOneHistoricByUserIdMostRecent(
 		entityId: string,
 		userId: string,
 	): Promise<EntityHistoric<U>> {
-		const cursor = await this.collectionHistoric
-			.find<EntityHistoric<U>>({
-				entityId: MongoUtils.oid(entityId),
-				userId: ObjectId.isValid(userId) ? MongoUtils.oid(userId) : userId,
-			})
-			.sort('_id', -1)
-			.limit(1)
-			.map((a: EntityHistoric<U>) =>
-				MongoUtils.mapObjectToClass<EntityHistoric<U>, EntityHistoric<U>>(
-					EntityHistoric,
-					MongoUtils.unRemoveSpecialCharactersInKeys(a),
-				),
-			);
-		if (await cursor.hasNext()) {
-			return await cursor.next();
-		}
-		return;
+		return await this.historicManager.findOneByUserIdMostRecent(entityId, userId);
 	}
 
 	public async findOneHistoricByJustAfterAnother(
 		entityId: string,
 		historicId: string,
 	): Promise<EntityHistoric<U>> {
-		const cursor = await this.collectionHistoric
-			.find<EntityHistoric<U>>({
-				entityId: MongoUtils.oid(entityId),
-				_id: {
-					$gt: MongoUtils.oid(historicId),
-				},
-			})
-			.sort('_id', 1)
-			.limit(1)
-			.map((a: EntityHistoric<U>) =>
-				MongoUtils.mapObjectToClass<EntityHistoric<U>, EntityHistoric<U>>(
-					EntityHistoric,
-					MongoUtils.unRemoveSpecialCharactersInKeys(a),
-				),
-			);
-		if (await cursor.hasNext()) {
-			return await cursor.next();
-		}
-		return;
+		return await this.historicManager.findOneByJustAfterAnother(entityId, historicId);
 	}
 
 	public async countHistoricByEntityId(id: string): Promise<number> {
-		return await this.collectionHistoric.countDocuments({ entityId: MongoUtils.oid(id) });
+		return await this.historicManager.countByEntityId(id);
 	}
 
 	public async countHistoricSince(entityId: string, historicIdReference?: string): Promise<number> {
-		const query: StringMap<any> = {
-			entityId: MongoUtils.oid(entityId),
-		};
-		if (historicIdReference) {
-			query._id = {
-				$gt: MongoUtils.oid(historicIdReference),
-			};
-		}
-		return await this.collectionHistoric.countDocuments(query);
+		return await this.historicManager.countSince(entityId, historicIdReference);
 	}
 
 	public async collectionExists(): Promise<boolean> {
@@ -871,7 +820,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 	}
 
 	public async dropHistory(): Promise<void> {
-		await this.collectionHistoric.drop();
+		await this.historicManager.drop();
 	}
 
 	/**
@@ -1218,14 +1167,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 						);
 					});
 					if (diffs) {
-						const change: EntityHistoric<U> = {
-							entityId: MongoUtils.oid(newEntity._id) as any,
-							date: now,
-							userId: ObjectId.isValid(userId) ? (MongoUtils.oid(userId) as any) : userId,
-							dataEdited: diffs,
-							snapshot: oldValueSaved,
-						};
-						await this.collectionHistoric.insertOne(change);
+						await this.historicManager.insertOne(newEntity._id, diffs, oldValueSaved, now, userId);
 					}
 				}
 			}
@@ -1619,30 +1561,6 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			}
 		}
 		return ret;
-	}
-
-	private async ensureExpirationIndex(
-		collection: Collection,
-		fieldOrSpec: string | object,
-		ttlInDays: number,
-		options: IndexOptions = {},
-	): Promise<void> {
-		options.expireAfterSeconds = ttlInDays * 24 * 3600;
-		options.name = options.name || 'n9MongoClient_expiration';
-
-		try {
-			await collection.createIndex(fieldOrSpec, options);
-		} catch (e) {
-			// error 85 and 86 mean the index already exists with different parameters / fields
-			// 85 means different parameters
-			// 86 means different fields
-			if (e.code === 85 || e.code === 86) {
-				await collection.dropIndex(options.name);
-				await collection.createIndex(fieldOrSpec, options);
-			} else {
-				throw e;
-			}
-		}
 	}
 
 	private buildAddTagUpdate(userId: string, options: AddTagOptions): object {
