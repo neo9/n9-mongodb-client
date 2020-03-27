@@ -12,19 +12,19 @@ import {
 	Db,
 	FilterQuery,
 	IndexOptions,
-	ObjectID,
 	ObjectId,
 	UpdateQuery,
 } from 'mongodb';
 import { AggregationBuilder } from './aggregation-utils';
 import { HistoricManager } from './historic-manager';
 import { IndexManager } from './index-manager';
+import { LangUtils } from './lang-utils';
+import { LockFieldsManager } from './lock-fields-manager';
 import {
 	AddTagOptions,
 	BaseMongoObject,
 	ClassType,
 	EntityHistoric,
-	LockField,
 	MongoClientConfiguration,
 	RemoveTagOptions,
 	StringMap,
@@ -33,62 +33,13 @@ import {
 } from './models';
 import { MongoReadStream } from './mongo-read-stream';
 import { MongoUtils } from './mongo-utils';
+import { TagManager } from './tag-manager';
 
 const defaultConfiguration: MongoClientConfiguration = {
 	keepHistoric: false,
 };
 
 export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
-	// tslint:disable-next-line:function-name
-	public static removeEmptyDeep<T>(
-		obj: T,
-		compactArrays: boolean = false,
-		removeEmptyObjects: boolean = false,
-		keepNullValues: boolean = false,
-	): T {
-		for (const key of Object.keys(obj)) {
-			const objElement = obj[key];
-			if (compactArrays && _.isArray(objElement)) {
-				obj[key] = _.filter(objElement, (elm) => !_.isNil(elm));
-			}
-			if (
-				removeEmptyObjects &&
-				_.isObject(objElement) &&
-				!_.isArray(objElement) &&
-				_.isEmpty(objElement)
-			) {
-				delete obj[key];
-			}
-			// @ts-ignore
-			if (objElement && typeof objElement === 'object') {
-				MongoClient.removeEmptyDeep(objElement, compactArrays, removeEmptyObjects, keepNullValues);
-			}
-			// @ts-ignore
-			else if (
-				(keepNullValues && _.isUndefined(objElement)) ||
-				(!keepNullValues && _.isNil(objElement))
-			) {
-				delete obj[key];
-			}
-		}
-		return obj;
-	}
-
-	private static getJoinPaths(basePath: string, key: string): string {
-		if (basePath) return `${basePath}.${key}`;
-		return key;
-	}
-
-	private static isClassicObject(existingEntityElement: any): boolean {
-		return (
-			_.isObject(existingEntityElement) &&
-			!_.isFunction(existingEntityElement) &&
-			!(existingEntityElement instanceof ObjectID) &&
-			!(existingEntityElement instanceof Date) &&
-			!_.isArray(existingEntityElement)
-		);
-	}
-
 	private readonly collection: Collection<U>;
 	private readonly collectionSourceForAggregation: Collection<U>;
 	private readonly logger: N9Log;
@@ -96,8 +47,10 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 	private readonly type: ClassType<U>;
 	private readonly typeList: ClassType<L>;
 	private readonly conf: MongoClientConfiguration;
+	private readonly lockFieldsManager: LockFieldsManager<U>;
 	private readonly indexManager: IndexManager;
 	private readonly historicManager: HistoricManager<U>;
+	private readonly tagManager: TagManager;
 
 	constructor(
 		collection: Collection<U> | string,
@@ -107,10 +60,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 	) {
 		this.conf = _.merge({}, defaultConfiguration, conf);
 		if (this.conf.lockFields) {
-			this.conf.lockFields.excludedFields = _.union(this.conf.lockFields.excludedFields, [
-				'objectInfos',
-				'_id',
-			]);
+			this.lockFieldsManager = new LockFieldsManager(this.conf.lockFields);
 		}
 		this.logger = (global.log as N9Log).module('mongo-client');
 		this.db = global.db as Db;
@@ -129,6 +79,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		}
 		this.indexManager = new IndexManager(this.collection);
 		this.historicManager = new HistoricManager(this.collection);
+		this.tagManager = new TagManager(this.collection);
 
 		if (this.conf.aggregationCollectionSource) {
 			this.collectionSourceForAggregation = this.db.collection(
@@ -221,7 +172,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				newEntityWithoutForbiddenCharacters.objectInfos.lockFields = [];
 			}
 			if (lockFields) {
-				newEntityWithoutForbiddenCharacters.objectInfos.lockFields = this.getAllLockFieldsFromEntity(
+				newEntityWithoutForbiddenCharacters.objectInfos.lockFields = this.lockFieldsManager.getAllLockFieldsFromEntity(
 					newEntityWithoutForbiddenCharacters,
 					date,
 					userId,
@@ -229,7 +180,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			}
 		}
 
-		newEntityWithoutForbiddenCharacters = MongoClient.removeEmptyDeep(
+		newEntityWithoutForbiddenCharacters = LangUtils.removeEmptyDeep(
 			newEntityWithoutForbiddenCharacters,
 		);
 		await this.collection.insertOne(newEntityWithoutForbiddenCharacters);
@@ -611,14 +562,19 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			let newEntityToSave;
 			if (forceEditLockFields) {
 				newEntityWithOnlyDataToUpdate = newEntity;
-				newEntityToSave = this.mergeOldEntityWithNewOne(newEntity, existingEntity, '', []);
+				newEntityToSave = this.lockFieldsManager.mergeOldEntityWithNewOne(
+					newEntity,
+					existingEntity,
+					'',
+					[],
+				);
 			} else {
-				newEntityWithOnlyDataToUpdate = this.pruneEntityWithLockFields(
+				newEntityWithOnlyDataToUpdate = this.lockFieldsManager.pruneEntityWithLockFields(
 					newEntity,
 					existingEntity.objectInfos.lockFields,
 				);
 				// console.log('-- client.ts ', newEntityWithOnlyDataToUpdate, ` <<-- newEntityWithOnlyDataToUpdate`);
-				newEntityToSave = this.mergeOldEntityWithNewOne(
+				newEntityToSave = this.lockFieldsManager.mergeOldEntityWithNewOne(
 					newEntity,
 					existingEntity,
 					'',
@@ -634,7 +590,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				if (!_.get(newEntityToSave, 'objectInfos.lockFields')) {
 					_.set(newEntityToSave, 'objectInfos.lockFields', []);
 				}
-				const allLockFieldsFromEntity = this.getAllLockFieldsFromEntity(
+				const allLockFieldsFromEntity = this.lockFieldsManager.getAllLockFieldsFromEntity(
 					newEntityWithOnlyDataToUpdate,
 					new Date(),
 					userId,
@@ -836,10 +792,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		userId: string,
 		options: AddTagOptions = {},
 	): Promise<string> {
-		options.tag = options.tag || new ObjectId().toHexString();
-		const update = this.buildAddTagUpdate(userId, options);
-		await this.collection.findOneAndUpdate(query, update, { returnOriginal: false });
-		return options.tag;
+		return await this.tagManager.addTagToOne(query, userId, options);
 	}
 
 	/**
@@ -850,7 +803,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		userId: string,
 		options: AddTagOptions = {},
 	): Promise<string> {
-		return await this.addTagToOne({ _id: MongoUtils.oid(id) }, userId, options);
+		return await this.tagManager.addTagToOneById(id, userId, options);
 	}
 
 	/**
@@ -861,10 +814,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		userId: string,
 		options: AddTagOptions = {},
 	): Promise<string> {
-		options.tag = options.tag || new ObjectId().toHexString();
-		const update = this.buildAddTagUpdate(userId, options);
-		await this.collection.updateMany(query, update);
-		return options.tag;
+		return await this.tagManager.addTagToMany(query, userId, options);
 	}
 
 	/**
@@ -882,8 +832,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		userId: string,
 		options: RemoveTagOptions = {},
 	): Promise<void> {
-		const update = this.buildRemoveTagUpdate(tag, userId, options);
-		await this.collection.findOneAndUpdate(query, update, { returnOriginal: false });
+		return await this.tagManager.removeTagFromOne(query, tag, userId, options);
 	}
 
 	/**
@@ -895,7 +844,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		userId: string,
 		options: RemoveTagOptions = {},
 	): Promise<void> {
-		await this.removeTagFromOne({ _id: MongoUtils.oid(id) }, tag, userId, options);
+		return await this.tagManager.removeTagFromOneById(id, tag, userId, options);
 	}
 
 	/**vs
@@ -907,15 +856,14 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		userId: string,
 		options: RemoveTagOptions = {},
 	): Promise<void> {
-		const update = this.buildRemoveTagUpdate(tag, userId, options);
-		await this.collection.updateMany(query, update);
+		return await this.tagManager.removeTagFromMany(query, tag, userId, options);
 	}
 
 	/**
 	 * Delete all entities with the given tag
 	 */
 	public async deleteManyWithTag(tag: string): Promise<void> {
-		await this.collection.deleteMany({ 'objectInfos.tags': tag });
+		return await this.tagManager.deleteManyWithTag(tag);
 	}
 
 	private async buildUpdatesQueries(
@@ -937,12 +885,15 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				if (!!options.mapFunction) {
 					entity = await options.mapFunction(entity, currentValue);
 				}
-				MongoClient.removeEmptyDeep(entity, false, false, true);
+				LangUtils.removeEmptyDeep(entity, false, false, true);
 
 				if (this.conf.lockFields) {
 					if (!options.forceEditLockFields) {
-						entity = this.pruneEntityWithLockFields(entity, currentValue.objectInfos.lockFields);
-						const newEntityMerged = this.mergeOldEntityWithNewOne(
+						entity = this.lockFieldsManager.pruneEntityWithLockFields(
+							entity,
+							currentValue.objectInfos.lockFields,
+						);
+						const newEntityMerged = this.lockFieldsManager.mergeOldEntityWithNewOne(
 							entity,
 							currentValue,
 							'',
@@ -958,7 +909,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 
 					if (options.lockNewFields) {
 						const lockFields = currentValue.objectInfos.lockFields || [];
-						const newLockFields = this.getAllLockFieldsFromEntity(
+						const newLockFields = this.lockFieldsManager.getAllLockFieldsFromEntity(
 							entity,
 							new Date(),
 							userId,
@@ -1014,7 +965,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				if (!!options.mapFunction) {
 					entity = await options.mapFunction(entity);
 				}
-				MongoClient.removeEmptyDeep(entity);
+				LangUtils.removeEmptyDeep(entity);
 
 				const toSet = _.omit(entity, options.onlyInsertFieldsKey);
 				const toSetOnInsert = _.pick(entity, options.onlyInsertFieldsKey);
@@ -1176,100 +1127,6 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		return newValues;
 	}
 
-	private getAllLockFieldsFromEntity(
-		newEntity: Partial<U>,
-		date: Date,
-		userId: string,
-		existingEntity?: U,
-	): LockField[] {
-		let keys: string[];
-		if (existingEntity) {
-			const entityWithOnlyNewValues = this.pickOnlyNewValues(existingEntity, newEntity, '');
-			// console.log(`-- entityWithOnlyNewValues  --`, JSON.stringify(entityWithOnlyNewValues, null, 2));
-			keys = this.generateAllLockFields(entityWithOnlyNewValues, '');
-		} else {
-			keys = this.generateAllLockFields(newEntity, '');
-		}
-		if (_.isEmpty(keys)) return;
-
-		const ret: LockField[] = [];
-		for (const key of keys) {
-			ret.push({
-				path: key,
-				metaDatas: {
-					date,
-					userId,
-				},
-			});
-		}
-		return ret;
-	}
-
-	private generateAllLockFields(
-		newEntity: any,
-		basePath: string,
-		ignoreOnePath?: string,
-	): string[] {
-		const keys: string[] = [];
-		if (_.isNil(newEntity)) return keys;
-
-		for (const key of _.keys(newEntity)) {
-			const joinedPath = MongoClient.getJoinPaths(basePath, key);
-			// excluded fields
-			const newEntityElement = newEntity[key];
-			if (
-				key === ignoreOnePath ||
-				_.includes(this.conf.lockFields.excludedFields, joinedPath) ||
-				_.isNil(newEntityElement)
-			) {
-				continue;
-			}
-
-			if (MongoClient.isClassicObject(newEntityElement)) {
-				// generate a.b.c
-				keys.push(...this.generateAllLockFields(newEntityElement, joinedPath));
-			} else if (_.isArray(newEntityElement)) {
-				// a[b=1]
-				if (_.keys(this.conf.lockFields.arrayWithReferences).includes(joinedPath)) {
-					const arrayKey = this.conf.lockFields.arrayWithReferences[joinedPath];
-					for (const element of newEntityElement) {
-						if (!_.isNil(element)) {
-							const arrayPath = `${joinedPath}[${arrayKey}=${element[arrayKey]}]`;
-							if (_.isNil(element[arrayKey])) {
-								throw new N9Error('wrong-array-definition', 400, {
-									newEntity,
-									basePath,
-									ignoreOnePath,
-									arrayPath,
-								});
-							}
-							if (MongoClient.isClassicObject(element)) {
-								if (_.isEmpty(_.omit(element, arrayKey))) {
-									keys.push(arrayPath);
-								} else {
-									keys.push(...this.generateAllLockFields(element, arrayPath, arrayKey));
-								}
-							} else {
-								// TODO: if _.isArray(newEntity[key])
-								keys.push(arrayPath);
-							}
-						}
-					}
-				} else {
-					// a["elementValue"]
-					for (const element of newEntityElement) {
-						const arrayPath = `${joinedPath}[${JSON.stringify(element)}]`;
-						keys.push(arrayPath);
-					}
-				}
-			} else {
-				// a
-				keys.push(joinedPath);
-			}
-		}
-		return keys;
-	}
-
 	private ifHasLockFieldsThrow(): void {
 		if (this.conf.lockFields) {
 			throw new N9Error('invalid-function-call', 401, { lockFields: this.conf.lockFields });
@@ -1278,316 +1135,5 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 
 	private async getEmptyCursor<X extends U>(type: ClassType<X>): Promise<Cursor<X>> {
 		return await this.findWithType<X>({ $and: [{ _id: false }, { _id: true }] }, type, -1, 0);
-	}
-
-	private pruneEntityWithLockFields(entity: Partial<U>, lockFields: LockField[]): Partial<U> {
-		if (!_.isEmpty(lockFields)) {
-			for (const lockField of lockFields) {
-				let path = lockField.path;
-				if (path.includes('[')) {
-					// path : a.b.c
-					path = this.translatePathToLodashPath(path, entity);
-				}
-				if (path) {
-					_.unset(entity, path);
-				}
-			}
-		}
-		MongoClient.removeEmptyDeep(entity, true, true, true);
-		return entity;
-	}
-
-	/**
-	 * Convert :
-	 * a[b=2]value to a[1].value
-	 * @param path
-	 * @param entity
-	 */
-	private translatePathToLodashPath(path: string, entity: Partial<U>): string {
-		const objectsArrayPathRegex = /(?<basePath>.*)\[(?<code>[^\]]+)=(?<value>[^\]]+)](?<pathLeft>.*)/;
-		const simpleArrayPathRegex = /(?<basePath>.*)\[(?<value>[^\]]+)](?<pathLeft>.*)/;
-		const match = path.match(objectsArrayPathRegex);
-		const matchSimpleArray = path.match(simpleArrayPathRegex);
-		let newPath;
-		if (match) {
-			const groups = match.groups;
-			const array: any[] = _.get(entity, groups.basePath);
-			if (!_.isEmpty(array)) {
-				const index = array.findIndex((item) => item && item[groups.code] === groups.value);
-				if (index !== -1) {
-					newPath = `${groups.basePath}[${index}]`;
-				} else {
-					return;
-				}
-			}
-			if (groups.pathLeft) {
-				newPath += this.translatePathToLodashPath(groups.pathLeft, _.get(entity, groups.basePath));
-			}
-		} else if (matchSimpleArray) {
-			const groups = matchSimpleArray.groups;
-			const array: any[] = _.get(entity, groups.basePath);
-			if (!_.isEmpty(array)) {
-				const index = array.findIndex((item) => JSON.stringify(item) === groups.value);
-				if (index !== -1) {
-					newPath = `${groups.basePath}[${index}]`;
-				} else {
-					return;
-				}
-			}
-			if (groups.pathLeft) {
-				newPath += this.translatePathToLodashPath(groups.pathLeft, _.get(entity, groups.basePath));
-			}
-		} else {
-			return path;
-		}
-		return newPath;
-	}
-
-	private mergeOldEntityWithNewOne(
-		newEntity: any,
-		existingEntity: any,
-		basePath: string,
-		lockFields: LockField[],
-	): any {
-		let ret;
-		if (MongoClient.isClassicObject(newEntity) && MongoClient.isClassicObject(existingEntity)) {
-			const keys = _.uniq([..._.keys(newEntity), ..._.keys(existingEntity)]);
-			for (const key of keys) {
-				newEntity[key] = this.mergeOldEntityWithNewOne(
-					newEntity[key],
-					existingEntity[key],
-					MongoClient.getJoinPaths(basePath, key),
-					lockFields,
-				);
-			}
-			ret = {
-				...existingEntity,
-				...newEntity,
-			};
-		} else if (_.isArray(newEntity) && _.isArray(existingEntity)) {
-			if (
-				!_.isEmpty(lockFields) &&
-				lockFields.find((lockField) => lockField.path.startsWith(basePath))
-			) {
-				// console.log(`--  key --`, basePath, lockFields.find((lockField) => lockField.path.startsWith(basePath)));
-				// console.log('--  ', JSON.stringify(existingEntity, null, 1), ` <<-- existingEntity`);
-				// console.log('--  ', JSON.stringify(newEntity, null, 1), ` <<-- newEntity`);
-				const fieldCodeName = this.conf.lockFields.arrayWithReferences[basePath];
-				const mergedArray = [];
-				// add existing locked elements
-				for (const existingEntityElement of existingEntity) {
-					let elementPath;
-					if (fieldCodeName) {
-						elementPath = `${basePath}[${fieldCodeName}=${existingEntityElement[fieldCodeName]}]`;
-					} else {
-						elementPath = `${basePath}["${existingEntityElement}"]`;
-					}
-					const lockFieldForCurrentElement = lockFields.find((lockField) =>
-						lockField.path.startsWith(elementPath),
-					);
-					if (lockFieldForCurrentElement) {
-						// push only if existingEntityElement is locked
-						mergedArray.push(existingEntityElement);
-					}
-					// else field not locked
-				}
-
-				for (const newEntityElement of newEntity) {
-					// merge newEntityElement with associated existingEntityElement
-					if (fieldCodeName) {
-						// array of objects
-						const elementPath = `${basePath}[${fieldCodeName}=${newEntityElement[fieldCodeName]}]`;
-						const alreadyAddedElementIndex = mergedArray.findIndex((mergedArrayElement) => {
-							return (
-								!_.isNil(mergedArrayElement[fieldCodeName]) &&
-								mergedArrayElement[fieldCodeName] === newEntityElement[fieldCodeName]
-							);
-						});
-						if (alreadyAddedElementIndex !== -1) {
-							mergedArray[alreadyAddedElementIndex] = this.mergeOldEntityWithNewOne(
-								mergedArray[alreadyAddedElementIndex],
-								newEntityElement,
-								elementPath,
-								lockFields,
-							);
-						} else {
-							mergedArray.push(newEntityElement);
-						}
-					} else {
-						// array of non objects values
-						const elementPath = `${basePath}["${newEntityElement[fieldCodeName]}"]`;
-						const alreadyAddedElementIndex = mergedArray.findIndex(
-							(mergedArrayElement) =>
-								!_.isNil(mergedArrayElement[fieldCodeName]) &&
-								mergedArrayElement === newEntityElement,
-						);
-						if (alreadyAddedElementIndex !== -1) {
-							mergedArray[alreadyAddedElementIndex] = this.mergeOldEntityWithNewOne(
-								mergedArray[alreadyAddedElementIndex],
-								newEntityElement,
-								elementPath,
-								lockFields,
-							);
-						} else {
-							mergedArray.push(newEntityElement);
-						}
-					}
-				}
-				return mergedArray;
-			}
-			return newEntity;
-		} else if (_.isUndefined(newEntity)) {
-			ret = existingEntity;
-		} else {
-			ret = newEntity;
-		}
-		return ret;
-	}
-
-	private pickOnlyNewValues(
-		existingEntity: U | string | number,
-		newEntity: Partial<U> | string | number,
-		basePath: string,
-	): Partial<U> | string | number {
-		if (_.isEmpty(newEntity)) return;
-		const existingEntityKeys = _.keys(existingEntity);
-		if (!_.isObject(existingEntity)) {
-			if (_.isArray(existingEntity)) {
-				throw new N9Error('invalid-type', 400, { existingEntity, newEntity });
-			}
-			if (existingEntity !== newEntity) return newEntity;
-			return;
-		}
-
-		const ret: any = {};
-		for (const key of existingEntityKeys) {
-			const existingEntityElement = existingEntity[key];
-			const currentPath = MongoClient.getJoinPaths(basePath, key);
-
-			if (_.includes(this.conf.lockFields.excludedFields, currentPath)) {
-				continue;
-			}
-
-			if (MongoClient.isClassicObject(existingEntityElement)) {
-				ret[key] = this.pickOnlyNewValues(existingEntityElement, newEntity[key], currentPath);
-				if (_.isNil(ret[key])) {
-					delete ret[key];
-				}
-			} else if (_.isArray(existingEntityElement)) {
-				ret[key] = this.pickOnlyNewValuesInArray(
-					existingEntityElement,
-					newEntity[key],
-					currentPath,
-				);
-
-				if (_.isEmpty(ret[key])) delete ret[key];
-			} else {
-				let existingEntityElementToCompare = existingEntityElement;
-				if (existingEntityElementToCompare instanceof ObjectID) {
-					existingEntityElementToCompare = existingEntityElementToCompare.toHexString();
-				}
-
-				let newEntityElementToCompare = newEntity[key];
-				if (newEntityElementToCompare instanceof ObjectID) {
-					newEntityElementToCompare = newEntityElementToCompare.toHexString();
-				}
-
-				if (
-					existingEntityElementToCompare !== newEntityElementToCompare &&
-					!_.isNil(newEntity[key])
-				) {
-					ret[key] = newEntity[key];
-				}
-			}
-		}
-
-		for (const newEntityKey of _.keys(newEntity)) {
-			if (!existingEntityKeys.includes(newEntityKey)) {
-				ret[newEntityKey] = newEntity[newEntityKey];
-			}
-		}
-		// console.log(`-- pickOnlyNewValues  --`);
-		// console.log(JSON.stringify(existingEntity, null, 2));
-		// console.log(`-- -- -- -- -- -- -- -- -- --`);
-		// console.log(JSON.stringify(newEntity, null, 2));
-		// console.log(`-- -- -- -- -- == == == ====>`);
-		// console.log(JSON.stringify(ret));
-		if (_.isEmpty(ret)) {
-			// console.log(`-- return undefined --`);
-			return;
-		}
-
-		return ret;
-	}
-
-	private pickOnlyNewValuesInArray(
-		existingEntityArray: any[],
-		newEntityElement: any[],
-		currentPath: string,
-	): any[] {
-		const ret = [];
-		for (let i = 0; i < Math.max(_.size(existingEntityArray), _.size(newEntityElement)); i += 1) {
-			const existingEntityElementArrayElement = existingEntityArray[i];
-			const newValue = this.pickOnlyNewValues(
-				existingEntityElementArrayElement,
-				_.get(newEntityElement, [i]),
-				currentPath,
-			);
-			const codeKeyName = this.conf.lockFields.arrayWithReferences[currentPath];
-
-			if (!_.isNil(newValue)) {
-				if (codeKeyName) {
-					newValue[codeKeyName] = _.get(newEntityElement, [i, codeKeyName]);
-				}
-				ret.push(newValue);
-			}
-		}
-
-		// If one delete an array element, we lock the others
-		if (_.size(existingEntityArray) > _.size(newEntityElement)) {
-			for (const newEntityElementArrayElement of newEntityElement) {
-				const codeKeyName = this.conf.lockFields.arrayWithReferences[currentPath];
-
-				if (codeKeyName) {
-					const existingElementIndex = _.findIndex(ret, {
-						[codeKeyName]: _.get(newEntityElementArrayElement, codeKeyName),
-					});
-					if (existingElementIndex === -1) {
-						ret.push(newEntityElementArrayElement);
-					}
-				} else {
-					ret.push(newEntityElementArrayElement);
-				}
-			}
-		}
-		return ret;
-	}
-
-	private buildAddTagUpdate(userId: string, options: AddTagOptions): object {
-		const update: UpdateQuery<any> = { $addToSet: { 'objectInfos.tags': options.tag } };
-		const updateLastUpdate = _.isBoolean(options.updateLastUpdate)
-			? options.updateLastUpdate
-			: true;
-		if (updateLastUpdate) {
-			update.$set = {
-				'objectInfos.lastUpdate.date': new Date(),
-				'objectInfos.lastUpdate.userId': ObjectId.isValid(userId) ? MongoUtils.oid(userId) : userId,
-			};
-		}
-		return update;
-	}
-
-	private buildRemoveTagUpdate(tag: string, userId: string, options: RemoveTagOptions): object {
-		const update: UpdateQuery<any> = { $pull: { 'objectInfos.tags': tag } };
-		const updateLastUpdate = _.isBoolean(options.updateLastUpdate)
-			? options.updateLastUpdate
-			: true;
-		if (updateLastUpdate) {
-			update.$set = {
-				'objectInfos.lastUpdate.date': new Date(),
-				'objectInfos.lastUpdate.userId': ObjectId.isValid(userId) ? MongoUtils.oid(userId) : userId,
-			};
-		}
-		return update;
 	}
 }
