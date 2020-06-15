@@ -1,6 +1,8 @@
 import { N9Error, waitFor } from '@neo9/n9-node-utils';
+import * as _ from 'lodash';
 import * as mongodb from 'mongodb';
 import * as mongoDbLock from 'mongodb-lock';
+import { LockOptions } from './models/lock-options.models';
 
 /**
  * Wrapper of mongodb-lock
@@ -8,6 +10,8 @@ import * as mongoDbLock from 'mongodb-lock';
  */
 export class N9MongoLock {
 	private lock: mongoDbLock.MongodbLock;
+	private options: LockOptions;
+	private readonly waitDurationMsRandomPart: number;
 
 	/**
 	 *
@@ -18,12 +22,23 @@ export class N9MongoLock {
 	constructor(
 		collection: string = 'n9MongoLock',
 		lockName: string = 'default-lock',
-		options: mongoDbLock.LockOptions = { timeout: 30 * 1000, removeExpired: true },
+		options?: LockOptions,
 	) {
+		this.options = _.defaultsDeep(options, {
+			timeout: 30 * 1000,
+			removeExpired: true,
+			n9MongoLockOptions: {
+				waitDurationMsMax: 100,
+				waitDurationMsMin: 5,
+			},
+		});
 		const db = global.db as mongodb.Db;
 		if (!db) {
 			throw new N9Error('missing-db', 500);
 		}
+		this.waitDurationMsRandomPart =
+			this.options.n9MongoLockOptions.waitDurationMsMax -
+			this.options.n9MongoLockOptions.waitDurationMsMin;
 		this.lock = mongoDbLock(db.collection(collection), lockName, options);
 	}
 
@@ -55,17 +70,16 @@ export class N9MongoLock {
 	/**
 	 * Acquire a lock after waiting max timeoutMs
 	 * @param timeoutMs timeout in ms
-	 * @param waitDurationMs check timeout every waitDurationMs ms
 	 */
-	public async acquireBlockingUntilAvailable(
-		timeoutMs: number,
-		waitDurationMs: number = 100,
-	): Promise<string> {
+	public async acquireBlockingUntilAvailable(timeoutMs: number): Promise<string> {
 		const startTime = Date.now();
 		do {
 			const code = await this.acquire();
 			if (code) return code;
-			await waitFor(waitDurationMs);
+			await waitFor(
+				this.options.n9MongoLockOptions.waitDurationMsMin +
+					Math.random() * this.waitDurationMsRandomPart,
+			);
 		} while (Date.now() - startTime < timeoutMs);
 	}
 
@@ -73,11 +87,15 @@ export class N9MongoLock {
 	 * Release the lock
 	 */
 	public async release(code: string): Promise<boolean> {
-		return new Promise<boolean>((resolve, reject) => {
+		const ret: boolean = await new Promise<boolean>((resolve, reject) => {
 			this.lock.release(code, (err: any, ok: boolean) => {
 				if (err) return reject(err);
 				return resolve(ok);
 			});
 		});
+		// Wait to let enough time to someone else to pick the lock
+		await waitFor(this.options.n9MongoLockOptions.waitDurationMsMax + 5);
+
+		return ret;
 	}
 }
