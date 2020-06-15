@@ -1,8 +1,8 @@
-import { default as ava, TestInterface } from 'ava';
+import { default as ava } from 'ava';
 import * as mongodb from 'mongodb';
 import { MongoMemoryServer } from 'mongodb-memory-server';
-import { MongoClient, MongoUtils } from '../../../src';
-import { BaseMongoObject, StringMap } from '../../../src/models';
+import { MongoClient, MongoUtils } from '../../src';
+import { BaseMongoObject, StringMap } from '../../src/models';
 
 export class ArrayElement {
 	public code: string;

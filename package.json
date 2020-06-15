@@ -15,14 +15,14 @@
     "lint": "tslint --project tsconfig.json --format verbose '{src,test}/**/*.ts'",
     "lint:apply": "npm run format && tslint --fix --project tsconfig.json '{src,test}/**/*.ts'",
     "lint:verbose": "tslint --fix --project tsconfig.json --format verbose '{src,test}/**/*.ts'",
-    "test": "node test/run-tests.js dev",
-    "test:dev": "node test/run-tests.js dev",
+    "test:dev": "export NODE_ENV=test && TS_NODE_FILES=true ava --verbose --color --serial --watch",
+    "test": "npm run lint && export NODE_ENV=test && TS_NODE_FILES=true nyc ava --verbose --color --serial && nyc report --reporter=html",
     "test:watch": "node test/run-tests.js watch",
     "coverage": "nyc report --reporter=text-lcov > coverage.lcov && codecov -t b2eaf76a-9a9e-4190-aa8f-398a8ff33939",
     "preversion": "npm test",
     "prepublishOnly": "npm run build",
-    "release": "export BABEL_DISABLE_CACHE=1 && release-it",
-    "release:dry": "export BABEL_DISABLE_CACHE=1 && release-it --dry-run=true",
+    "release": "export BABEL_DISABLE_CACHE=1 && release-it --ci",
+    "release:dry": "export BABEL_DISABLE_CACHE=1 && release-it --ci --dry-run=true",
     "build:changelog": "conventional-changelog -i CHANGELOG.md -s -p jscs -r 0",
     "post:release": "echo Successfully released $npm_package_version",
     "init": "./bin/setup-git-hooks"
@@ -61,19 +61,21 @@
     "mongodb-lock": "^1.0.1"
   },
   "devDependencies": {
+    "@ava/typescript": "^1.1.1",
     "@commitlint/cli": "^8.3.5",
     "@neo9/n9-coding-style": "^1.0.2",
+    "@release-it/conventional-changelog": "^1.1.4",
     "@types/node": "^10.12.18",
     "@types/std-mocks": "^1.0.0",
-    "ava": "^1.4.1",
-    "conventional-changelog-cli": "^2.0.11",
+    "ava": "^3.9.0",
     "husky": "^4.2.3",
-    "mongodb-memory-server": "6.0.2",
-    "nyc": "^13.1.0",
+    "mongodb-memory-server": "6.6.1",
+    "nyc": "^15.1.0",
     "prettier": "^1.19.1",
-    "release-it": "7.4.8",
+    "release-it": "^13.6.3",
     "std-mocks": "^1.0.1",
-    "tslint": "5.20.0",
+    "ts-node": "^8.10.2",
+    "tslint": "^6.1.2",
     "tslint-config-prettier": "^1.18.0",
     "tslint-plugin-prettier": "^2.1.0",
     "typescript": "^3.8.3"
@@ -91,5 +93,17 @@
     "driver",
     "Neo9",
     "France"
-  ]
+  ],
+  "ava": {
+    "files": [
+      "test/*"
+    ],
+    "timeout": "1m",
+    "extensions": [
+      "ts"
+    ],
+    "require": [
+      "ts-node/register"
+    ]
+  }
 }

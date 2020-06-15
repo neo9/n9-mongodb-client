@@ -3,8 +3,8 @@ import ava, { Assertions } from 'ava';
 import * as mongodb from 'mongodb';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 
-import { MongoClient, MongoUtils } from '../../../src';
-import { BaseMongoObject } from '../../../src/models';
+import { MongoClient, MongoUtils } from '../../src';
+import { BaseMongoObject } from '../../src/models';
 
 global.log = new N9Log('tests').module('issues');
 

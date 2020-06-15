@@ -1,6 +1,6 @@
 import { N9Log } from '@neo9/n9-node-log';
 import ava, { Assertions } from 'ava';
-import { N9MongoLock } from '../../src';
+import { N9MongoLock } from '../src';
 import { init } from './fixtures/utils';
 
 global.log = new N9Log('tests').module('lock-fields');

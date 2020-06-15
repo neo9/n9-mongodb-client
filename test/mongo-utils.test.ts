@@ -4,7 +4,7 @@ import * as _ from 'lodash';
 import { ObjectID } from 'mongodb';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import * as stdMocks from 'std-mocks';
-import { MongoUtils } from '../../src';
+import { MongoUtils } from '../src';
 
 global.log = new N9Log('tests').module('mongo-utils');
 

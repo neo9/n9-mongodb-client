@@ -46,7 +46,7 @@ export class N9MongoLock {
 	 * Function to call at the beginning
 	 * https://github.com/chilts/mongodb-lock#mongodb-indexes
 	 */
-	public async ensureIndexes(): Promise<void> {
+	public async ensureIndexes() {
 		return new Promise<void>((resolve, reject) => {
 			this.lock.ensureIndexes((err: any, result: any) => {
 				if (err) return reject(err);

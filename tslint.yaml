@@ -5,13 +5,6 @@ extends:
   - tslint-config-prettier
   - tslint-plugin-prettier
 rules:
-  indent: false # managed by prettier
-  ter-indent: false
-  ordered-imports: true
-  object-literal-sort-keys: false
-  interface-name:
-    - true
-    - never-prefix
   variable-name:
     - true
     - allow-leading-underscore
@@ -28,19 +21,6 @@ rules:
   max-classes-per-file:
     - true
     - 5
-  array-type:
-    - true
-    - array
-  typedef:
-    - true
-    - call-signature
-    - parameter
-    - member-variable-declaration
-  cyclomatic-complexity:
-    - true
-    - 20
-  no-reference: true
-  no-floating-promises: true
   # bug open about no-unused-variable : https://github.com/palantir/tslint/issues/3463
   #  no-unused-variable:
   #    - true

@@ -2,9 +2,9 @@ import { N9Log } from '@neo9/n9-node-log';
 import ava, { Assertions } from 'ava';
 import { Transform } from 'class-transformer';
 import * as _ from 'lodash';
-import { MongoClient } from '../../src';
-import { BaseMongoObject } from '../../src/models';
-import * as DateParser from '../../src/transformers/date-parser.transformer';
+import { MongoClient } from '../src';
+import { BaseMongoObject } from '../src/models';
+import * as DateParser from '../src/transformers/date-parser.transformer';
 import { init } from './fixtures/utils';
 
 export class WithDateEntity extends BaseMongoObject {

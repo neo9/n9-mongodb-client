@@ -2,8 +2,8 @@ import { N9Log } from '@neo9/n9-node-log';
 import ava, { Assertions } from 'ava';
 import { AggregationCursor } from 'mongodb';
 
-import { MongoClient } from '../../src';
-import { BaseMongoObject } from '../../src/models';
+import { MongoClient } from '../src';
+import { BaseMongoObject } from '../src/models';
 import { init } from './fixtures/utils';
 
 class SampleType extends BaseMongoObject {

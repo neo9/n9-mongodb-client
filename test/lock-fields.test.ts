@@ -2,8 +2,8 @@ import { N9Log } from '@neo9/n9-node-log';
 import ava, { Assertions } from 'ava';
 import * as _ from 'lodash';
 import { ObjectID } from 'mongodb';
-import { MongoClient } from '../../src';
-import { BaseMongoObject, EntityHistoric, StringMap } from '../../src/models';
+import { MongoClient } from '../src';
+import { BaseMongoObject, EntityHistoric, StringMap } from '../src/models';
 import { init } from './fixtures/utils';
 
 export class AttributeEntity extends BaseMongoObject {

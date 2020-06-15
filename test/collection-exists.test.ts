@@ -1,8 +1,8 @@
 import { N9Log } from '@neo9/n9-node-log';
 import ava, { Assertions } from 'ava';
 
-import { MongoClient } from '../../src';
-import { BaseMongoObject } from '../../src/models';
+import { MongoClient } from '../src';
+import { BaseMongoObject } from '../src/models';
 import { init } from './fixtures/utils';
 
 class SampleType extends BaseMongoObject {
@@ -41,7 +41,7 @@ ava('[EXISTS] Create collection then drop it then test existence', async (t: Ass
 		async () => {
 			await mongoClient.dropCollection();
 		},
-		'ns not found',
+		null,
 		'should throw not found exception',
 	);
 });
