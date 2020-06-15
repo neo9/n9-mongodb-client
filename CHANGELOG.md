@@ -1,3 +1,14 @@
+## [0.13.3](https://github.com/neo9/n9-mongo-client/compare/0.13.2...%s) (2020-06-15)
+
+
+### locks
+
+* Fix lock duration check to acquire lock ([a3119a8](https://github.com/neo9/n9-mongo-client/commit/a3119a81015bc072a59b843f441667ea6577cc99))
+
+### yarn
+
+* Upgrade release-it ava and mongodb-memory-server ([5d534fb](https://github.com/neo9/n9-mongo-client/commit/5d534fb796dce00593e15b13d0eab98898529cda))
+
 ## Version [0.13.2](https://github.com/neo9/n9-mongo-client/compare/0.13.1...0.13.2) (2020-03-03)
 
 
