@@ -1,3 +1,34 @@
+# [0.14.0-rc.0](https://github.com/neo9/n9-mongo-client/compare/0.13.3...0.14.0-rc.0) (2020-07-20)
+
+
+### ci
+
+* Fix codecov regression ([bbaf134](https://github.com/neo9/n9-mongo-client/commit/bbaf1348ea2c7cd8e08019f868722a1584f185af))
+* Remove pre-push hooks and update readme ([809de97](https://github.com/neo9/n9-mongo-client/commit/809de97be7bba69001ab6dca7478e698df1ce239))
+* Update travis configuration ([2384982](https://github.com/neo9/n9-mongo-client/commit/23849827425614c78d3a3b429733d1bb042667b3))
+
+### client
+
+* Add support for updateOnlyOnChange in findOneAndUpdate ([5cafe80](https://github.com/neo9/n9-mongo-client/commit/5cafe80362be7cedc1d7082816fa8478297d7db7))
+* Move client configuration model in separate file ([ba274f6](https://github.com/neo9/n9-mongo-client/commit/ba274f68189ddf000396bc05c255c69cc989af8a))
+* Move tag feature in a seperate class ([4728eae](https://github.com/neo9/n9-mongo-client/commit/4728eae5ec58b1f9b6b06838bd05856a798c39e1))
+* Split index management and historic in seperate classes ([8dd6c01](https://github.com/neo9/n9-mongo-client/commit/8dd6c01bed14430cebd9e6b3b790600878c5a2ca))
+* Use UpdateQuery type instead of custom type ([ef693f5](https://github.com/neo9/n9-mongo-client/commit/ef693f58b427411efb9fdd6d6583fb2f58e387f6))
+
+### locks
+
+* Set lock options optional ([088d218](https://github.com/neo9/n9-mongo-client/commit/088d218a103370ba02c9b3a781975bbee5ca418c))
+
+### release
+
+* Fix release it tag name ([a7aa33b](https://github.com/neo9/n9-mongo-client/commit/a7aa33bcd520bd403222b7edd9bcf55c46c8cc78))
+
+### yarn
+
+* Add codecov dev dependency ([3eba43d](https://github.com/neo9/n9-mongo-client/commit/3eba43d64eb038a2c99f2c1bf6a2734913ff6089))
+* Upgrade lodash to v 4.17.19 and minimist ([d766e78](https://github.com/neo9/n9-mongo-client/commit/d766e781920a8f00a77bdc84dbb5fdd812982c24))
+* Upgrade mongodb driver to v 3.5.9 ([0e9a3e3](https://github.com/neo9/n9-mongo-client/commit/0e9a3e389c021551a419d051ca030b21bbf355d8))
+
 ## [0.13.3](https://github.com/neo9/n9-mongo-client/compare/0.13.2...%s) (2020-06-15)
 
 
