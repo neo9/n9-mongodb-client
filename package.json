@@ -68,6 +68,7 @@
     "@types/node": "^10.12.18",
     "@types/std-mocks": "^1.0.0",
     "ava": "^3.9.0",
+    "codecov": "^3.7.1",
     "husky": "^4.2.3",
     "mongodb-memory-server": "6.6.1",
     "nyc": "^15.1.0",
