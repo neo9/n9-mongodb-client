@@ -18,7 +18,7 @@
     "test:dev": "export NODE_ENV=test && TS_NODE_FILES=true ava --verbose --color --serial --watch",
     "test": "npm run lint && export NODE_ENV=test && TS_NODE_FILES=true nyc ava --verbose --color --serial && nyc report --reporter=html",
     "test:watch": "node test/run-tests.js watch",
-    "coverage": "nyc report --reporter=text-lcov > coverage.lcov && codecov -t b2eaf76a-9a9e-4190-aa8f-398a8ff33939",
+    "coverage": "nyc report --reporter=text-lcov > coverage.lcov && codecov",
     "preversion": "npm test",
     "prepublishOnly": "npm run build",
     "release": "export BABEL_DISABLE_CACHE=1 && release-it --ci",
