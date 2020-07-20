@@ -4,7 +4,7 @@
     "commitMessage": "release: V ${version}",
     "requireCleanWorkingDir": true,
     "tag": true,
-    "tagName": "%s",
+    "tagName": "${version}",
     "tagAnnotation": "release: V ${version}",
     "push": true
   },
