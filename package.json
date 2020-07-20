@@ -56,7 +56,7 @@
     "class-transformer": "^0.2.0",
     "deep-diff": "^1.0.2",
     "lodash": "^4.17.19",
-    "mongodb": "3.2.5",
+    "mongodb": "3.5.9",
     "mongodb-lock": "^1.0.1"
   },
   "devDependencies": {

@@ -94,6 +94,7 @@ ava('[Indexes] Update historic expiration index if it exists', async (t: Asserti
 	const mongoClient = new MongoClient(collection, Object, Object, { keepHistoric: true });
 
 	await mongoClient.createHistoricExpirationIndex(1, 'date', { name: 'expiration' });
+
 	let index = (await historicCollection.listIndexes().toArray()).find(
 		(i) => i.name === 'expiration',
 	);
