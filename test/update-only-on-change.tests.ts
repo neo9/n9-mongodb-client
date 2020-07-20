@@ -1,8 +1,8 @@
 import { N9Log } from '@neo9/n9-node-log';
 import { waitFor } from '@neo9/n9-node-utils';
 import ava, { Assertions } from 'ava';
-import { MongoClient, MongoUtils } from '../../src';
-import { BaseMongoObject, UpdateOnlyOnChangeConfiguration } from '../../src/models';
+import { MongoClient, MongoUtils } from '../src';
+import { BaseMongoObject, UpdateOnlyOnChangeConfiguration } from '../src/models';
 import { init } from './fixtures/utils';
 
 class SampleType extends BaseMongoObject {
