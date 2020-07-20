@@ -30,8 +30,7 @@
   "husky": {
     "hooks": {
       "commit-msg": "commitlint -E HUSKY_GIT_PARAMS",
-      "pre-commit": "npm run format && npm run lint",
-      "pre-push": "npm run test"
+      "pre-commit": "npm run format && npm run lint"
     }
   },
   "author": "Benjamin DANIEL <benjamin.daniel@neo9.fr>",
@@ -67,7 +66,7 @@
     "@release-it/conventional-changelog": "^1.1.4",
     "@types/node": "^10.12.18",
     "@types/std-mocks": "^1.0.0",
-    "ava": "^3.9.0",
+    "ava": "^3.10.1",
     "codecov": "^3.7.1",
     "husky": "^4.2.3",
     "mongodb-memory-server": "6.6.1",
