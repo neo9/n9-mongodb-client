@@ -26,10 +26,12 @@ export interface UpdateOnlyOnChangeConfiguration {
 	changeFilters?: {
 		/**
 		 * List of fields to analyse for change detection. All other fields will not be analysed.
+		 * Pick path work as prefix to allow to pick all object starting with it.
 		 */
 		pick?: string[];
 		/**
 		 * List of fields to ignore for change detection. All other fields will be analysed.
+		 * Pick path work as prefix to allow to omit all object starting with it.
 		 */
 		omit?: string[];
 	};

@@ -1198,15 +1198,16 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		userId: string,
 	): Promise<FindAndModifyWriteOpResultObject<U>> {
 		// determine if the document has changed
-		// if pick is not empty, field names must be in pick to be taken into account
 		// if omit is not empty, field names must not be in omit to be taken into account
-		const omit = this.conf.updateOnlyOnChange?.changeFilters?.omit ?? [];
+		// if pick is not empty, field names must be in pick to be taken into account
 		const pick = this.conf.updateOnlyOnChange?.changeFilters?.pick ?? [];
+		const omit = pick.length ? [] : this.conf.updateOnlyOnChange?.changeFilters?.omit ?? [];
 		let hasChanged = false;
 		for (const diff of diffs) {
 			const path = diff.path.join('.');
-			const isOmitted = omit.length && omit.includes(path);
-			const isPicked = !pick.length || pick.includes(path);
+			const isOmitted = omit.length && omit.find((omittedPath) => path.startsWith(omittedPath));
+			const isPicked = !pick.length || pick.find((pickedPath) => path.startsWith(pickedPath));
+
 			if (!isOmitted && isPicked) {
 				hasChanged = true;
 				break;

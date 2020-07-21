@@ -209,7 +209,7 @@ const testPrefix = '[UPDATE-ONLY-ON-CHANGE]';
 
 // updateOnlyOnChange enabled
 ava.serial(
-	'[UPDATE-ONLY-ON-CHANGE] ',
+	testPrefix,
 	insertThenUpdateOneFieldToNewValue,
 	{
 		updateOnlyOnChange: {},
@@ -291,7 +291,7 @@ ava.serial(
 		},
 	},
 	{
-		lastModificationDateShouldChange: false,
+		lastModificationDateShouldChange: true, // omit is ignored
 	},
 );
 
