@@ -1,3 +1,10 @@
+# [0.14.0-rc.2](https://github.com/neo9/n9-mongo-client/compare/0.14.0-rc.1...0.14.0-rc.2) (2020-07-21)
+
+
+### update
+
+* Fix modification date update with sub object modification ([8255ce0](https://github.com/neo9/n9-mongo-client/commit/8255ce0e991f81baa2a2f5ac88d98891d596d4c0))
+
 # [0.14.0-rc.1](https://github.com/neo9/n9-mongo-client/compare/0.14.0-rc.0...0.14.0-rc.1) (2020-07-21)
 
 
