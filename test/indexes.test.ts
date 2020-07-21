@@ -72,9 +72,9 @@ ava('[Indexes] Create historic expiration index', async (t: Assertions) => {
 	const collection = global.db.collection(`test-${Date.now()}`);
 	const historicCollection = global.db.collection(`test-${Date.now()}` + 'Historic');
 	const mongoClient = new MongoClient(collection, Object, Object, { keepHistoric: true });
-  await mongoClient.initHistoricIndexes();
+	await mongoClient.initHistoricIndexes();
 
-  await mongoClient.createHistoricExpirationIndex(1, 'date', { name: 'expiration' });
+	await mongoClient.createHistoricExpirationIndex(1, 'date', { name: 'expiration' });
 	const index = (await historicCollection.listIndexes().toArray()).find(
 		(i) => i.name === 'expiration',
 	);

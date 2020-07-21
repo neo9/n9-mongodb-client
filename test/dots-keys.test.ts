@@ -72,9 +72,9 @@ ava('[DOTS-KEYS] Insert&update and check historic', async (t: Assertions) => {
 	const mongoClient = new MongoClient(`test-${Date.now()}`, SampleType, SampleType, {
 		keepHistoric: true,
 	});
-  await mongoClient.initHistoricIndexes();
+	await mongoClient.initHistoricIndexes();
 
-  const intValue = 41;
+	const intValue = 41;
 	const aKeyWithDots: keyof SampleType = 'a.key.with.dots';
 	const newEntity: SampleType = {
 		[aKeyWithDots]: intValue,
