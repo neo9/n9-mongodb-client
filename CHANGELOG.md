@@ -1,3 +1,18 @@
+# [0.14.0-rc.1](https://github.com/neo9/n9-mongo-client/compare/0.14.0-rc.0...0.14.0-rc.1) (2020-07-21)
+
+
+### format
+
+* Fix formatting ([164b0a9](https://github.com/neo9/n9-mongo-client/commit/164b0a967a9e5f9e6ec5f6111fc8e65498682ebe))
+
+### tests
+
+* Fix tests for update only on change ([8bd3f3d](https://github.com/neo9/n9-mongo-client/commit/8bd3f3d035858573d6cc2a09f0a17e867da7d336))
+
+### yarn
+
+* Upgrade mongodb drivers and lodash types ([00164d5](https://github.com/neo9/n9-mongo-client/commit/00164d50379e2fb7dc1ec803aa1149770b97f385))
+
 # [0.14.0-rc.0](https://github.com/neo9/n9-mongo-client/compare/0.13.3...0.14.0-rc.0) (2020-07-20)
 
 
