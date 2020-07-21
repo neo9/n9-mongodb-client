@@ -45,7 +45,7 @@ async function insertThenUpdateOneFieldToNewValue(
 
 	// check returned entity
 	const returnedEntity = await mongoClient.findOneAndUpdate(
-		{ _id: MongoUtils.oid(insertedEntity._id) },
+		{ _id: MongoUtils.oid(insertedEntity._id) as any },
 		{ $set: { property1: 'new-value1' } },
 		'TEST',
 		false,
@@ -136,7 +136,7 @@ async function insertThenUpdateOneFieldToSameValue(
 
 	// check returned entity
 	const returnedEntity = await mongoClient.findOneAndUpdate(
-		{ _id: MongoUtils.oid(insertedEntity._id) },
+		{ _id: MongoUtils.oid(insertedEntity._id) as any },
 		{ $set: { property1: 'value1' } },
 		'TEST',
 		false,

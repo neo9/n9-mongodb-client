@@ -21,6 +21,20 @@ ava('[Indexes] Create index', async (t: Assertions) => {
 	await mongoClient.dropCollection();
 });
 
+ava('[Indexes] Create unique index', async (t: Assertions) => {
+	const collection = global.db.collection(`test-${Date.now()}`);
+	const mongoClient = new MongoClient(collection, Object, null);
+
+	await mongoClient.createUniqueIndex('code');
+
+	const createdIndex = (await collection.listIndexes().toArray()).find((i) => i.name === 'code_1');
+
+	t.truthy(createdIndex, 'index exists');
+	t.true(createdIndex.unique, 'index is unique');
+
+	await mongoClient.dropCollection();
+});
+
 ava('[Indexes] Drop index', async (t: Assertions) => {
 	const collection = global.db.collection(`test-${Date.now()}`);
 	await collection.createIndex('name');
@@ -58,8 +72,9 @@ ava('[Indexes] Create historic expiration index', async (t: Assertions) => {
 	const collection = global.db.collection(`test-${Date.now()}`);
 	const historicCollection = global.db.collection(`test-${Date.now()}` + 'Historic');
 	const mongoClient = new MongoClient(collection, Object, Object, { keepHistoric: true });
+  await mongoClient.initHistoricIndexes();
 
-	await mongoClient.createHistoricExpirationIndex(1, 'date', { name: 'expiration' });
+  await mongoClient.createHistoricExpirationIndex(1, 'date', { name: 'expiration' });
 	const index = (await historicCollection.listIndexes().toArray()).find(
 		(i) => i.name === 'expiration',
 	);
@@ -83,6 +98,22 @@ ava('[Indexes] Update expiration index if it exists', async (t: Assertions) => {
 	t.true(
 		index.key && index.key['objectInfos.lastUpdate.date'] === 1,
 		'index exists and is on `objectInfos.lastUpdate.date` field',
+	);
+	// with default options
+	await mongoClient.dropIndex('expiration');
+	await mongoClient.createExpirationIndex(2, 'objectInfos.lastUpdate.date');
+	index = (await collection.listIndexes().toArray()).find(
+		(i) => i.name === 'n9MongoClient_expiration',
+	);
+	t.true(index.expireAfterSeconds === 172800, 'index exists with ttl different name');
+	t.true(
+		index.key && index.key['objectInfos.lastUpdate.date'] === 1,
+		'index n9MongoClient_expiration exists and is on `objectInfos.lastUpdate.date` field',
+	);
+	await mongoClient.dropIndex('objectInfos.lastUpdate.date');
+	await t.notThrowsAsync(
+		async () => await mongoClient.dropIndex('objectInfos.lastUpdate.date'),
+		'should drop index that does not exists is ok',
 	);
 
 	await mongoClient.dropCollection();

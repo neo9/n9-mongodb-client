@@ -1,5 +1,4 @@
 import { N9Log } from '@neo9/n9-node-log';
-import { N9Error } from '@neo9/n9-node-utils';
 import { Diff } from 'deep-diff';
 import { Collection, Cursor, Db, IndexOptions, ObjectId } from 'mongodb';
 import { IndexManager } from './index-manager';
@@ -15,19 +14,11 @@ export class HistoricManager<U extends BaseMongoObject> {
 	private readonly db: Db;
 	private readonly indexManager: IndexManager;
 
-	constructor(collection: Collection<U> | string) {
+	constructor(collection: Collection<U>) {
 		this.logger = (global.log as N9Log).module('mongo-client-historic');
-		this.db = global.db as Db;
+		this.db = global.db as Db; // existence is checked in client.ts
 
-		if (!this.db) {
-			throw new N9Error('missing-db', 500);
-		}
-
-		if (typeof collection === 'string') {
-			this.collection = this.db.collection(`${collection}Historic`);
-		} else {
-			this.collection = this.db.collection(`${collection.collectionName}Historic`);
-		}
+		this.collection = this.db.collection(`${collection.collectionName}Historic`);
 
 		this.indexManager = new IndexManager(this.collection);
 	}
@@ -82,7 +73,7 @@ export class HistoricManager<U extends BaseMongoObject> {
 			dataEdited: diffs,
 			snapshot: MongoUtils.removeSpecialCharactersInKeys(snapshot),
 		};
-		await this.collection.insertOne(change);
+		await this.collection.insertOne(change as any);
 	}
 
 	public async findByEntityId(
@@ -91,7 +82,7 @@ export class HistoricManager<U extends BaseMongoObject> {
 		size: number = 10,
 	): Promise<Cursor<EntityHistoric<U>>> {
 		return await this.collection
-			.find<EntityHistoric<U>>({ entityId: MongoUtils.oid(id) })
+			.find<EntityHistoric<U>>({ entityId: MongoUtils.oid(id) as any })
 			.sort('_id', -1)
 			.skip(page * size)
 			.limit(size)
@@ -109,8 +100,8 @@ export class HistoricManager<U extends BaseMongoObject> {
 	): Promise<EntityHistoric<U>> {
 		const cursor = await this.collection
 			.find<EntityHistoric<U>>({
-				entityId: MongoUtils.oid(entityId),
-				userId: ObjectId.isValid(userId) ? MongoUtils.oid(userId) : userId,
+				entityId: MongoUtils.oid(entityId) as any,
+				userId: ObjectId.isValid(userId) ? (MongoUtils.oid(userId) as any) : userId,
 			})
 			.sort('_id', -1)
 			.limit(1)
@@ -132,9 +123,9 @@ export class HistoricManager<U extends BaseMongoObject> {
 	): Promise<EntityHistoric<U>> {
 		const cursor = await this.collection
 			.find<EntityHistoric<U>>({
-				entityId: MongoUtils.oid(entityId),
+				entityId: MongoUtils.oid(entityId) as any,
 				_id: {
-					$gt: MongoUtils.oid(historicId),
+					$gt: MongoUtils.oid(historicId) as any,
 				},
 			})
 			.sort('_id', 1)
@@ -152,7 +143,7 @@ export class HistoricManager<U extends BaseMongoObject> {
 	}
 
 	public async countByEntityId(id: string): Promise<number> {
-		return await this.collection.countDocuments({ entityId: MongoUtils.oid(id) });
+		return await this.collection.countDocuments({ entityId: MongoUtils.oid(id) as any });
 	}
 
 	public async countSince(entityId: string, historicIdReference?: string): Promise<number> {

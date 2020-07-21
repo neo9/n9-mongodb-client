@@ -569,9 +569,9 @@
   integrity sha512-RbzJvlNzmRq5c3O09UipeuXno4tA1FE6ikOjxZK0tuxVv3412l64l5t1W5pj4+rJq9vpkm/kwiR07aZXnsKPxw==
 
 "@types/bson@*":
-  version "1.0.11"
-  resolved "https://registry.npmjs.org/@types/bson/-/bson-1.0.11.tgz#c95ad69bb0b3f5c33b4bb6cc86d86cafb273335c"
-  integrity sha512-j+UcCWI+FsbI5/FQP/Kj2CXyplWAz39ktHFkXk84h7dNblKRSoNJs95PZFRd96NQGqsPEPgeclqnznWZr14ZDA==
+  version "4.0.2"
+  resolved "https://registry.yarnpkg.com/@types/bson/-/bson-4.0.2.tgz#7accb85942fc39bbdb7515d4de437c04f698115f"
+  integrity sha512-+uWmsejEHfmSjyyM/LkrP0orfE2m5Mx9Xel4tXNeqi1ldK5XMQcDsFkBmLDtuyKUbxj2jGDo0H240fbCRJZo7Q==
   dependencies:
     "@types/node" "*"
 
@@ -656,10 +656,10 @@
   resolved "https://registry.yarnpkg.com/@types/lockfile/-/lockfile-1.0.1.tgz#434a3455e89843312f01976e010c60f1bcbd56f7"
   integrity sha512-65WZedEm4AnOsBDdsapJJG42MhROu3n4aSSiu87JXF/pSdlubxZxp3S1yz3kTfkJ2KBPud4CpjoHVAptOm9Zmw==
 
-"@types/lodash@^4.14.118":
-  version "4.14.119"
-  resolved "https://registry.npmjs.org/@types/lodash/-/lodash-4.14.119.tgz#be847e5f4bc3e35e46d041c394ead8b603ad8b39"
-  integrity sha512-Z3TNyBL8Vd/M9D9Ms2S3LmFq2sSMzahodD6rCS9V2N44HUMINb75jNkSuwAx7eo2ufqTdfOdtGQpNbieUjPQmw==
+"@types/lodash@^4.14.157":
+  version "4.14.157"
+  resolved "https://registry.yarnpkg.com/@types/lodash/-/lodash-4.14.157.tgz#fdac1c52448861dfde1a2e1515dbc46e54926dc8"
+  integrity sha512-Ft5BNFmv2pHDgxV5JDsndOWTRJ+56zte0ZpYLowp03tW+K+t8u8YMOzAnpuqPgzX6WO1XpDIUm7u04M8vdDiVQ==
 
 "@types/md5-file@^4.0.1":
   version "4.0.2"
@@ -683,10 +683,10 @@
   dependencies:
     "@types/node" "*"
 
-"@types/mongodb@^3.1.14":
-  version "3.1.18"
-  resolved "https://registry.npmjs.org/@types/mongodb/-/mongodb-3.1.18.tgz#24e847c15155226895ec9c79660ec0907005deff"
-  integrity sha512-8m8yvrDagesNNJdOIMk+g0b5z/sW48FwNp4GS1tRcHMKfQ/o40WsFXOXSfYY7y4xkutPFGQKGb4/GpzGFhpnqw==
+"@types/mongodb@^3.5.25":
+  version "3.5.25"
+  resolved "https://registry.yarnpkg.com/@types/mongodb/-/mongodb-3.5.25.tgz#ab187db04d79f8e3f15af236327dc9139d9d4736"
+  integrity sha512-2H/Owt+pHCl9YmBOYnXc3VdnxejJEjVdH+QCWL5ZAfPehEn3evygKBX3/vKRv7aTwfNbUd0E5vjJdQklH/9a6w==
   dependencies:
     "@types/bson" "*"
     "@types/node" "*"

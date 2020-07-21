@@ -447,8 +447,9 @@ ava('[LOCK-FIELDS] Insert&update boolean', async (t: Assertions) => {
 		},
 		keepHistoric: true,
 	});
+  await mongoClient.initHistoricIndexes();
 
-	const attributesCreated: AttributeEntity[] = await (
+  const attributesCreated: AttributeEntity[] = await (
 		await mongoClient.updateManyAtOnce([attribute], 'userId1', {
 			upsert: true,
 			lockNewFields: false,
@@ -517,8 +518,9 @@ ava('[LOCK-FIELDS] Insert&update array sub object element', async (t: Assertions
 		},
 		keepHistoric: true,
 	});
+  await mongoClient.initHistoricIndexes();
 
-	const attributesCreated: AttributeEntity[] = await (
+  const attributesCreated: AttributeEntity[] = await (
 		await mongoClient.updateManyAtOnce([attribute], 'userId1', {
 			upsert: true,
 			lockNewFields: false,
@@ -570,8 +572,9 @@ ava('[LOCK-FIELDS] Insert object with array and code with no value', async (t: A
 		},
 		keepHistoric: true,
 	});
+  await mongoClient.initHistoricIndexes();
 
-	const objectCreated: ObjectWithArray = await mongoClient.insertOne(
+  const objectCreated: ObjectWithArray = await mongoClient.insertOne(
 		objectWithArray,
 		'userId',
 		true,
@@ -661,8 +664,9 @@ ava('[LOCK-FIELDS] Insert&update attribute', async (t: Assertions) => {
 		},
 		keepHistoric: true,
 	});
+  await mongoClient.initHistoricIndexes();
 
-	const attributesCreated: AttributeEntity[] = await (
+  const attributesCreated: AttributeEntity[] = await (
 		await mongoClient.updateManyAtOnce([attribute], 'userId1', {
 			upsert: true,
 			lockNewFields: false,

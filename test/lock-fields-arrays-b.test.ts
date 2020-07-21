@@ -61,6 +61,7 @@ ava(
 		};
 
 		const mongoClient = generateMongoClient();
+		await mongoClient.initHistoricIndexes();
 
 		// Simulate import
 		const resultImport1: SampleEntityWithArray[] = await (

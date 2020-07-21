@@ -38,8 +38,10 @@ export function init(): void {
 
 	ava.after(async () => {
 		global.log.info(`DROP DB after tests OK`);
-		await (global.db as mongodb.Db).dropDatabase();
-		await MongoUtils.disconnect();
+		if (global.db) {
+			await (global.db as mongodb.Db).dropDatabase();
+			await MongoUtils.disconnect();
+		}
 		await mongod.stop();
 	});
 }

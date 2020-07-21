@@ -7,6 +7,38 @@ import { MongoUtils } from './mongo-utils';
  * Class that can add and remvoe tags to entities in a colection
  */
 export class TagManager {
+	private static buildAddTagUpdate(userId: string, options: AddTagOptions): object {
+		const update: UpdateQuery<any> = { $addToSet: { 'objectInfos.tags': options.tag } as any };
+		const updateLastUpdate = _.isBoolean(options.updateLastUpdate)
+			? options.updateLastUpdate
+			: true;
+		if (updateLastUpdate) {
+			update.$set = {
+				'objectInfos.lastUpdate.date': new Date(),
+				'objectInfos.lastUpdate.userId': ObjectId.isValid(userId) ? MongoUtils.oid(userId) : userId,
+			};
+		}
+		return update;
+	}
+
+	private static buildRemoveTagUpdate(
+		tag: string,
+		userId: string,
+		options: RemoveTagOptions,
+	): object {
+		const update: UpdateQuery<any> = { $pull: { 'objectInfos.tags': tag } as any };
+		const updateLastUpdate = _.isBoolean(options.updateLastUpdate)
+			? options.updateLastUpdate
+			: true;
+		if (updateLastUpdate) {
+			update.$set = {
+				'objectInfos.lastUpdate.date': new Date(),
+				'objectInfos.lastUpdate.userId': ObjectId.isValid(userId) ? MongoUtils.oid(userId) : userId,
+			};
+		}
+		return update;
+	}
+
 	/**
 	 * @param collection the mongodb collection in which the tags will be managed
 	 */
@@ -26,7 +58,7 @@ export class TagManager {
 		options: AddTagOptions = {},
 	): Promise<string> {
 		options.tag = options.tag || new ObjectId().toHexString();
-		const update = this.buildAddTagUpdate(userId, options);
+		const update = TagManager.buildAddTagUpdate(userId, options);
 		await this.collection.findOneAndUpdate(query, update, { returnOriginal: false });
 		return options.tag;
 	}
@@ -51,7 +83,7 @@ export class TagManager {
 		options: AddTagOptions = {},
 	): Promise<string> {
 		options.tag = options.tag || new ObjectId().toHexString();
-		const update = this.buildAddTagUpdate(userId, options);
+		const update = TagManager.buildAddTagUpdate(userId, options);
 		await this.collection.updateMany(query, update);
 		return options.tag;
 	}
@@ -71,7 +103,7 @@ export class TagManager {
 		userId: string,
 		options: RemoveTagOptions = {},
 	): Promise<void> {
-		const update = this.buildRemoveTagUpdate(tag, userId, options);
+		const update = TagManager.buildRemoveTagUpdate(tag, userId, options);
 		await this.collection.findOneAndUpdate(query, update, { returnOriginal: false });
 	}
 
@@ -96,7 +128,7 @@ export class TagManager {
 		userId: string,
 		options: RemoveTagOptions = {},
 	): Promise<void> {
-		const update = this.buildRemoveTagUpdate(tag, userId, options);
+		const update = TagManager.buildRemoveTagUpdate(tag, userId, options);
 		await this.collection.updateMany(query, update);
 	}
 
@@ -105,33 +137,5 @@ export class TagManager {
 	 */
 	public async deleteManyWithTag(tag: string): Promise<void> {
 		await this.collection.deleteMany({ 'objectInfos.tags': tag });
-	}
-
-	private buildAddTagUpdate(userId: string, options: AddTagOptions): object {
-		const update: UpdateQuery<any> = { $addToSet: { 'objectInfos.tags': options.tag } };
-		const updateLastUpdate = _.isBoolean(options.updateLastUpdate)
-			? options.updateLastUpdate
-			: true;
-		if (updateLastUpdate) {
-			update.$set = {
-				'objectInfos.lastUpdate.date': new Date(),
-				'objectInfos.lastUpdate.userId': ObjectId.isValid(userId) ? MongoUtils.oid(userId) : userId,
-			};
-		}
-		return update;
-	}
-
-	private buildRemoveTagUpdate(tag: string, userId: string, options: RemoveTagOptions): object {
-		const update: UpdateQuery<any> = { $pull: { 'objectInfos.tags': tag } };
-		const updateLastUpdate = _.isBoolean(options.updateLastUpdate)
-			? options.updateLastUpdate
-			: true;
-		if (updateLastUpdate) {
-			update.$set = {
-				'objectInfos.lastUpdate.date': new Date(),
-				'objectInfos.lastUpdate.userId': ObjectId.isValid(userId) ? MongoUtils.oid(userId) : userId,
-			};
-		}
-		return update;
 	}
 }

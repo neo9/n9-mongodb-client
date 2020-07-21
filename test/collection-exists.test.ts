@@ -39,9 +39,11 @@ ava('[EXISTS] Create collection then drop it then test existence', async (t: Ass
 
 	await t.throwsAsync(
 		async () => {
-			await mongoClient.dropCollection();
+			await mongoClient.dropCollection(true, true);
 		},
-		null,
+		{
+			message: 'mongodb-drop-collection-error',
+		},
 		'should throw not found exception',
 	);
 });

@@ -51,6 +51,7 @@ ava('[LOCK-FIELDS-ARRAY C] Import twice should remove element', async (t: Assert
 	};
 
 	const mongoClient = generateMongoClient();
+	await mongoClient.initHistoricIndexes();
 
 	// Simulate import
 	const resultImport1: SampleEntityWithArray[] = await (
@@ -102,6 +103,7 @@ ava('[LOCK-FIELDS-ARRAY D] Lock fields order should be keept', async (t: Asserti
 	};
 
 	const mongoClient = generateMongoClient();
+	await mongoClient.initHistoricIndexes();
 
 	// Simulate import
 	const entityCreated = await mongoClient.insertOne(vD, 'userId', true);

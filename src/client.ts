@@ -16,6 +16,7 @@ import {
 	MongoClient as MongodbClient,
 	ObjectId,
 	UpdateQuery,
+	BulkWriteOperation,
 } from 'mongodb';
 import { AggregationBuilder } from './aggregation-utils';
 import { HistoricManager } from './historic-manager';
@@ -278,7 +279,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		query: object,
 		pageSize: number,
 		projection: object = {},
-	): MongoReadStream<Partial<U>, Partial<L>> {
+	): MongoReadStream<Partial<U>, Partial<L>> | MongoReadStream<U, L> {
 		return new MongoReadStream<U, L>(this, query, pageSize, projection);
 	}
 
@@ -287,7 +288,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		type: ClassType<T>,
 		pageSize: number,
 		projection: object = {},
-	): MongoReadStream<Partial<U>, Partial<L>> {
+	): MongoReadStream<Partial<U>, Partial<L>> | MongoReadStream<U, L> {
 		return new MongoReadStream<U, L>(this, query, pageSize, projection, type);
 	}
 
@@ -350,7 +351,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		returnNewValue: boolean = true,
 		arrayFilters: FilterQuery<U>[] = [],
 	): Promise<U> {
-		const query: StringMap<any> = {
+		const query: FilterQuery<any> = {
 			_id: MongoUtils.oid(id),
 		};
 		return await this.findOneAndUpdate(
@@ -373,7 +374,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		returnNewValue: boolean = true,
 		arrayFilters: FilterQuery<U>[] = [],
 	): Promise<U> {
-		const query: StringMap<any> = {
+		const query: FilterQuery<any> = {
 			[MongoUtils.escapeSpecialCharacters(keyName)]: keyValue,
 		};
 		return await this.findOneAndUpdate(
@@ -439,9 +440,9 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				date: now,
 				userId: formattedUserId,
 			},
-		};
+		} as any;
 		if (!this.conf.updateOnlyOnChange) {
-			updateQuery.$set['objectInfos.lastModification'] = {
+			(updateQuery.$set as any)['objectInfos.lastModification'] = {
 				date: now,
 				userId: formattedUserId,
 			};
@@ -454,7 +455,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 					date: now,
 					userId: formattedUserId,
 				},
-			};
+			} as any;
 		}
 
 		let saveOldValue;
@@ -534,7 +535,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		lockFieldPath: string,
 		userId: string,
 	): Promise<U> {
-		const query: StringMap<any> = {
+		const query: FilterQuery<any> = {
 			_id: MongoUtils.oid(id),
 		};
 		return await this.findOneAndRemoveLock(query, lockFieldPath, userId);
@@ -546,7 +547,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		userId: string,
 		keyName: string = 'code',
 	): Promise<U> {
-		const query: StringMap<any> = {
+		const query: FilterQuery<any> = {
 			[keyName]: keyValue,
 		};
 		return await this.findOneAndRemoveLock(query, lockFieldPath, userId);
@@ -736,7 +737,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				date: now,
 				userId: ObjectId.isValid(userId) ? MongoUtils.oid(userId) : userId,
 			},
-		};
+		} as any;
 
 		if (this.conf.keepHistoric) {
 			throw new N9Error('not-supported-operation-for-collection-with-historic', 501, {
@@ -812,8 +813,20 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		return collections.length === 1;
 	}
 
-	public async dropCollection(): Promise<void> {
-		await this.collection.drop();
+	public async dropCollection(
+		dropHistoryIfExists: boolean = true,
+		throwIfNotExists: boolean = false,
+	): Promise<void> {
+		if (dropHistoryIfExists && this.conf.keepHistoric) {
+			await this.dropHistory();
+		}
+		try {
+			if (throwIfNotExists || (await this.collectionExists())) {
+				await this.collection.drop();
+			}
+		} catch (e) {
+			throw new N9Error('mongodb-drop-collection-error', 500, { mongodbError: e });
+		}
 	}
 
 	public async dropHistory(): Promise<void> {
@@ -1054,9 +1067,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			return await this.getEmptyCursor<U>(this.type);
 		}
 
-		const bulkOperations: {
-			updateOne: { filter: StringMap<any>; update: StringMap<any>; upsert?: boolean };
-		}[] = [];
+		const bulkOperations: BulkWriteOperation<U>[] = [];
 		const now = new Date();
 		for (const newEnt of newEntities) {
 			const updateQuery = newEnt.updateQuery;
@@ -1082,7 +1093,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				};
 			}
 
-			let filter: StringMap<any> = {};
+			let filter: FilterQuery<any> = {};
 
 			if (newEnt.id) {
 				filter._id = MongoUtils.oid(newEnt.id);
@@ -1207,14 +1218,14 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		}
 
 		return await this.collection.findOneAndUpdate(
-			{ _id: MongoUtils.oid(entityId) },
+			{ _id: MongoUtils.oid(entityId) as any },
 			{
 				$set: {
 					'objectInfos.lastModification': {
 						date: updateDate,
 						userId: (ObjectId.isValid(userId) ? MongoUtils.oid(userId) : userId) as string,
 					},
-				},
+				} as any,
 			},
 			{
 				returnOriginal: false,
