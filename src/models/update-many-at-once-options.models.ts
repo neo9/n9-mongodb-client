@@ -13,7 +13,7 @@ export interface UpdateManyAtOnceOptions<U> {
 	lockNewFields?: boolean;
 	/**
 	 * - If it's a string, it will be treated as a field name to use to retrieve the existing values of the entities in database.
-	 * The value for this field will be taken from the given entities.
+	 * The value for this field will be taken from the given entities. Be careful with `ObjectId` vs. `string`, use function for `_id` for instance.
 	 * - If it's a function, it will be called with the given value for the entity
 	 * and its return value will be the query used to get the existing value for that entity
 	 * - If it's null or undefined, the existing version of the entity will not be retrieved from database.

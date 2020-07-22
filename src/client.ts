@@ -725,6 +725,12 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 	): Promise<Cursor<U>> {
 		this.ifHasLockFieldsThrow();
 
+		if (this.conf.keepHistoric || this.conf.updateOnlyOnChange) {
+			throw new N9Error('not-supported-operation-for-collection-with-historic', 501, {
+				conf: this.conf,
+			});
+		}
+
 		if (!updateQuery.$set) {
 			updateQuery.$set = {};
 		}
@@ -739,11 +745,6 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			},
 		} as any;
 
-		if (this.conf.keepHistoric) {
-			throw new N9Error('not-supported-operation-for-collection-with-historic', 501, {
-				conf: this.conf,
-			});
-		}
 		const updateResult = await this.collection.updateMany(query, updateQuery);
 		return this.findWithType(query, this.type, 0, updateResult.matchedCount);
 	}
@@ -1075,13 +1076,21 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				updateQuery.$set = {};
 			}
 
+			const formattedUserId = ObjectId.isValid(userId) ? MongoUtils.oid(userId) : userId;
 			updateQuery.$set = {
 				...(updateQuery.$set as object),
 				'objectInfos.lastUpdate': {
 					date: now,
-					userId: ObjectId.isValid(userId) ? MongoUtils.oid(userId) : userId,
+					userId: formattedUserId,
 				},
 			};
+
+			if (!this.conf.updateOnlyOnChange) {
+				(updateQuery.$set as any)['objectInfos.lastModification'] = {
+					date: now,
+					userId: formattedUserId,
+				};
+			}
 
 			if (upsert) {
 				updateQuery.$setOnInsert = {
@@ -1116,7 +1125,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			});
 		}
 		let oldValuesSaved: StringMap<U>;
-		if (this.conf.keepHistoric) {
+		if (this.conf.keepHistoric || this.conf.updateOnlyOnChange) {
 			oldValuesSaved = _.keyBy(
 				await (
 					await this.findWithType(
@@ -1141,24 +1150,26 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		// }
 
 		const bulkResult = await this.collection.bulkWrite(bulkOperations);
-		const newValues: Cursor<U> = await this.findWithType(
-			{
-				_id: {
-					$in: MongoUtils.oids(
-						_.concat(
-							_.map(newEntities, 'id'),
-							_.values(bulkResult.insertedIds),
-							_.values(bulkResult.upsertedIds),
-						),
+		const newValuesQuery = {
+			_id: {
+				$in: MongoUtils.oids(
+					_.concat(
+						_.map(newEntities, 'id'),
+						_.values(bulkResult.insertedIds),
+						_.values(bulkResult.upsertedIds),
 					),
-				},
+				),
 			},
+		};
+		let newValues: Cursor<U> = await this.findWithType(
+			newValuesQuery,
 			this.type,
 			0,
 			_.size(newEntities),
 		);
 
-		if (this.conf.keepHistoric) {
+		if (this.conf.keepHistoric || this.conf.updateOnlyOnChange) {
+			let shouldResetResponse = false;
 			while (await newValues.hasNext()) {
 				const newEntity = await newValues.next();
 				const oldValueSaved: U = oldValuesSaved[newEntity._id];
@@ -1173,10 +1184,28 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 					});
 					if (diffs) {
 						await this.historicManager.insertOne(newEntity._id, diffs, oldValueSaved, now, userId);
+
+						if (this.conf.updateOnlyOnChange) {
+							const retValue = await this.updateLastModificationDate(
+								newEntity._id,
+								diffs,
+								now,
+								userId,
+								false,
+							);
+							if (retValue) {
+								shouldResetResponse = true;
+							}
+						}
 					}
 				}
 			}
-			newValues.rewind();
+			if (shouldResetResponse) {
+				await newValues.close();
+				newValues = await this.findWithType(newValuesQuery, this.type, 0, _.size(newEntities));
+			} else {
+				newValues.rewind();
+			}
 		}
 		return newValues;
 	}
@@ -1191,12 +1220,16 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		return await this.findWithType<X>({ $and: [{ _id: false }, { _id: true }] }, type, -1, 0);
 	}
 
+	/**
+	 * Return undefined if nothing has changed
+	 */
 	private async updateLastModificationDate(
 		entityId: string,
 		diffs: Diff<U, U>[],
 		updateDate: Date,
 		userId: string,
-	): Promise<FindAndModifyWriteOpResultObject<U>> {
+		returnNewValue: boolean = true,
+	): Promise<FindAndModifyWriteOpResultObject<U> | undefined> {
 		// determine if the document has changed
 		// if omit is not empty, field names must not be in omit to be taken into account
 		// if pick is not empty, field names must be in pick to be taken into account
@@ -1229,7 +1262,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				} as any,
 			},
 			{
-				returnOriginal: false,
+				returnOriginal: !returnNewValue,
 			},
 		);
 	}
