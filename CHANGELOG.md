@@ -1,3 +1,10 @@
+# [0.14.0-rc.4](https://github.com/neo9/n9-mongo-client/compare/0.14.0-rc.3...0.14.0-rc.4) (2020-07-22)
+
+
+### tests
+
+* Fix too quick operation ([5dad8c7](https://github.com/neo9/n9-mongo-client/commit/5dad8c734f73ac383dc3909df8f82c64d6d83ead))
+
 # [0.14.0-rc.3](https://github.com/neo9/n9-mongo-client/compare/0.14.0-rc.2...0.14.0-rc.3) (2020-07-22)
 
 
