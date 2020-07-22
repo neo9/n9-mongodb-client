@@ -1,3 +1,10 @@
+# [0.14.0-rc.3](https://github.com/neo9/n9-mongo-client/compare/0.14.0-rc.2...0.14.0-rc.3) (2020-07-22)
+
+
+### update
+
+* Fix modification date on bulk operations ([a17af2d](https://github.com/neo9/n9-mongo-client/commit/a17af2d4ac7c6236288b5384581c7a7bda71f138))
+
 # [0.14.0-rc.2](https://github.com/neo9/n9-mongo-client/compare/0.14.0-rc.1...0.14.0-rc.2) (2020-07-21)
 
 
