@@ -1,3 +1,10 @@
+# [0.4.0-rc.5](https://github.com/neo9/n9-mongo-client/compare/0.14.0-rc.4...0.4.0-rc.5) (2020-07-24)
+
+
+### update
+
+* Fix modification date on upsert operations ([e4b21d6](https://github.com/neo9/n9-mongo-client/commit/e4b21d689c2835a87615c3e29a1e0b8fbb689441))
+
 # [0.14.0-rc.4](https://github.com/neo9/n9-mongo-client/compare/0.14.0-rc.3...0.14.0-rc.4) (2020-07-22)
 
 
