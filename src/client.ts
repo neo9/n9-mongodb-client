@@ -456,6 +456,13 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 					userId: formattedUserId,
 				},
 			} as any;
+
+			if (this.conf.updateOnlyOnChange) {
+				(updateQuery.$setOnInsert as any)['objectInfos.lastModification'] = {
+					date: now,
+					userId: formattedUserId,
+				};
+			}
 		}
 
 		let saveOldValue;
@@ -1097,9 +1104,15 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 					...(updateQuery.$setOnInsert as object),
 					'objectInfos.creation': {
 						userId,
-						date: new Date(),
+						date: now,
 					},
 				};
+				if (this.conf.updateOnlyOnChange) {
+					(updateQuery.$setOnInsert as any)['objectInfos.lastModification'] = {
+						date: now,
+						userId: formattedUserId,
+					};
+				}
 			}
 
 			let filter: FilterQuery<any> = {};
@@ -1237,13 +1250,15 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		const omit = pick.length ? [] : this.conf.updateOnlyOnChange?.changeFilters?.omit ?? [];
 		let hasChanged = false;
 		for (const diff of diffs) {
-			const path = diff.path.join('.');
-			const isOmitted = omit.length && omit.find((omittedPath) => path.startsWith(omittedPath));
-			const isPicked = !pick.length || pick.find((pickedPath) => path.startsWith(pickedPath));
+			if (diff.path) {
+				const path = diff.path.join('.');
+				const isOmitted = omit.length && omit.find((omittedPath) => path.startsWith(omittedPath));
+				const isPicked = !pick.length || pick.find((pickedPath) => path.startsWith(pickedPath));
 
-			if (!isOmitted && isPicked) {
-				hasChanged = true;
-				break;
+				if (!isOmitted && isPicked) {
+					hasChanged = true;
+					break;
+				}
 			}
 		}
 		// if no change were detected, don't update lastModification
