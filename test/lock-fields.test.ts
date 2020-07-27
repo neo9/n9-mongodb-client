@@ -51,6 +51,13 @@ class ObjectWithArray extends BaseMongoObject {
 	};
 }
 
+class ObjectWithDateProperty extends BaseMongoObject {
+	public code: string;
+	public props: {
+		date: Date;
+	};
+}
+
 const locksDataSample: SampleComplexType = {
 	text: 'text sample',
 	excludedField: 'not locked field',
@@ -692,6 +699,115 @@ ava('[LOCK-FIELDS] Insert&update attribute', async (t: Assertions) => {
 		newAttributeValue2.objectInfos.lockFields.length,
 		1,
 		'One element edited, so one should find one lock field',
+	);
+});
+
+ava('[LOCK-FIELDS] Insert&update entity with date property', async (t: Assertions) => {
+	const entity: ObjectWithDateProperty = {
+		code: 'test_case',
+		props: {
+			date: new Date('2020-01-01'),
+		},
+	};
+
+	const mongoClient = new MongoClient(`test-${Date.now()}`, ObjectWithDateProperty, null, {
+		lockFields: {},
+		keepHistoric: false,
+	});
+
+	const createdEntities: ObjectWithDateProperty[] = await (
+		await mongoClient.updateManyAtOnce([entity], 'userId1', {
+			upsert: true,
+			lockNewFields: false,
+			query: 'code',
+		})
+	).toArray();
+	const createdEntity = await mongoClient.findOneByKey(entity.code);
+
+	t.deepEqual(createdEntities[0], createdEntity, `update many at once return new data`);
+
+	// unitary update of a date property
+	const updateData2 = _.cloneDeep(entity);
+	updateData2.props.date = new Date('2020-02-02');
+
+	const newEntityValue2 = await mongoClient.findOneAndUpdateByIdWithLocks(
+		createdEntity._id,
+		updateData2,
+		'userIdUpdate',
+		false,
+		true,
+	);
+
+	t.is(
+		new Date(newEntityValue2.props.date).toISOString(),
+		new Date('2020-02-02').toISOString(),
+		'The date should be updated with unitary update',
+	);
+
+	// bulk update of a date property
+	const updateData3 = _.cloneDeep(entity);
+	updateData3.props.date = new Date('2020-03-03');
+
+	const newEntityValues3 = await (
+		await mongoClient.updateManyAtOnce([updateData3], 'userIdBulkUpsert', {
+			upsert: true,
+			lockNewFields: false,
+			query: 'code',
+		})
+	).toArray();
+
+	t.is(
+		new Date(newEntityValues3[0].props.date).toISOString(),
+		new Date('2020-03-03').toISOString(),
+		'The date should be updated with bulk update when the field is not locked',
+	);
+
+	// unitary update of a date property with lock
+	const updateData4 = _.cloneDeep(entity);
+	updateData4.props.date = new Date('2020-04-04');
+
+	const newEntityValue4 = await mongoClient.findOneAndUpdateByIdWithLocks(
+		createdEntity._id,
+		updateData4,
+		'userIdUpdate',
+		true,
+		true,
+	);
+
+	// bulk update of a date property with lock field
+	const updateData5 = _.cloneDeep(entity);
+	updateData5.props.date = new Date('2020-05-05');
+
+	const newEntityValues5 = await (
+		await mongoClient.updateManyAtOnce([updateData5], 'userIdBulkUpsert', {
+			upsert: true,
+			lockNewFields: false,
+			query: 'code',
+			forceEditLockFields: false,
+		})
+	).toArray();
+
+	t.is(
+		new Date(newEntityValues5[0].props.date).toISOString(),
+		new Date('2020-04-04').toISOString(),
+		'The date should be not be updated with bulk update when the field is locked and no force edit',
+	);
+
+	const updateData6 = _.cloneDeep(entity);
+	updateData6.props.date = new Date('2020-05-05');
+	const newEntityValues6 = await (
+		await mongoClient.updateManyAtOnce([updateData6], 'userIdBulkUpsert', {
+			upsert: true,
+			lockNewFields: false,
+			query: 'code',
+			forceEditLockFields: true,
+		})
+	).toArray();
+
+	t.is(
+		new Date(newEntityValues6[0].props.date).toISOString(),
+		new Date('2020-05-05').toISOString(),
+		'The date should be not be updated with bulk update when the field is locked and no force edit',
 	);
 });
 

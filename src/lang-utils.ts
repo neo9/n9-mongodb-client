@@ -26,7 +26,9 @@ export class LangUtils {
 				removeEmptyObjects &&
 				_.isObject(objElement) &&
 				!_.isArray(objElement) &&
-				_.isEmpty(objElement)
+				_.isEmpty(objElement) &&
+				// _.isEmpty return true for Date instance
+				!_.isDate(objElement)
 			) {
 				delete obj[key];
 			}
