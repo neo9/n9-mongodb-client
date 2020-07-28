@@ -1,3 +1,10 @@
+## [0.14.1](https://github.com/neo9/n9-mongo-client/compare/0.14.0...0.14.1) (2020-07-28)
+
+
+### date
+
+* Fix date deletion during object cleaning ([9558f61](https://github.com/neo9/n9-mongo-client/commit/9558f610fbab359acfadd980b2747cddd3776e9f))
+
 # [0.14.0](https://github.com/neo9/n9-mongo-client/compare/0.14.0-rc.5...0.14.0) (2020-07-24)
 
 # [0.14.0-rc.5](https://github.com/neo9/n9-mongo-client/compare/0.4.0-rc.5...0.14.0-rc.5) (2020-07-24)
