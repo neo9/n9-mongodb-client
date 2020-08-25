@@ -195,6 +195,9 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 
 		newEntityWithoutForbiddenCharacters = LangUtils.removeEmptyDeep(
 			newEntityWithoutForbiddenCharacters,
+			undefined,
+			undefined,
+			!!this.conf.lockFields,
 		);
 		await this.collection.insertOne(newEntityWithoutForbiddenCharacters);
 		if (returnNewValue) {
@@ -1027,7 +1030,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				if (!!options.mapFunction) {
 					entity = await options.mapFunction(entity);
 				}
-				LangUtils.removeEmptyDeep(entity);
+				LangUtils.removeEmptyDeep(entity, undefined, undefined, !!this.conf.lockFields); // keep null values for lockfields
 
 				const toSet = _.omit(entity, options.onlyInsertFieldsKey);
 				const toSetOnInsert = _.pick(entity, options.onlyInsertFieldsKey);
