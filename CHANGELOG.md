@@ -1,3 +1,10 @@
+## [1.14.2-rc.0](https://github.com/neo9/n9-mongo-client/compare/0.14.1...1.14.2-rc.0) (2020-08-25)
+
+
+### insert
+
+* Fix insertion of null values with lock fields enabled ([bb03542](https://github.com/neo9/n9-mongo-client/commit/bb035422786bf8f6179d134b51209ccb1aa29488))
+
 ## [0.14.1](https://github.com/neo9/n9-mongo-client/compare/0.14.0...0.14.1) (2020-07-28)
 
 
