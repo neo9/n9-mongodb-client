@@ -1,3 +1,5 @@
+## [0.14.2](https://github.com/neo9/n9-mongo-client/compare/0.14.2-rc.0...0.14.2) (2020-08-25)
+
 ## [0.14.2-rc.0](https://github.com/neo9/n9-mongo-client/compare/1.14.2-rc.0...0.14.2-rc.0) (2020-08-25)
 
 ## [1.14.2-rc.0](https://github.com/neo9/n9-mongo-client/compare/0.14.1...1.14.2-rc.0) (2020-08-25)
