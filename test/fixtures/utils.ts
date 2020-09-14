@@ -15,6 +15,12 @@ export class SampleEntityWithArray extends BaseMongoObject {
 	};
 }
 
+export class SampleEntityWithSimpleArray extends BaseMongoObject {
+	public parameters: {
+		items: string[];
+	};
+}
+
 export function generateMongoClient(): MongoClient<SampleEntityWithArray, null> {
 	const collectionName = `test-${Math.ceil(Math.random() * 10000)}-${Date.now()}`;
 	return new MongoClient(collectionName, SampleEntityWithArray, null, {

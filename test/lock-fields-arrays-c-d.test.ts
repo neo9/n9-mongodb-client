@@ -92,8 +92,8 @@ ava('[LOCK-FIELDS-ARRAY C] Import twice should remove element', async (t: Assert
  * D :  [a,b,c]
  * D':  [c,a,b,d]
  *
- * Création de C par un opérateur =>  tout est verrouillé => [a🔒,b🔒,c🔒]
- * Import de C' => ordre conservé, ajout de d => [a🔒,b🔒,c🔒,d]
+ * Creation of D by an operator (human) =>  all is locked => [a🔒,b🔒,c🔒]
+ * Import D' => order preserved, addition of d => [a🔒,b🔒,c🔒,d]
  */
 ava('[LOCK-FIELDS-ARRAY D] Lock fields order should be keept', async (t: Assertions) => {
 	const vD: SampleEntityWithArray = {

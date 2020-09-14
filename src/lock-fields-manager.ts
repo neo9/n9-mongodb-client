@@ -184,6 +184,25 @@ export class LockFieldsManager<U extends BaseMongoObject> {
 	}
 
 	/**
+	 * Clean lock fields
+	 * @param lockFields
+	 * @param entity
+	 */
+	public cleanObsoleteLockFields(lockFields: LockField[], entity: Partial<U>): LockField[] {
+		if (_.isEmpty(lockFields)) return lockFields;
+
+		const cleanedLockFields: LockField[] = [];
+		for (const lockField of lockFields) {
+			const path = this.translatePathToLodashPath(lockField.path, entity);
+			const valueFound = _.get(entity, path);
+			if (!_.isNil(valueFound)) {
+				cleanedLockFields?.push(lockField);
+			}
+		}
+		return cleanedLockFields;
+	}
+
+	/**
 	 * Convert :
 	 * a[b=2]value to a[1].value
 	 * @param path
@@ -206,6 +225,9 @@ export class LockFieldsManager<U extends BaseMongoObject> {
 					return;
 				}
 			}
+			if (array === null) {
+				return groups.basePath;
+			}
 			if (groups.pathLeft) {
 				newPath += this.translatePathToLodashPath(groups.pathLeft, _.get(entity, groups.basePath));
 			}
@@ -219,6 +241,9 @@ export class LockFieldsManager<U extends BaseMongoObject> {
 				} else {
 					return;
 				}
+			}
+			if (array === null) {
+				return groups.basePath;
 			}
 			if (groups.pathLeft) {
 				newPath += this.translatePathToLodashPath(groups.pathLeft, _.get(entity, groups.basePath));
@@ -324,11 +349,13 @@ export class LockFieldsManager<U extends BaseMongoObject> {
 					delete ret[key];
 				}
 			} else if (_.isArray(existingEntityElement)) {
-				ret[key] = this.pickOnlyNewValuesInArray(
-					existingEntityElement,
-					newEntity[key],
-					currentPath,
-				);
+				if (newEntity[key] !== null) {
+					ret[key] = this.pickOnlyNewValuesInArray(
+						existingEntityElement,
+						newEntity[key],
+						currentPath,
+					);
+				}
 
 				if (_.isEmpty(ret[key])) delete ret[key];
 			} else {
