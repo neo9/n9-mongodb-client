@@ -1,3 +1,14 @@
+## [0.14.3](https://github.com/neo9/n9-mongo-client/compare/0.14.2...0.14.3) (2020-09-14)
+
+
+### locks
+
+* Fix array deletion when it is locked ([e63aef7](https://github.com/neo9/n9-mongo-client/commit/e63aef73cd134c15faf8e47d86b7e3c8b8d71729))
+
+### yarn
+
+* Update dependencies for security fix ([494ae98](https://github.com/neo9/n9-mongo-client/commit/494ae989083b2fe73aea26801346f464252bc276))
+
 ## [0.14.2](https://github.com/neo9/n9-mongo-client/compare/0.14.2-rc.0...0.14.2) (2020-08-25)
 
 ## [0.14.2-rc.0](https://github.com/neo9/n9-mongo-client/compare/1.14.2-rc.0...0.14.2-rc.0) (2020-08-25)
