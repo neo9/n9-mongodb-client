@@ -1,3 +1,14 @@
+## [0.14.4](https://github.com/neo9/n9-mongo-client/compare/0.14.3...0.14.4) (2020-09-15)
+
+
+### format
+
+* Fix format ([b03262b](https://github.com/neo9/n9-mongo-client/commit/b03262beb1acdcbae84cfa4ef6347261c429bd27))
+
+### locks
+
+* Fix lockFields clean if nothing to clean ([b691684](https://github.com/neo9/n9-mongo-client/commit/b691684911c6d52772bc13b6953b7be61791353d))
+
 ## [0.14.3](https://github.com/neo9/n9-mongo-client/compare/0.14.2...0.14.3) (2020-09-14)
 
 
