@@ -985,12 +985,17 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 						if (!_.isEmpty(newLockFields)) {
 							lockFields.push(...newLockFields);
 						}
-						if (options.forceEditLockFields) {
+						if (options.forceEditLockFields && options.unsetUndefined) {
 							// we can delete lock fields only if we change there values
-							entity['objectInfos.lockFields'] = this.lockFieldsManager.cleanObsoleteLockFields(
+							const newLockFieldsCleaned = this.lockFieldsManager.cleanObsoleteLockFields(
 								lockFields,
 								entity,
 							);
+							if (
+								!(_.isEmpty(newLockFieldsCleaned) && _.isEmpty(currentValue.objectInfos.lockFields))
+							) {
+								entity['objectInfos.lockFields'] = newLockFieldsCleaned;
+							}
 						} else if (!_.isEmpty(newLockFields)) {
 							entity['objectInfos.lockFields'] = lockFields;
 						}
