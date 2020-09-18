@@ -37,3 +37,6 @@ $RECYCLE.BIN/
 .scannerwork
 sonar-project.properties
 coverage.lcov
+
+# Benchmark
+/benchmark/

@@ -25,7 +25,8 @@
     "release:dry": "export BABEL_DISABLE_CACHE=1 && release-it --ci --dry-run=true",
     "build:changelog": "conventional-changelog -i CHANGELOG.md -s -p jscs -r 0",
     "post:release": "echo Successfully released $npm_package_version",
-    "init": "./bin/setup-git-hooks"
+    "init": "./bin/setup-git-hooks",
+    "benchmark": "node benchmark.js"
   },
   "husky": {
     "hooks": {
@@ -67,6 +68,7 @@
     "@types/node": "^10.12.18",
     "@types/std-mocks": "^1.0.0",
     "ava": "^3.10.1",
+    "benny": "^3.6.14",
     "codecov": "^3.7.1",
     "husky": "^4.2.3",
     "mongodb-memory-server": "6.6.1",
