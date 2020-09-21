@@ -34,6 +34,7 @@ import {
 	UpdateManyAtOnceOptions,
 	UpdateManyQuery,
 } from './models';
+import { UpdateManyToSameValueOptions } from './models/update-many-to-same-value-options.models';
 import { MongoReadStream } from './mongo-read-stream';
 import { MongoUtils } from './mongo-utils';
 import { TagManager } from './tag-manager';
@@ -732,11 +733,18 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		query: FilterQuery<U>,
 		updateQuery: UpdateQuery<U>,
 		userId: string,
-	): Promise<Cursor<U>> {
+		options: UpdateManyToSameValueOptions<U> = {},
+	): Promise<{ matchedCount: number; modifiedCount: number }> {
 		this.ifHasLockFieldsThrow();
 
-		if (this.conf.keepHistoric || this.conf.updateOnlyOnChange) {
+		if (this.conf.keepHistoric) {
 			throw new N9Error('not-supported-operation-for-collection-with-historic', 501, {
+				conf: this.conf,
+			});
+		}
+
+		if (this.conf.updateOnlyOnChange && !options.forceLastModificationDate) {
+			throw new N9Error('force-last-modification-required', 501, {
 				conf: this.conf,
 			});
 		}
@@ -753,10 +761,18 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				date: now,
 				userId: ObjectId.isValid(userId) ? MongoUtils.oid(userId) : userId,
 			},
+			'objectInfos.lastModification': {
+				date: now,
+				userId: ObjectId.isValid(userId) ? MongoUtils.oid(userId) : userId,
+			},
 		} as any;
 
 		const updateResult = await this.collection.updateMany(query, updateQuery);
-		return this.findWithType(query, this.type, 0, updateResult.matchedCount);
+
+		return {
+			matchedCount: updateResult.matchedCount,
+			modifiedCount: updateResult.modifiedCount,
+		};
 	}
 
 	/**

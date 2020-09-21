@@ -8,4 +8,5 @@ export * from './maps.models';
 export * from './mongo-client-configuration.models';
 export * from './tag-options.models';
 export * from './update-many-at-once-options.models';
+export * from './update-many-to-same-value-options.models';
 export * from './update-many-query.models';
