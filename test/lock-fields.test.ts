@@ -271,6 +271,9 @@ ava('[LOCK-FIELDS] Forbide usage of some methods', async (t: Assertions) => {
 	await t.throwsAsync(async () => {
 		await mongoClient.findOneAndUpdate({}, {}, 'userId');
 	});
+	await t.throwsAsync(async () => {
+		await mongoClient.updateManyToSameValue({}, {}, 'userId');
+	});
 });
 
 ava('[LOCK-FIELDS] Update many with locks', async (t: Assertions) => {
