@@ -957,6 +957,9 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		options: UpdateManyAtOnceOptions<U>,
 	): Promise<UpdateManyQuery[]> {
 		const updates: UpdateManyQuery[] = [];
+		let now;
+		if (options.lockNewFields) now = new Date();
+
 		for (let entity of entities) {
 			let currentValue: U;
 			if (options.query) {
@@ -996,7 +999,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 						const lockFields = currentValue.objectInfos.lockFields || [];
 						const newLockFields = this.lockFieldsManager.getAllLockFieldsFromEntity(
 							entity,
-							new Date(),
+							now,
 							userId,
 							currentValue,
 						);
