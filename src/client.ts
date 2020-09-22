@@ -4,6 +4,7 @@ import { Diff, diff as deepDiff } from 'deep-diff';
 import * as _ from 'lodash';
 import {
 	AggregationCursor,
+	BulkWriteOperation,
 	CollationDocument,
 	Collection,
 	CollectionAggregationOptions,
@@ -16,13 +17,13 @@ import {
 	MongoClient as MongodbClient,
 	ObjectId,
 	UpdateQuery,
-	BulkWriteOperation,
 } from 'mongodb';
 import { AggregationBuilder } from './aggregation-utils';
 import { HistoricManager } from './historic-manager';
 import { IndexManager } from './index-manager';
 import { LangUtils } from './lang-utils';
 import { LockFieldsManager } from './lock-fields-manager';
+import { LodashReplacerUtils } from './lodash-replacer.utils';
 import {
 	AddTagOptions,
 	BaseMongoObject,
@@ -220,10 +221,10 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		options?: CollectionInsertManyOptions,
 		returnNewValue: boolean = true,
 	): Promise<U[]> {
-		if (_.isEmpty(newEntities)) return;
+		if (LodashReplacerUtils.IS_ARRAY_EMPTY(newEntities)) return;
 
-		const entitiesToInsert = newEntities.map((newEntity) => {
-			const date = new Date();
+		const date = new Date();
+		const entitiesToInsert: any = newEntities.map((newEntity) => {
 			newEntity.objectInfos = {
 				creation: {
 					date,
@@ -250,7 +251,6 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				),
 			);
 		}
-		return;
 	}
 
 	public async findWithType<T extends Partial<U | L>>(
@@ -640,7 +640,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				$set: newEntityToSave,
 			};
 			if (lockNewFields) {
-				if (!_.get(newEntityToSave, 'objectInfos.lockFields')) {
+				if (!newEntityToSave?.objectInfos?.lockFields) {
 					_.set(newEntityToSave, 'objectInfos.lockFields', []);
 				}
 				const allLockFieldsFromEntity = this.lockFieldsManager.getAllLockFieldsFromEntity(
@@ -650,10 +650,10 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 					existingEntity,
 				);
 
-				if (!_.isEmpty(allLockFieldsFromEntity)) {
+				if (!LodashReplacerUtils.IS_ARRAY_EMPTY(allLockFieldsFromEntity)) {
 					const lockFields = [];
 					for (const lockField of allLockFieldsFromEntity) {
-						if (!_.find(existingEntity.objectInfos.lockFields, { path: lockField.path })) {
+						if (!existingEntity.objectInfos.lockFields?.find((lf) => lf.path === lockField.path)) {
 							lockFields.push(lockField);
 						}
 					}
@@ -718,12 +718,16 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		userId: string,
 		options: UpdateManyAtOnceOptions<U> = {},
 	): Promise<Cursor<U>> {
-		options.upsert = _.isBoolean(options.upsert) ? options.upsert : false;
-		options.lockNewFields = _.isBoolean(options.lockNewFields) ? options.lockNewFields : true;
-		options.forceEditLockFields = _.isBoolean(options.forceEditLockFields)
+		options.upsert = LodashReplacerUtils.IS_BOOLEAN(options.upsert) ? options.upsert : false;
+		options.lockNewFields = LodashReplacerUtils.IS_BOOLEAN(options.lockNewFields)
+			? options.lockNewFields
+			: true;
+		options.forceEditLockFields = LodashReplacerUtils.IS_BOOLEAN(options.forceEditLockFields)
 			? options.forceEditLockFields
 			: false;
-		options.unsetUndefined = _.isBoolean(options.unsetUndefined) ? options.unsetUndefined : true;
+		options.unsetUndefined = LodashReplacerUtils.IS_BOOLEAN(options.unsetUndefined)
+			? options.unsetUndefined
+			: true;
 		const updateQueries = await this.buildUpdatesQueries(entities, userId, options);
 		// console.log(`-- client.ts>updateManyAtOnce updateQueries --`, JSON.stringify(updateQueries, null, 2));
 		return await this.updateMany(updateQueries, userId, options.upsert);
@@ -956,7 +960,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		for (let entity of entities) {
 			let currentValue: U;
 			if (options.query) {
-				if (_.isString(options.query)) {
+				if (LodashReplacerUtils.IS_STRING(options.query)) {
 					currentValue = await this.findOneByKey(_.get(entity, options.query), options.query);
 				} else {
 					currentValue = await this.findOne(options.query.call(null, entity));
@@ -998,7 +1002,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 						);
 
 						delete entity?.objectInfos;
-						if (!_.isEmpty(newLockFields)) {
+						if (!LodashReplacerUtils.IS_ARRAY_EMPTY(newLockFields)) {
 							lockFields.push(...newLockFields);
 						}
 						if (options.forceEditLockFields && options.unsetUndefined) {
@@ -1008,11 +1012,14 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 								entity,
 							);
 							if (
-								!(_.isEmpty(newLockFieldsCleaned) && _.isEmpty(currentValue.objectInfos.lockFields))
+								!(
+									LodashReplacerUtils.IS_ARRAY_EMPTY(newLockFieldsCleaned) &&
+									LodashReplacerUtils.IS_ARRAY_EMPTY(currentValue.objectInfos.lockFields)
+								)
 							) {
 								entity['objectInfos.lockFields'] = newLockFieldsCleaned;
 							}
-						} else if (!_.isEmpty(newLockFields)) {
+						} else if (!LodashReplacerUtils.IS_ARRAY_EMPTY(newLockFields)) {
 							entity['objectInfos.lockFields'] = lockFields;
 						}
 					}
@@ -1022,7 +1029,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				const toSetOnInsert = _.pick(entity, options.onlyInsertFieldsKey);
 
 				let setOnInsert;
-				if (!_.isEmpty(toSetOnInsert)) {
+				if (!LodashReplacerUtils.IS_OBJECT_EMPTY(toSetOnInsert)) {
 					setOnInsert = {
 						$setOnInsert: {
 							...(toSetOnInsert as object),
@@ -1034,7 +1041,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				let unsetQuery;
 				if (options.unsetUndefined) {
 					const toUnset: object = _.omit(currentValue, [..._.keys(entity), '_id', 'objectInfos']);
-					if (!_.isEmpty(toUnset)) {
+					if (!LodashReplacerUtils.IS_OBJECT_EMPTY(toUnset)) {
 						unsetQuery = {
 							$unset: {
 								..._.mapValues(toUnset, () => false),
@@ -1066,7 +1073,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				const toSetOnInsert = _.pick(entity, options.onlyInsertFieldsKey);
 
 				let setOnInsert;
-				if (!_.isEmpty(toSetOnInsert)) {
+				if (!LodashReplacerUtils.IS_OBJECT_EMPTY(toSetOnInsert)) {
 					setOnInsert = {
 						$setOnInsert: {
 							...(toSetOnInsert as object),
@@ -1084,7 +1091,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				};
 
 				if (options.query) {
-					if (_.isString(options.query)) {
+					if (LodashReplacerUtils.IS_STRING(options.query)) {
 						update.key = {
 							name: options.query,
 							value: _.get(entity, options.query),
@@ -1104,7 +1111,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		userId: string,
 		upsert?: boolean,
 	): Promise<Cursor<U>> {
-		if (_.isEmpty(newEntities)) {
+		if (LodashReplacerUtils.IS_ARRAY_EMPTY(newEntities)) {
 			return await this.getEmptyCursor<U>(this.type);
 		}
 
@@ -1177,12 +1184,12 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 					await this.findWithType(
 						{
 							_id: {
-								$in: MongoUtils.oids(_.map(newEntities, 'id')),
+								$in: MongoUtils.oids(newEntities?.map((newEntity) => newEntity.id)),
 							},
 						},
 						this.type,
 						0,
-						_.size(newEntities),
+						newEntities?.length,
 					)
 				).toArray(),
 				'_id',
@@ -1211,7 +1218,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			newValuesQuery,
 			this.type,
 			0,
-			_.size(newEntities),
+			newEntities?.length,
 		);
 
 		if (this.conf.keepHistoric || this.conf.updateOnlyOnChange) {
@@ -1248,7 +1255,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			}
 			if (shouldResetResponse) {
 				await newValues.close();
-				newValues = await this.findWithType(newValuesQuery, this.type, 0, _.size(newEntities));
+				newValues = await this.findWithType(newValuesQuery, this.type, 0, newEntities?.length);
 			} else {
 				newValues.rewind();
 			}

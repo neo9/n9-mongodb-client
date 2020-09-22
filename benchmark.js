@@ -32,7 +32,7 @@ async function runInsertBench(defaultCaseRunOptions, version) {
 			async () => {
 				const mongoClient = new MongoClient('test-2', TestEntity, TestEntity);
 				return async () => {
-					await mongoClient.insertMany(dataToInsert, 'userId');
+					await mongoClient.insertMany(dataToInsert, 'userId', undefined, false);
 				};
 			},
 			defaultCaseRunOptions,
@@ -56,9 +56,12 @@ async function runFindBench(defaultCaseRunOptions, version) {
 		test: 'a string',
 		n: 123456,
 	});
-	const mongoClient = new MongoClient('test-2', TestEntity, TestEntity);
+	const mongoClient = new MongoClient(collectionName, TestEntity, TestEntity);
 	const db = global.dbClient.db();
-	await mongoClient.insertMany(dataToInsert, 'userId');
+	await mongoClient.insertMany(dataToInsert, 'userId', { forceServerObjectId: true });
+	// Force to read all once
+	const cursor = await db.collection(collectionName).find({});
+	await cursor.toArray();
 
 	await suite(
 		suiteName,
@@ -104,13 +107,14 @@ async function start() {
 		const uri = await mongod.getConnectionString();
 		await MongoUtils.connect(uri);
 		const defaultCaseRunOptions = {
-			maxTime: 5,
+			minSamples: 100,
 		};
 		const version = require('./package.json').version;
 
 		await runInsertBench(defaultCaseRunOptions, version);
 		await global.db.dropDatabase();
 		await runFindBench(defaultCaseRunOptions, version);
+		await global.db.dropDatabase();
 	} catch (e) {
 		throw e;
 	} finally {

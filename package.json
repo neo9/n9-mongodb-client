@@ -26,7 +26,8 @@
     "build:changelog": "conventional-changelog -i CHANGELOG.md -s -p jscs -r 0",
     "post:release": "echo Successfully released $npm_package_version",
     "init": "./bin/setup-git-hooks",
-    "benchmark": "node benchmark.js"
+    "benchmark": "node benchmark.js",
+    "benchmark:debug": "node --inspect-brk benchmark.js"
   },
   "husky": {
     "hooks": {
@@ -60,7 +61,7 @@
   "devDependencies": {
     "@ava/typescript": "^1.1.1",
     "@commitlint/cli": "^9.1.1",
-    "@neo9/n9-coding-style": "^1.0.2",
+    "@neo9/n9-coding-style": "^1.1.1",
     "@release-it/conventional-changelog": "^1.1.4",
     "@types/deep-diff": "^1.0.0",
     "@types/lodash": "^4.14.157",

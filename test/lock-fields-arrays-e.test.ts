@@ -1,13 +1,13 @@
 import { N9Log } from '@neo9/n9-node-log';
 import ava, { Assertions } from 'ava';
 import * as _ from 'lodash';
+import { MongoClient } from '../src';
 import {
 	generateMongoClient,
 	init,
 	SampleEntityWithArray,
 	SampleEntityWithSimpleArray,
 } from './fixtures/utils';
-import { MongoClient } from '../src';
 
 global.log = new N9Log('tests').module('lock-fields-arrays');
 
