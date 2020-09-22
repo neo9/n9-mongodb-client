@@ -1,3 +1,22 @@
+# [0.15.0-rc.0](https://github.com/neo9/n9-mongo-client/compare/0.14.4...0.15.0-rc.0) (2020-09-22)
+
+
+### benchmark
+
+* Add benchmark on insert and read ([cbd7051](https://github.com/neo9/n9-mongo-client/commit/cbd70510db5215fcce5b26f8bc2e889d384bb933))
+
+### perf
+
+* Improve performance by reducing lodash usage ([0036cbd](https://github.com/neo9/n9-mongo-client/commit/0036cbdb168b8ea78ff31b874560106c3d848478))
+
+### update
+
+* Update last modification date on update many to same value ([382cb9f](https://github.com/neo9/n9-mongo-client/commit/382cb9f659f47df111b4d2de0318836954fc4fd8))
+
+### yarn
+
+* Fix npm registry ([228f1b0](https://github.com/neo9/n9-mongo-client/commit/228f1b050ec618e6e9cf40c51e17acf35261aff6))
+
 ## [0.14.4](https://github.com/neo9/n9-mongo-client/compare/0.14.3...0.14.4) (2020-09-15)
 
 
