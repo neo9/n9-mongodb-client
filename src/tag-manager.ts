@@ -1,5 +1,5 @@
-import * as _ from 'lodash';
 import { Collection, ObjectId, UpdateQuery } from 'mongodb';
+import { LodashReplacerUtils } from './lodash-replacer.utils';
 import { AddTagOptions, RemoveTagOptions } from './models';
 import { MongoUtils } from './mongo-utils';
 
@@ -9,7 +9,7 @@ import { MongoUtils } from './mongo-utils';
 export class TagManager {
 	private static buildAddTagUpdate(userId: string, options: AddTagOptions): object {
 		const update: UpdateQuery<any> = { $addToSet: { 'objectInfos.tags': options.tag } as any };
-		const updateLastUpdate = _.isBoolean(options.updateLastUpdate)
+		const updateLastUpdate = LodashReplacerUtils.IS_BOOLEAN(options.updateLastUpdate)
 			? options.updateLastUpdate
 			: true;
 		if (updateLastUpdate) {
@@ -27,7 +27,7 @@ export class TagManager {
 		options: RemoveTagOptions,
 	): object {
 		const update: UpdateQuery<any> = { $pull: { 'objectInfos.tags': tag } as any };
-		const updateLastUpdate = _.isBoolean(options.updateLastUpdate)
+		const updateLastUpdate = LodashReplacerUtils.IS_BOOLEAN(options.updateLastUpdate)
 			? options.updateLastUpdate
 			: true;
 		if (updateLastUpdate) {

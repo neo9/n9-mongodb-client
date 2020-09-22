@@ -1,6 +1,7 @@
 /* tslint:disable:function-name */
 import * as _ from 'lodash';
 import { ObjectID } from 'mongodb';
+import { LodashReplacerUtils } from './lodash-replacer.utils';
 
 export class LangUtils {
 	/**
@@ -19,15 +20,15 @@ export class LangUtils {
 	): T {
 		for (const key of Object.keys(obj)) {
 			const objElement = obj[key];
-			if (compactArrays && _.isArray(objElement)) {
-				obj[key] = _.filter(objElement, (elm) => !_.isNil(elm));
+			if (compactArrays && Array.isArray(objElement)) {
+				obj[key] = _.filter(objElement, (elm) => !LodashReplacerUtils.IS_NIL(elm));
 			}
 			if (
 				removeEmptyObjects &&
-				_.isObject(objElement) &&
-				!_.isArray(objElement) &&
-				_.isEmpty(objElement) &&
-				!_.isDate(objElement) // _.isEmpty return true for Date instance
+				LodashReplacerUtils.IS_OBJECT(objElement) &&
+				!Array.isArray(objElement) &&
+				LodashReplacerUtils.IS_OBJECT_EMPTY(objElement) &&
+				!LodashReplacerUtils.IS_DATE(objElement) // _.isEmpty return true for Date instance
 			) {
 				delete obj[key];
 			}
@@ -37,8 +38,8 @@ export class LangUtils {
 			}
 			// @ts-ignore
 			else if (
-				(keepNullValues && _.isUndefined(objElement)) ||
-				(!keepNullValues && _.isNil(objElement))
+				(keepNullValues && objElement === undefined) ||
+				(!keepNullValues && LodashReplacerUtils.IS_NIL(objElement))
 			) {
 				delete obj[key];
 			}
@@ -60,11 +61,10 @@ export class LangUtils {
 	 */
 	public static isClassicObject(existingEntityElement: any): boolean {
 		return (
-			_.isObject(existingEntityElement) &&
-			!_.isFunction(existingEntityElement) &&
+			LodashReplacerUtils.IS_OBJECT(existingEntityElement) &&
 			!(existingEntityElement instanceof ObjectID) &&
 			!(existingEntityElement instanceof Date) &&
-			!_.isArray(existingEntityElement)
+			!Array.isArray(existingEntityElement)
 		);
 	}
 }

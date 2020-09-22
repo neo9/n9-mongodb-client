@@ -2,6 +2,7 @@ import { N9Error } from '@neo9/n9-node-utils';
 import * as _ from 'lodash';
 import { ObjectID } from 'mongodb';
 import { LangUtils } from './lang-utils';
+import { LodashReplacerUtils } from './lodash-replacer.utils';
 import { BaseMongoObject, LockField, LockFieldConfiguration } from './models';
 
 /**
@@ -36,7 +37,7 @@ export class LockFieldsManager<U extends BaseMongoObject> {
 		} else {
 			keys = this.generateAllLockFields(newEntity, '');
 		}
-		if (_.isEmpty(keys)) return;
+		if (LodashReplacerUtils.IS_ARRAY_EMPTY(keys)) return;
 
 		const ret: LockField[] = [];
 		for (const key of keys) {
@@ -57,7 +58,7 @@ export class LockFieldsManager<U extends BaseMongoObject> {
 	 * @param lockFields list of lock fields to remove
 	 */
 	public pruneEntityWithLockFields(entity: Partial<U>, lockFields: LockField[]): Partial<U> {
-		if (!_.isEmpty(lockFields)) {
+		if (!LodashReplacerUtils.IS_ARRAY_EMPTY(lockFields)) {
 			for (const lockField of lockFields) {
 				let path = lockField.path;
 				if (path.includes('[')) {
@@ -103,9 +104,9 @@ export class LockFieldsManager<U extends BaseMongoObject> {
 				...existingEntity,
 				...newEntity,
 			};
-		} else if (_.isArray(newEntity) && _.isArray(existingEntity)) {
+		} else if (Array.isArray(newEntity) && Array.isArray(existingEntity)) {
 			if (
-				!_.isEmpty(lockFields) &&
+				!LodashReplacerUtils.IS_ARRAY_EMPTY(lockFields) &&
 				lockFields.find((lockField) => lockField.path.startsWith(basePath))
 			) {
 				// console.log(`--  key --`, basePath, lockFields.find((lockField) => lockField.path.startsWith(basePath)));
@@ -138,7 +139,7 @@ export class LockFieldsManager<U extends BaseMongoObject> {
 						const elementPath = `${basePath}[${fieldCodeName}=${newEntityElement[fieldCodeName]}]`;
 						const alreadyAddedElementIndex = mergedArray.findIndex((mergedArrayElement) => {
 							return (
-								!_.isNil(mergedArrayElement[fieldCodeName]) &&
+								!LodashReplacerUtils.IS_NIL(mergedArrayElement[fieldCodeName]) &&
 								mergedArrayElement[fieldCodeName] === newEntityElement[fieldCodeName]
 							);
 						});
@@ -157,7 +158,7 @@ export class LockFieldsManager<U extends BaseMongoObject> {
 						const elementPath = `${basePath}["${newEntityElement[fieldCodeName]}"]`;
 						const alreadyAddedElementIndex = mergedArray.findIndex(
 							(mergedArrayElement) =>
-								!_.isNil(mergedArrayElement[fieldCodeName]) &&
+								!LodashReplacerUtils.IS_NIL(mergedArrayElement[fieldCodeName]) &&
 								mergedArrayElement === newEntityElement,
 						);
 						if (alreadyAddedElementIndex !== -1) {
@@ -175,7 +176,7 @@ export class LockFieldsManager<U extends BaseMongoObject> {
 				return mergedArray;
 			}
 			return newEntity;
-		} else if (_.isUndefined(newEntity)) {
+		} else if (newEntity === undefined) {
 			ret = existingEntity;
 		} else {
 			ret = newEntity;
@@ -189,13 +190,13 @@ export class LockFieldsManager<U extends BaseMongoObject> {
 	 * @param entity
 	 */
 	public cleanObsoleteLockFields(lockFields: LockField[], entity: Partial<U>): LockField[] {
-		if (_.isEmpty(lockFields)) return lockFields;
+		if (LodashReplacerUtils.IS_ARRAY_EMPTY(lockFields)) return lockFields;
 
 		const cleanedLockFields: LockField[] = [];
 		for (const lockField of lockFields) {
 			const path = this.translatePathToLodashPath(lockField.path, entity);
 			const valueFound = _.get(entity, path);
-			if (!_.isNil(valueFound)) {
+			if (!LodashReplacerUtils.IS_NIL(valueFound)) {
 				cleanedLockFields?.push(lockField);
 			}
 		}
@@ -217,7 +218,7 @@ export class LockFieldsManager<U extends BaseMongoObject> {
 		if (match) {
 			const groups = match.groups;
 			const array: any[] = _.get(entity, groups.basePath);
-			if (!_.isEmpty(array)) {
+			if (!LodashReplacerUtils.IS_ARRAY_EMPTY(array)) {
 				const index = array.findIndex((item) => item && item[groups.code] === groups.value);
 				if (index !== -1) {
 					newPath = `${groups.basePath}[${index}]`;
@@ -234,7 +235,7 @@ export class LockFieldsManager<U extends BaseMongoObject> {
 		} else if (matchSimpleArray) {
 			const groups = matchSimpleArray.groups;
 			const array: any[] = _.get(entity, groups.basePath);
-			if (!_.isEmpty(array)) {
+			if (!LodashReplacerUtils.IS_ARRAY_EMPTY(array)) {
 				const index = array.findIndex((item) => JSON.stringify(item) === groups.value);
 				if (index !== -1) {
 					newPath = `${groups.basePath}[${index}]`;
@@ -260,16 +261,16 @@ export class LockFieldsManager<U extends BaseMongoObject> {
 		ignoreOnePath?: string,
 	): string[] {
 		const keys: string[] = [];
-		if (_.isNil(newEntity)) return keys;
+		if (LodashReplacerUtils.IS_NIL(newEntity)) return keys;
 
-		for (const key of _.keys(newEntity)) {
+		for (const key of Object.keys(newEntity)) {
 			const joinedPath = LangUtils.getJoinPaths(basePath, key);
 			// excluded fields
 			const newEntityElement = newEntity[key];
 			if (
 				key === ignoreOnePath ||
-				_.includes(this.conf.excludedFields, joinedPath) ||
-				_.isNil(newEntityElement)
+				this.conf.excludedFields?.includes(joinedPath) ||
+				LodashReplacerUtils.IS_NIL(newEntityElement)
 			) {
 				continue;
 			}
@@ -277,14 +278,15 @@ export class LockFieldsManager<U extends BaseMongoObject> {
 			if (LangUtils.isClassicObject(newEntityElement)) {
 				// generate a.b.c
 				keys.push(...this.generateAllLockFields(newEntityElement, joinedPath));
-			} else if (_.isArray(newEntityElement)) {
+			} else if (Array.isArray(newEntityElement)) {
 				// a[b=1]
-				if (_.keys(this.conf.arrayWithReferences).includes(joinedPath)) {
-					const arrayKey = this.conf.arrayWithReferences[joinedPath];
+				const arrayWithReferences = this.conf.arrayWithReferences;
+				if (arrayWithReferences && Object.keys(arrayWithReferences).includes(joinedPath)) {
+					const arrayKey = arrayWithReferences[joinedPath];
 					for (const element of newEntityElement) {
-						if (!_.isNil(element)) {
+						if (!LodashReplacerUtils.IS_NIL(element)) {
 							const arrayPath = `${joinedPath}[${arrayKey}=${element[arrayKey]}]`;
-							if (_.isNil(element[arrayKey])) {
+							if (LodashReplacerUtils.IS_NIL(element[arrayKey])) {
 								throw new N9Error('wrong-array-definition', 400, {
 									newEntity,
 									basePath,
@@ -293,13 +295,13 @@ export class LockFieldsManager<U extends BaseMongoObject> {
 								});
 							}
 							if (LangUtils.isClassicObject(element)) {
-								if (_.isEmpty(_.omit(element, arrayKey))) {
+								if (LodashReplacerUtils.IS_OBJECT_EMPTY(_.omit(element, arrayKey))) {
 									keys.push(arrayPath);
 								} else {
 									keys.push(...this.generateAllLockFields(element, arrayPath, arrayKey));
 								}
 							} else {
-								// TODO: if _.isArray(newEntity[key])
+								// TODO: if Array.isArray(newEntity[key])
 								keys.push(arrayPath);
 							}
 						}
@@ -324,10 +326,10 @@ export class LockFieldsManager<U extends BaseMongoObject> {
 		newEntity: Partial<U> | string | number,
 		basePath: string,
 	): Partial<U> | string | number {
-		if (_.isEmpty(newEntity)) return;
+		if (LodashReplacerUtils.IS_OBJECT_EMPTY(newEntity)) return;
 		const existingEntityKeys = _.keys(existingEntity);
-		if (!_.isObject(existingEntity)) {
-			if (_.isArray(existingEntity)) {
+		if (!LodashReplacerUtils.IS_OBJECT(existingEntity)) {
+			if (Array.isArray(existingEntity)) {
 				throw new N9Error('invalid-type', 400, { existingEntity, newEntity });
 			}
 			if (existingEntity !== newEntity) return newEntity;
@@ -339,16 +341,16 @@ export class LockFieldsManager<U extends BaseMongoObject> {
 			const existingEntityElement = existingEntity[key];
 			const currentPath = LangUtils.getJoinPaths(basePath, key);
 
-			if (_.includes(this.conf.excludedFields, currentPath)) {
+			if (this.conf.excludedFields?.includes(currentPath)) {
 				continue;
 			}
 
 			if (LangUtils.isClassicObject(existingEntityElement)) {
 				ret[key] = this.pickOnlyNewValues(existingEntityElement, newEntity[key], currentPath);
-				if (_.isNil(ret[key])) {
+				if (LodashReplacerUtils.IS_NIL(ret[key])) {
 					delete ret[key];
 				}
-			} else if (_.isArray(existingEntityElement)) {
+			} else if (Array.isArray(existingEntityElement)) {
 				if (newEntity[key] !== null) {
 					ret[key] = this.pickOnlyNewValuesInArray(
 						existingEntityElement,
@@ -357,7 +359,7 @@ export class LockFieldsManager<U extends BaseMongoObject> {
 					);
 				}
 
-				if (_.isEmpty(ret[key])) delete ret[key];
+				if (LodashReplacerUtils.IS_OBJECT_EMPTY(ret[key])) delete ret[key];
 			} else {
 				let existingEntityElementToCompare = existingEntityElement;
 				if (existingEntityElementToCompare instanceof ObjectID) {
@@ -371,14 +373,14 @@ export class LockFieldsManager<U extends BaseMongoObject> {
 
 				if (
 					existingEntityElementToCompare !== newEntityElementToCompare &&
-					!_.isNil(newEntity[key])
+					!LodashReplacerUtils.IS_NIL(newEntity[key])
 				) {
 					ret[key] = newEntity[key];
 				}
 			}
 		}
 
-		for (const newEntityKey of _.keys(newEntity)) {
+		for (const newEntityKey of Object.keys(newEntity)) {
 			if (!existingEntityKeys.includes(newEntityKey)) {
 				ret[newEntityKey] = newEntity[newEntityKey];
 			}
@@ -389,7 +391,7 @@ export class LockFieldsManager<U extends BaseMongoObject> {
 		// console.log(JSON.stringify(newEntity, null, 2));
 		// console.log(`-- -- -- -- -- == == == ====>`);
 		// console.log(JSON.stringify(ret));
-		if (_.isEmpty(ret)) {
+		if (LodashReplacerUtils.IS_OBJECT_EMPTY(ret)) {
 			// console.log(`-- return undefined --`);
 			return;
 		}
@@ -403,7 +405,7 @@ export class LockFieldsManager<U extends BaseMongoObject> {
 		currentPath: string,
 	): any[] {
 		const ret = [];
-		for (let i = 0; i < Math.max(_.size(existingEntityArray), _.size(newEntityElement)); i += 1) {
+		for (let i = 0; i < Math.max(existingEntityArray?.length, newEntityElement?.length); i += 1) {
 			const existingEntityElementArrayElement = existingEntityArray[i];
 			const newValue = this.pickOnlyNewValues(
 				existingEntityElementArrayElement,
@@ -412,7 +414,7 @@ export class LockFieldsManager<U extends BaseMongoObject> {
 			);
 			const codeKeyName = this.conf.arrayWithReferences[currentPath];
 
-			if (!_.isNil(newValue)) {
+			if (!LodashReplacerUtils.IS_NIL(newValue)) {
 				if (codeKeyName) {
 					newValue[codeKeyName] = _.get(newEntityElement, [i, codeKeyName]);
 				}
@@ -421,7 +423,7 @@ export class LockFieldsManager<U extends BaseMongoObject> {
 		}
 
 		// If one delete an array element, we lock the others
-		if (_.size(existingEntityArray) > _.size(newEntityElement)) {
+		if (existingEntityArray?.length > newEntityElement?.length) {
 			for (const newEntityElementArrayElement of newEntityElement) {
 				const codeKeyName = this.conf.arrayWithReferences[currentPath];
 

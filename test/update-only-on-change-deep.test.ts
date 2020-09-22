@@ -1,8 +1,8 @@
-import ava, { Assertions } from 'ava';
-import { MongoClient, BaseMongoObject } from '../src';
 import { N9Log } from '@neo9/n9-node-log';
-import { init } from './fixtures/utils';
 import { waitFor } from '@neo9/n9-node-utils';
+import ava, { Assertions } from 'ava';
+import { BaseMongoObject, MongoClient } from '../src';
+import { init } from './fixtures/utils';
 
 class SampleTypeListing extends BaseMongoObject {
 	public field1StringThatDoesNotAffectChange: string;

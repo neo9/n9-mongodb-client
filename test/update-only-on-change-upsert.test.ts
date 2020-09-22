@@ -1,8 +1,7 @@
-import ava, { Assertions } from 'ava';
-import { MongoClient, BaseMongoObject, MongoUtils } from '../src';
 import { N9Log } from '@neo9/n9-node-log';
+import ava, { Assertions } from 'ava';
+import { BaseMongoObject, MongoClient, MongoUtils } from '../src';
 import { init } from './fixtures/utils';
-import { waitFor } from '@neo9/n9-node-utils';
 
 class SampleType extends BaseMongoObject {
 	public field1Number: number;

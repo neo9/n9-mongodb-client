@@ -1,11 +1,11 @@
 import { N9Log } from '@neo9/n9-node-log';
 import ava, { Assertions } from 'ava';
 
+import * as _ from 'lodash';
+import { Db } from 'mongodb';
 import { MongoClient } from '../src';
 import { BaseMongoObject } from '../src/models';
 import { init } from './fixtures/utils';
-import * as _ from 'lodash';
-import { Db } from 'mongodb';
 
 class SampleTypeListing extends BaseMongoObject {
 	public field1String: string;

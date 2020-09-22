@@ -2,6 +2,7 @@
 import { ClassTransformOptions, plainToClass } from 'class-transformer';
 import * as _ from 'lodash';
 import * as mongodb from 'mongodb';
+import { LodashReplacerUtils } from './lodash-replacer.utils';
 import { ClassType } from './models/class-type.models';
 
 export class MongoUtils {
@@ -40,13 +41,13 @@ export class MongoUtils {
 	}
 
 	public static mapObjectIdToStringHex<T>(obj: any): any {
-		Object.keys(obj).forEach((key) => {
-			if (obj[key] && typeof obj[key] === 'object' && !(obj[key] instanceof mongodb.ObjectID)) {
-				MongoUtils.mapObjectIdToStringHex(obj[key]);
-			} else if (obj[key] instanceof mongodb.ObjectID) {
-				obj[key] = (obj[key] as mongodb.ObjectID).toHexString();
+		for (const [key, value] of Object.entries(obj)) {
+			if (value instanceof mongodb.ObjectID) {
+				obj[key] = (value as mongodb.ObjectID).toHexString();
+			} else if (value && typeof value === 'object') {
+				MongoUtils.mapObjectIdToStringHex(value);
 			}
-		});
+		}
 		return obj;
 	}
 
@@ -63,17 +64,17 @@ export class MongoUtils {
 
 	public static removeSpecialCharactersInKeys(obj: any): any {
 		if (
-			_.isNil(obj) ||
-			_.isString(obj) ||
-			_.isBoolean(obj) ||
-			_.isNumber(obj) ||
+			LodashReplacerUtils.IS_NIL(obj) ||
+			LodashReplacerUtils.IS_STRING(obj) ||
+			LodashReplacerUtils.IS_BOOLEAN(obj) ||
+			LodashReplacerUtils.IS_NUMBER(obj) ||
 			obj instanceof mongodb.ObjectID ||
-			_.isDate(obj)
+			LodashReplacerUtils.IS_DATE(obj)
 		) {
 			return obj;
 		}
 
-		if (_.isArray(obj)) {
+		if (Array.isArray(obj)) {
 			return obj.map((element) => this.removeSpecialCharactersInKeys(element));
 		}
 		for (const key of Object.keys(obj)) {
@@ -91,17 +92,17 @@ export class MongoUtils {
 
 	public static unRemoveSpecialCharactersInKeys(obj: any): any {
 		if (
-			_.isNil(obj) ||
-			_.isString(obj) ||
-			_.isBoolean(obj) ||
-			_.isNumber(obj) ||
+			LodashReplacerUtils.IS_NIL(obj) ||
+			LodashReplacerUtils.IS_STRING(obj) ||
+			LodashReplacerUtils.IS_BOOLEAN(obj) ||
+			LodashReplacerUtils.IS_NUMBER(obj) ||
 			obj instanceof mongodb.ObjectID ||
-			_.isDate(obj)
+			LodashReplacerUtils.IS_DATE(obj)
 		) {
 			return obj;
 		}
 
-		if (_.isArray(obj)) {
+		if (Array.isArray(obj)) {
 			return obj.map((element) => this.unRemoveSpecialCharactersInKeys(element));
 		}
 		for (const key of Object.keys(obj)) {
