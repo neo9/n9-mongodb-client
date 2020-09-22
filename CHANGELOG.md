@@ -1,3 +1,10 @@
+# [0.15.0](https://github.com/neo9/n9-mongo-client/compare/0.15.0-rc.0...0.15.0) (2020-09-22)
+
+
+### perf
+
+* Fix new Date location ([66df1be](https://github.com/neo9/n9-mongo-client/commit/66df1be7d57a12ef9df7bb34f4aab9c4729becd4))
+
 # [0.15.0-rc.0](https://github.com/neo9/n9-mongo-client/compare/0.14.4...0.15.0-rc.0) (2020-09-22)
 
 
