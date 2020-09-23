@@ -90,12 +90,7 @@ ava('[AGG] Insert some and aggregate with output', async (t: Assertions) => {
 		.sort({
 			field1String: 1,
 		})
-		.concatAggregationBuilder(
-			mongoClientOut
-				.newAggregationBuilder()
-				.skip(1)
-				.limit(2),
-		)
+		.concatAggregationBuilder(mongoClientOut.newAggregationBuilder().skip(1).limit(2))
 		.out()
 		.build();
 
