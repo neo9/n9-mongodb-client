@@ -1,3 +1,10 @@
+## [0.15.1](https://github.com/neo9/n9-mongo-client/compare/0.15.0...0.15.1) (2020-09-23)
+
+
+### yarn
+
+* Upgrade all dependencies except class-transformer ([f91c2f1](https://github.com/neo9/n9-mongo-client/commit/f91c2f16df78c052e22a5193c0dd8b4818173f99))
+
 # [0.15.0](https://github.com/neo9/n9-mongo-client/compare/0.15.0-rc.0...0.15.0) (2020-09-22)
 
 
