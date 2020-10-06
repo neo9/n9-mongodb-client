@@ -1,3 +1,18 @@
+## [0.15.2](https://github.com/neo9/n9-mongo-client/compare/0.15.1...0.15.2) (2020-10-06)
+
+
+### format
+
+* Fix formatting ([6898893](https://github.com/neo9/n9-mongo-client/commit/689889370c289d1ab4456e9297be93e5f3395a63))
+
+### security
+
+* Prevent user from setting the _id of an entity ([29c887f](https://github.com/neo9/n9-mongo-client/commit/29c887f66e612d68f3628875fc85049b742d40e8))
+
+### types
+
+* Fix typing and add some tests ([e532a09](https://github.com/neo9/n9-mongo-client/commit/e532a092e3a044d8565d1bae8fbbc96108f3fa14))
+
 ## [0.15.1](https://github.com/neo9/n9-mongo-client/compare/0.15.0...0.15.1) (2020-09-23)
 
 
