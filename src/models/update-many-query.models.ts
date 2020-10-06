@@ -1,12 +1,12 @@
-import { FilterQuery } from 'mongodb';
+import { FilterQuery, UpdateQuery } from 'mongodb';
 import { StringMap } from './';
 
-export class UpdateManyQuery {
+export class UpdateManyQuery<T> {
 	public id?: string;
 	public key?: {
 		name: string;
 		value: string | number | boolean;
 	};
-	public query?: StringMap<any>;
-	public updateQuery: FilterQuery<any>;
+	public query?: FilterQuery<T>;
+	public updateQuery: UpdateQuery<T>;
 }

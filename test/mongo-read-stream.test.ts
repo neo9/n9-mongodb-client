@@ -46,6 +46,29 @@ ava('[MONGO-READ-STREAM] Read page by page', async (t: Assertions) => {
 
 	t.is(length, collectionSize, 'nb elements in collection');
 	t.is(pages, Math.ceil(collectionSize / pageSize), 'nb pages in collection');
+
+	length = 0;
+	pages = 0;
+	const stream2 = await mongoClient.streamWithType({}, TestItem, pageSize);
+	await stream2.forEachPage(async (page: TestItem[]) => {
+		length += page.length;
+
+		if (pages > 0) {
+			t.truthy(stream2.query.$and, '$and added to query');
+			t.is(
+				(stream2.query.$and as object[]).filter((condition) =>
+					Object.keys(condition).includes('_id'),
+				).length,
+				1,
+				'$and has only 1 _id condition',
+			);
+		}
+
+		pages += 1;
+	});
+
+	t.is(length, collectionSize, 'nb elements in collection');
+	t.is(pages, Math.ceil(collectionSize / pageSize), 'nb pages in collection');
 	await mongoClient.dropCollection();
 });
 
@@ -87,6 +110,18 @@ ava('[MONGO-READ-STREAM] Read item by item', async (t: Assertions) => {
 	});
 
 	t.is(length, collectionSize, 'nb elements in collection');
+
+	length = 0;
+	await mongoClient.streamWithType({}, TestItem, pageSize).forEachAsync(async (item: TestItem) => {
+		if (item) {
+			length += 1;
+			await waitFor(2); // add some time to simulate long process
+		} else {
+			t.fail('missing item');
+		}
+	});
+	t.is(length, collectionSize, 'nb elements in collection');
+
 	await mongoClient.dropCollection();
 });
 

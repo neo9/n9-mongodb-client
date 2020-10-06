@@ -446,7 +446,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		const formattedUserId = (ObjectId.isValid(userId) ? MongoUtils.oid(userId) : userId) as string;
 
 		updateQuery.$set = {
-			...(updateQuery.$set as object),
+			...updateQuery.$set,
 			'objectInfos.lastUpdate': {
 				date: now,
 				userId: formattedUserId,
@@ -461,7 +461,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 
 		if (upsert) {
 			updateQuery.$setOnInsert = {
-				...(updateQuery.$setOnInsert as object),
+				...updateQuery.$setOnInsert,
 				'objectInfos.creation': {
 					date: now,
 					userId: formattedUserId,
@@ -669,7 +669,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 						'objectInfos.lockFields': {
 							$each: lockFields,
 						},
-					};
+					} as any;
 				}
 			}
 			delete newEntityToSave.objectInfos;
@@ -767,7 +767,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		const now = new Date();
 
 		updateQuery.$set = {
-			...(updateQuery.$set as object),
+			...updateQuery.$set,
 			'objectInfos.lastUpdate': {
 				date: now,
 				userId: ObjectId.isValid(userId) ? MongoUtils.oid(userId) : userId,
@@ -962,8 +962,8 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		entities: MatchKeysAndValues<U>[],
 		userId: string,
 		options: UpdateManyAtOnceOptions<U>,
-	): Promise<UpdateManyQuery[]> {
-		const updates: UpdateManyQuery[] = [];
+	): Promise<UpdateManyQuery<U>[]> {
+		const updates: UpdateManyQuery<U>[] = [];
 		let now;
 		if (options.lockNewFields) now = new Date();
 
@@ -1027,10 +1027,10 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 									LodashReplacerUtils.IS_ARRAY_EMPTY(currentValue.objectInfos.lockFields)
 								)
 							) {
-								entity['objectInfos.lockFields'] = newLockFieldsCleaned as any;
+								(entity as any)['objectInfos.lockFields'] = newLockFieldsCleaned;
 							}
 						} else if (!LodashReplacerUtils.IS_ARRAY_EMPTY(newLockFields)) {
-							entity['objectInfos.lockFields'] = lockFields as any;
+							(entity as any)['objectInfos.lockFields'] = lockFields;
 						}
 					}
 				}
@@ -1042,7 +1042,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				if (!LodashReplacerUtils.IS_OBJECT_EMPTY(toSetOnInsert)) {
 					setOnInsert = {
 						$setOnInsert: {
-							...(toSetOnInsert as object),
+							...toSetOnInsert,
 						},
 					};
 				}
@@ -1062,7 +1062,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 
 				const update = {
 					$set: {
-						...(toSet as object),
+						...toSet,
 					},
 					...unsetQuery,
 					...setOnInsert,
@@ -1086,15 +1086,15 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				if (!LodashReplacerUtils.IS_OBJECT_EMPTY(toSetOnInsert)) {
 					setOnInsert = {
 						$setOnInsert: {
-							...(toSetOnInsert as object),
+							...toSetOnInsert,
 						},
 					};
 				}
 
-				const update: UpdateManyQuery = {
+				const update: UpdateManyQuery<U> = {
 					updateQuery: {
 						$set: {
-							...(toSet as object),
+							...toSet,
 						},
 						...setOnInsert,
 					},
@@ -1117,7 +1117,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 	}
 
 	private async updateMany(
-		newEntities: UpdateManyQuery[],
+		newEntities: UpdateManyQuery<U>[],
 		userId: string,
 		upsert?: boolean,
 	): Promise<Cursor<U>> {
@@ -1135,7 +1135,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 
 			const formattedUserId = ObjectId.isValid(userId) ? MongoUtils.oid(userId) : userId;
 			updateQuery.$set = {
-				...(updateQuery.$set as object),
+				...updateQuery.$set,
 				'objectInfos.lastUpdate': {
 					date: now,
 					userId: formattedUserId,
@@ -1152,12 +1152,12 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				this.logger.warn(
 					`Trying to set _id field to ${updateQuery.$set._id} (${updateQuery.$set._id.constructor.name})`,
 				);
-				delete updateQuery.$set._id;
+				delete (updateQuery.$set as any)._id;
 			}
 
 			if (upsert) {
 				updateQuery.$setOnInsert = {
-					...(updateQuery.$setOnInsert as object),
+					...updateQuery.$setOnInsert,
 					'objectInfos.creation': {
 						userId,
 						date: now,
