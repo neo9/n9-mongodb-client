@@ -1,3 +1,4 @@
+import { FilterQuery } from "mongodb";
 import { StringMap } from './';
 
 export class UpdateManyQuery {
@@ -7,5 +8,5 @@ export class UpdateManyQuery {
 		value: string | number | boolean;
 	};
 	public query?: StringMap<any>;
-	public updateQuery: StringMap<any>;
+	public updateQuery: FilterQuery<any>;
 }

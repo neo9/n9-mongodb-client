@@ -1,6 +1,7 @@
 import { N9Log } from '@neo9/n9-node-log';
 import ava, { Assertions } from 'ava';
 
+import { Db } from 'mongodb';
 import { MongoClient } from '../src';
 import { BaseMongoObject } from '../src/models';
 import { init } from './fixtures/utils';
@@ -34,7 +35,8 @@ global.log = new N9Log('tests');
 init();
 
 ava('[CRUD] Insert one and find it', async (t: Assertions) => {
-	const mongoClient = new MongoClient(`test-${Date.now()}`, SampleType, SampleTypeListing);
+	const collection = (global.db as Db).collection(`test-${Date.now()}`);
+	const mongoClient = new MongoClient(collection, SampleType, SampleTypeListing);
 	const size = await mongoClient.count();
 
 	t.true(size === 0, 'collection should be empty');
@@ -42,6 +44,7 @@ ava('[CRUD] Insert one and find it', async (t: Assertions) => {
 	const intValue = 41;
 	await mongoClient.insertOne(
 		{
+			_id: '--', // A wrong ID
 			field1String: 'string1',
 			field2Number: intValue,
 		},
@@ -53,12 +56,14 @@ ava('[CRUD] Insert one and find it', async (t: Assertions) => {
 	const foundObjectById = await mongoClient.findOneById(foundObject._id);
 	const foundObjectByKey = await mongoClient.findOneByKey('string1', 'field1String');
 	const existsById = await mongoClient.existsById(foundObject._id);
+	const foundWithNativeClient = await collection.findOne<SampleType>({ field1String: 'string1' });
 
 	t.truthy(foundObject, 'found by query');
 	t.is(sizeWithElementIn, 1, 'nb element in collection');
 	t.is(foundObject.field2Number, intValue, 'found right element');
 	t.is(typeof foundObject._id, 'string', 'ID is a string and not ObjectID');
-	t.is(foundObject._id.constructor, String, 'ID is a string and not ObjectID');
+	t.is(foundObject._id.constructor.name, 'String', 'ID is a string and not ObjectID');
+	t.is(foundWithNativeClient._id.constructor.name, 'ObjectID', 'ID is an ObjectID on MongoDB');
 	t.truthy(foundObjectById, 'found by ID');
 	t.truthy(foundObjectByKey, 'found by key');
 	t.true(existsById, 'exists by ID');

@@ -14,6 +14,7 @@ import {
 	FilterQuery,
 	FindAndModifyWriteOpResultObject,
 	IndexOptions,
+	MatchKeysAndValues,
 	MongoClient as MongodbClient,
 	ObjectId,
 	UpdateQuery,
@@ -180,6 +181,12 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				userId,
 			},
 		};
+		if (newEntity._id) {
+			this.logger.warn(
+				`Trying to set _id field to ${newEntity._id} (${newEntity._id.constructor.name})`,
+			);
+			delete newEntity._id;
+		}
 		let newEntityWithoutForbiddenCharacters = MongoUtils.removeSpecialCharactersInKeys(newEntity);
 
 		if (this.conf.lockFields) {
@@ -636,7 +643,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				// TODO : add function in parameters or in mongoClient conf to allow validation here
 			}
 
-			const updateQuery: StringMap<any> = {
+			const updateQuery: UpdateQuery<U> = {
 				$set: newEntityToSave,
 			};
 			if (lockNewFields) {
@@ -952,7 +959,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 	}
 
 	private async buildUpdatesQueries(
-		entities: Partial<U>[],
+		entities: MatchKeysAndValues<U>[],
 		userId: string,
 		options: UpdateManyAtOnceOptions<U>,
 	): Promise<UpdateManyQuery[]> {
@@ -1004,7 +1011,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 							currentValue,
 						);
 
-						delete entity?.objectInfos;
+						delete (entity as any)?.objectInfos;
 						if (!LodashReplacerUtils.IS_ARRAY_EMPTY(newLockFields)) {
 							lockFields.push(...newLockFields);
 						}
@@ -1020,10 +1027,10 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 									LodashReplacerUtils.IS_ARRAY_EMPTY(currentValue.objectInfos.lockFields)
 								)
 							) {
-								entity['objectInfos.lockFields'] = newLockFieldsCleaned;
+								entity['objectInfos.lockFields'] = newLockFieldsCleaned as any;
 							}
 						} else if (!LodashReplacerUtils.IS_ARRAY_EMPTY(newLockFields)) {
-							entity['objectInfos.lockFields'] = lockFields;
+							entity['objectInfos.lockFields'] = lockFields as any;
 						}
 					}
 				}
@@ -1141,6 +1148,12 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 					userId: formattedUserId,
 				};
 			}
+			if (updateQuery.$set._id) {
+				this.logger.warn(
+					`Trying to set _id field to ${updateQuery.$set._id} (${updateQuery.$set._id.constructor.name})`,
+				);
+				delete updateQuery.$set._id;
+			}
 
 			if (upsert) {
 				updateQuery.$setOnInsert = {
@@ -1158,10 +1171,10 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				}
 			}
 
-			let filter: FilterQuery<any> = {};
+			let filter: FilterQuery<any | BaseMongoObject> = {};
 
 			if (newEnt.id) {
-				filter._id = MongoUtils.oid(newEnt.id);
+				filter._id = MongoUtils.oid(newEnt.id) as any;
 			} else if (newEnt.key) {
 				filter[newEnt.key.name] = newEnt.key.value;
 			} else if (newEnt.query) {
@@ -1187,12 +1200,12 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 					await this.findWithType(
 						{
 							_id: {
-								$in: MongoUtils.oids(newEntities?.map((newEntity) => newEntity.id)),
+								$in: MongoUtils.oids(newEntities.map((newEntity) => newEntity.id)),
 							},
 						},
 						this.type,
 						0,
-						newEntities?.length,
+						newEntities.length,
 					)
 				).toArray(),
 				'_id',
@@ -1201,7 +1214,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 
 		// for (const bulkOperation of bulkOperations) {
 		// 	console.log(`--  bulkOperation --`);
-		// 	console.log(JSON.stringify(bulkOperation, null, 2));
+		// 	console.log(JSON.stringify(bulkOperation));
 		// 	console.log(`--                --`);
 		// }
 
@@ -1210,9 +1223,9 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			_id: {
 				$in: MongoUtils.oids(
 					_.concat(
-						_.map(newEntities, 'id'),
-						_.values(bulkResult.insertedIds),
-						_.values(bulkResult.upsertedIds),
+						newEntities.map((newEntity) => newEntity.id),
+						Object.values(bulkResult.insertedIds ?? {}),
+						Object.values(bulkResult.upsertedIds ?? {}),
 					),
 				),
 			},

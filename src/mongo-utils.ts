@@ -33,7 +33,9 @@ export class MongoUtils {
 		return id ? new mongodb.ObjectID(id) : (id as null);
 	}
 
-	public static oids(ids: string[] | mongodb.ObjectID[]): mongodb.ObjectID[] | undefined {
+	public static oids(
+		ids: string[] | mongodb.ObjectID[] | (string | mongodb.ObjectID)[],
+	): mongodb.ObjectID[] | undefined {
 		if (ids) {
 			return (ids as any[]).map((id) => MongoUtils.oid(id));
 		}
