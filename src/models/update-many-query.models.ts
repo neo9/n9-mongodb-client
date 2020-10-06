@@ -1,4 +1,4 @@
-import { FilterQuery } from "mongodb";
+import { FilterQuery } from 'mongodb';
 import { StringMap } from './';
 
 export class UpdateManyQuery {
