@@ -1,3 +1,10 @@
+## [0.15.3](https://github.com/neo9/n9-mongo-client/compare/0.15.2...0.15.3) (2020-10-07)
+
+
+### security
+
+* Prevent user from setting the _id of an entity ([26b8bb2](https://github.com/neo9/n9-mongo-client/commit/26b8bb2327b42194a38ec00d4d6b7bc2ad78c764))
+
 ## [0.15.2](https://github.com/neo9/n9-mongo-client/compare/0.15.1...0.15.2) (2020-10-06)
 
 
