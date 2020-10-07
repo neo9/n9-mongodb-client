@@ -246,6 +246,12 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 					userId,
 				},
 			};
+			if (newEntity._id) {
+				this.logger.warn(
+					`Trying to set _id field to ${newEntity._id} (${newEntity._id.constructor.name})`,
+				);
+				delete newEntity._id;
+			}
 			return MongoUtils.removeSpecialCharactersInKeys(newEntity);
 		});
 
@@ -467,6 +473,13 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 					userId: formattedUserId,
 				},
 			} as any;
+
+			if (updateQuery.$set._id) {
+				this.logger.warn(
+					`Trying to set _id field to ${updateQuery.$set._id} (${updateQuery.$set._id.constructor.name})`,
+				);
+				delete (updateQuery.$set as any)._id;
+			}
 
 			if (this.conf.updateOnlyOnChange) {
 				(updateQuery.$setOnInsert as any)['objectInfos.lastModification'] = {

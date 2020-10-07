@@ -38,7 +38,7 @@ ava('[DOTS-KEYS] Insert one with dots and find it', async (t: Assertions) => {
 		'key is converted back to commons characters on read',
 	);
 	t.is(typeof foundObject._id, 'string', 'ID is a string and not ObjectID');
-	t.is(foundObject._id.constructor, String, 'ID is a string and not ObjectID');
+	t.is(foundObject._id.constructor.name, 'String', 'ID is a string and not ObjectID');
 
 	const foundObjectById = await mongoClient.findOneById(foundObject._id);
 	t.truthy(foundObjectById, 'found by ID');
@@ -117,7 +117,7 @@ ava('[DOTS-KEYS] Insert many with dots and find it', async (t: Assertions) => {
 	const newEntity: SampleType = {
 		[aKeyWithDots]: intValue,
 	};
-	await mongoClient.insertMany([newEntity, newEntity], 'userId1');
+	await mongoClient.insertMany([newEntity, newEntity], 'userId1', undefined, false);
 
 	const sizeWithElementIn = await mongoClient.count();
 	t.is(sizeWithElementIn, 2, 'nb element in collection');
