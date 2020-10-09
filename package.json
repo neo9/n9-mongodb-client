@@ -51,7 +51,7 @@
   },
   "dependencies": {
     "@neo9/n9-node-log": "^3.0.0",
-    "@neo9/n9-node-utils": "^2.0.0",
+    "@neo9/n9-node-utils": "^2.0.1",
     "class-transformer": "^0.2.0",
     "deep-diff": "^1.0.2",
     "lodash": "^4.17.20",
