@@ -432,10 +432,10 @@
     "@types/winston" "^2.3.6"
     winston "^2.4.5"
 
-"@neo9/n9-node-utils@^1.10.0":
-  version "1.10.0"
-  resolved "https://registry.npmjs.org/@neo9/n9-node-utils/-/n9-node-utils-1.10.0.tgz#e61aa194ef49ca53d1a6c63a54c0a2195566379f"
-  integrity sha512-uTdW9I+DMtCzZGtmlr2prShOyD5lfnCIjKeOsvmI/fYNqrgpxhrj4Cqf5+0bSxKQOrV0mPguB9n+usYOjKDeyw==
+"@neo9/n9-node-utils@^2.0.0":
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/@neo9/n9-node-utils/-/n9-node-utils-2.0.0.tgz#86d27e478f40cb6d1560d5e2a56201b90e78ad61"
+  integrity sha512-KJVHXFFUJ1dNus+nCMQWdvq5ENIY76xWb3lU+716bvWD+pwYGgLy9wMrTmgDraeQCgh/k5QiG90+OFtjJ++7cA==
 
 "@nodelib/fs.scandir@2.1.3":
   version "2.1.3"
