@@ -1,3 +1,10 @@
+## [0.16.1](https://github.com/neo9/n9-mongo-client/compare/0.16.0...0.16.1) (2020-10-09)
+
+
+### yarn
+
+* Upgrade n9-node-utils to V 2.0.1 ([b09a19f](https://github.com/neo9/n9-mongo-client/commit/b09a19f6f9875e4665148cf1519e674225c5da60))
+
 # [0.16.0](https://github.com/neo9/n9-mongo-client/compare/0.15.3...0.16.0) (2020-10-09)
 
 
