@@ -1,6 +1,7 @@
 /* tslint:disable:function-name */
+import { N9Error } from '@neo9/n9-node-utils';
 import * as _ from 'lodash';
-import { ObjectID } from 'mongodb';
+import { MongoError, ObjectID } from 'mongodb';
 import { LodashReplacerUtils } from './lodash-replacer.utils';
 
 export class LangUtils {
@@ -21,7 +22,7 @@ export class LangUtils {
 		for (const key of Object.keys(obj)) {
 			const objElement = obj[key];
 			if (compactArrays && Array.isArray(objElement)) {
-				obj[key] = _.filter(objElement, (elm) => !LodashReplacerUtils.IS_NIL(elm));
+				obj[key] = _.filter(objElement, (elm) => !LodashReplacerUtils.IS_NIL(elm)) as any;
 			}
 			if (
 				removeEmptyObjects &&
@@ -66,5 +67,13 @@ export class LangUtils {
 			!(existingEntityElement instanceof Date) &&
 			!Array.isArray(existingEntityElement)
 		);
+	}
+
+	public static throwN9ErrorFromError(e: Error | N9Error | MongoError, context?: object): void {
+		if (e instanceof N9Error) throw e;
+		throw new N9Error(e.message, (e as MongoError).code || (e as N9Error).status || 500, {
+			srcError: e,
+			...context,
+		});
 	}
 }

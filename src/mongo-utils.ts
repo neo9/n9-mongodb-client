@@ -1,4 +1,5 @@
 /* tslint:disable:function-name */
+import { N9Error } from '@neo9/n9-node-utils';
 import { ClassTransformOptions, plainToClass } from 'class-transformer';
 import * as _ from 'lodash';
 import * as mongodb from 'mongodb';
@@ -6,6 +7,8 @@ import { LodashReplacerUtils } from './lodash-replacer.utils';
 import { ClassType } from './models/class-type.models';
 
 export class MongoUtils {
+	private static readonly MONGO_ID_REGEXP: RegExp = /^[0-9a-f]{24}$/;
+
 	public static async connect(
 		url: string,
 		options: mongodb.MongoClientOptions = { useNewUrlParser: true },
@@ -30,7 +33,16 @@ export class MongoUtils {
 	}
 
 	public static oid(id: string | mongodb.ObjectID): mongodb.ObjectID | null {
-		return id ? new mongodb.ObjectID(id) : (id as null);
+		if (!id) return id as null;
+		try {
+			return new mongodb.ObjectID(id);
+		} catch (e) {
+			if (typeof id === 'string' && !this.MONGO_ID_REGEXP.test(id)) {
+				throw new N9Error('invalid-mongo-id', 400, { id });
+			} else {
+				throw e;
+			}
+		}
 	}
 
 	public static oids(

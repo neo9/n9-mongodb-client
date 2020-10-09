@@ -13,6 +13,7 @@ import {
 	Db,
 	FilterQuery,
 	FindAndModifyWriteOpResultObject,
+	FindOneOptions,
 	IndexOptions,
 	MatchKeysAndValues,
 	MongoClient as MongodbClient,
@@ -165,73 +166,9 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		lockFields: boolean = true,
 		returnNewValue: boolean = true,
 	): Promise<U> {
-		if (!newEntity) return newEntity;
-		const date = new Date();
-		newEntity.objectInfos = {
-			creation: {
-				date,
-				userId,
-			},
-			lastUpdate: {
-				date,
-				userId,
-			},
-			lastModification: {
-				date,
-				userId,
-			},
-		};
-		if (newEntity._id) {
-			this.logger.warn(
-				`Trying to set _id field to ${newEntity._id} (${newEntity._id.constructor.name})`,
-			);
-			delete newEntity._id;
-		}
-		let newEntityWithoutForbiddenCharacters = MongoUtils.removeSpecialCharactersInKeys(newEntity);
-
-		if (this.conf.lockFields) {
-			if (!newEntityWithoutForbiddenCharacters.objectInfos.lockFields) {
-				newEntityWithoutForbiddenCharacters.objectInfos.lockFields = [];
-			}
-			if (lockFields) {
-				newEntityWithoutForbiddenCharacters.objectInfos.lockFields = this.lockFieldsManager.getAllLockFieldsFromEntity(
-					newEntityWithoutForbiddenCharacters,
-					date,
-					userId,
-				);
-			}
-		}
-
-		newEntityWithoutForbiddenCharacters = LangUtils.removeEmptyDeep(
-			newEntityWithoutForbiddenCharacters,
-			undefined,
-			undefined,
-			!!this.conf.lockFields,
-		);
-		await this.collection.insertOne(newEntityWithoutForbiddenCharacters);
-		if (returnNewValue) {
-			return MongoUtils.mapObjectToClass(
-				this.type,
-				MongoUtils.unRemoveSpecialCharactersInKeys(newEntityWithoutForbiddenCharacters),
-			);
-		}
-		return;
-	}
-
-	public async count(query: object = {}): Promise<number> {
-		return await this.collection.countDocuments(query);
-	}
-
-	public async insertMany(
-		newEntities: U[],
-		userId: string,
-		options?: CollectionInsertManyOptions,
-		returnNewValue: boolean = true,
-	): Promise<U[]> {
-		if (LodashReplacerUtils.IS_ARRAY_EMPTY(newEntities)) return;
-
-		const date = new Date();
-		const entitiesToInsert: any = newEntities.map((newEntity) => {
+		try {
+			if (!newEntity) return newEntity;
+			const date = new Date();
 			newEntity.objectInfos = {
 				creation: {
 					date,
@@ -252,17 +189,93 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				);
 				delete newEntity._id;
 			}
-			return MongoUtils.removeSpecialCharactersInKeys(newEntity);
-		});
+			let newEntityWithoutForbiddenCharacters = MongoUtils.removeSpecialCharactersInKeys(newEntity);
 
-		const insertResult = await this.collection.insertMany(entitiesToInsert, options);
-		if (returnNewValue) {
-			return (insertResult.ops || []).map((newEntity) =>
-				MongoUtils.mapObjectToClass(
-					this.type,
-					MongoUtils.unRemoveSpecialCharactersInKeys(newEntity),
-				),
+			if (this.conf.lockFields) {
+				if (!newEntityWithoutForbiddenCharacters.objectInfos.lockFields) {
+					newEntityWithoutForbiddenCharacters.objectInfos.lockFields = [];
+				}
+				if (lockFields) {
+					newEntityWithoutForbiddenCharacters.objectInfos.lockFields = this.lockFieldsManager.getAllLockFieldsFromEntity(
+						newEntityWithoutForbiddenCharacters,
+						date,
+						userId,
+					);
+				}
+			}
+
+			newEntityWithoutForbiddenCharacters = LangUtils.removeEmptyDeep(
+				newEntityWithoutForbiddenCharacters,
+				undefined,
+				undefined,
+				!!this.conf.lockFields,
 			);
+			await this.collection.insertOne(newEntityWithoutForbiddenCharacters);
+			if (returnNewValue) {
+				return MongoUtils.mapObjectToClass(
+					this.type,
+					MongoUtils.unRemoveSpecialCharactersInKeys(newEntityWithoutForbiddenCharacters),
+				);
+			}
+			return;
+		} catch (e) {
+			LangUtils.throwN9ErrorFromError(e, { newEntity, userId, lockFields, returnNewValue });
+		}
+	}
+
+	public async count(query: object = {}): Promise<number> {
+		try {
+			return await this.collection.countDocuments(query);
+		} catch (e) {
+			LangUtils.throwN9ErrorFromError(e, { query });
+		}
+	}
+
+	public async insertMany(
+		newEntities: U[],
+		userId: string,
+		options?: CollectionInsertManyOptions,
+		returnNewValue: boolean = true,
+	): Promise<U[]> {
+		try {
+			if (LodashReplacerUtils.IS_ARRAY_EMPTY(newEntities)) return;
+
+			const date = new Date();
+			const entitiesToInsert: any = newEntities.map((newEntity) => {
+				newEntity.objectInfos = {
+					creation: {
+						date,
+						userId,
+					},
+					lastUpdate: {
+						date,
+						userId,
+					},
+					lastModification: {
+						date,
+						userId,
+					},
+				};
+				if (newEntity._id) {
+					this.logger.warn(
+						`Trying to set _id field to ${newEntity._id} (${newEntity._id.constructor.name})`,
+					);
+					delete newEntity._id;
+				}
+				return MongoUtils.removeSpecialCharactersInKeys(newEntity);
+			});
+
+			const insertResult = await this.collection.insertMany(entitiesToInsert, options);
+			if (returnNewValue) {
+				return (insertResult.ops || []).map((newEntity) =>
+					MongoUtils.mapObjectToClass(
+						this.type,
+						MongoUtils.unRemoveSpecialCharactersInKeys(newEntity),
+					),
+				);
+			}
+		} catch (e) {
+			LangUtils.throwN9ErrorFromError(e, { count: newEntities?.length });
 		}
 	}
 
@@ -329,18 +342,26 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		keyName: string = 'code',
 		projection?: object,
 	): Promise<U> {
-		const query: StringMap<any> = {
-			[MongoUtils.escapeSpecialCharacters(keyName)]: keyValue,
-		};
+		try {
+			const query: StringMap<any> = {
+				[MongoUtils.escapeSpecialCharacters(keyName)]: keyValue,
+			};
 
-		return await this.findOne(query, projection);
+			return await this.findOne(query, projection);
+		} catch (e) {
+			LangUtils.throwN9ErrorFromError(e, { keyValue, keyName, projection });
+		}
 	}
 
 	public async findOne(query: object, projection?: object): Promise<U> {
-		const internalEntity = await this.collection.findOne(query, { projection });
-		if (!internalEntity) return null;
-		const entity = MongoUtils.unRemoveSpecialCharactersInKeys(internalEntity);
-		return MongoUtils.mapObjectToClass(this.type, entity);
+		try {
+			const internalEntity = await this.collection.findOne(query, { projection });
+			if (!internalEntity) return null;
+			const entity = MongoUtils.unRemoveSpecialCharactersInKeys(internalEntity);
+			return MongoUtils.mapObjectToClass(this.type, entity);
+		} catch (e) {
+			LangUtils.throwN9ErrorFromError(e, { query, projection });
+		}
 	}
 
 	public async existsById(id: string): Promise<boolean> {
@@ -348,16 +369,24 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 	}
 
 	public async existsByKey(keyValue: any, keyName: string = 'code'): Promise<boolean> {
-		const query: StringMap<any> = {
-			[MongoUtils.escapeSpecialCharacters(keyName)]: keyValue,
-		};
+		try {
+			const query: StringMap<any> = {
+				[MongoUtils.escapeSpecialCharacters(keyName)]: keyValue,
+			};
 
-		return await this.exists(query);
+			return await this.exists(query);
+		} catch (e) {
+			LangUtils.throwN9ErrorFromError(e, { keyValue, keyName });
+		}
 	}
 
 	public async exists(query: object): Promise<boolean> {
-		const found = await this.collection.findOne<U>(query, { projection: { _id: 1 } });
-		return !!found;
+		try {
+			const found = await this.collection.findOne<U>(query, { projection: { _id: 1 } });
+			return !!found;
+		} catch (e) {
+			LangUtils.throwN9ErrorFromError(e, { query });
+		}
 	}
 
 	public async findOneAndUpdateById(
@@ -368,18 +397,29 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		returnNewValue: boolean = true,
 		arrayFilters: FilterQuery<U>[] = [],
 	): Promise<U> {
-		const query: FilterQuery<any> = {
-			_id: MongoUtils.oid(id),
-		};
-		return await this.findOneAndUpdate(
-			query,
-			updateQuery,
-			userId,
-			internalCall,
-			false,
-			returnNewValue,
-			arrayFilters,
-		);
+		try {
+			const query: FilterQuery<any> = {
+				_id: MongoUtils.oid(id),
+			};
+			return await this.findOneAndUpdate(
+				query,
+				updateQuery,
+				userId,
+				internalCall,
+				false,
+				returnNewValue,
+				arrayFilters,
+			);
+		} catch (e) {
+			LangUtils.throwN9ErrorFromError(e, {
+				id,
+				updateQuery,
+				userId,
+				internalCall,
+				returnNewValue,
+				arrayFilters,
+			});
+		}
 	}
 
 	public async findOneAndUpdateByKey(
@@ -391,18 +431,30 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		returnNewValue: boolean = true,
 		arrayFilters: FilterQuery<U>[] = [],
 	): Promise<U> {
-		const query: FilterQuery<any> = {
-			[MongoUtils.escapeSpecialCharacters(keyName)]: keyValue,
-		};
-		return await this.findOneAndUpdate(
-			query,
-			updateQuery,
-			userId,
-			internalCall,
-			false,
-			returnNewValue,
-			arrayFilters,
-		);
+		try {
+			const query: FilterQuery<any> = {
+				[MongoUtils.escapeSpecialCharacters(keyName)]: keyValue,
+			};
+			return await this.findOneAndUpdate(
+				query,
+				updateQuery,
+				userId,
+				internalCall,
+				false,
+				returnNewValue,
+				arrayFilters,
+			);
+		} catch (e) {
+			LangUtils.throwN9ErrorFromError(e, {
+				keyValue,
+				updateQuery,
+				userId,
+				keyName,
+				internalCall,
+				returnNewValue,
+				arrayFilters,
+			});
+		}
 	}
 
 	/**
@@ -440,105 +492,119 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		returnNewValue: boolean = true,
 		arrayFilters: FilterQuery<U>[] = [],
 	): Promise<U> {
-		if (!internalCall) {
-			this.ifHasLockFieldsThrow();
-		}
+		try {
+			if (!internalCall) {
+				this.ifHasLockFieldsThrow();
+			}
 
-		if (!updateQuery.$set) {
-			updateQuery.$set = {};
-		}
+			if (!updateQuery.$set) {
+				updateQuery.$set = {};
+			}
 
-		const now = new Date();
-		const formattedUserId = (ObjectId.isValid(userId) ? MongoUtils.oid(userId) : userId) as string;
+			const now = new Date();
+			const formattedUserId = (ObjectId.isValid(userId)
+				? MongoUtils.oid(userId)
+				: userId) as string;
 
-		updateQuery.$set = {
-			...updateQuery.$set,
-			'objectInfos.lastUpdate': {
-				date: now,
-				userId: formattedUserId,
-			},
-		} as any;
-		if (!this.conf.updateOnlyOnChange) {
-			(updateQuery.$set as any)['objectInfos.lastModification'] = {
-				date: now,
-				userId: formattedUserId,
-			};
-		}
-
-		if (upsert) {
-			updateQuery.$setOnInsert = {
-				...updateQuery.$setOnInsert,
-				'objectInfos.creation': {
+			updateQuery.$set = {
+				...updateQuery.$set,
+				'objectInfos.lastUpdate': {
 					date: now,
 					userId: formattedUserId,
 				},
 			} as any;
-
-			if (updateQuery.$set._id) {
-				this.logger.warn(
-					`Trying to set _id field to ${updateQuery.$set._id} (${updateQuery.$set._id.constructor.name})`,
-				);
-				delete (updateQuery.$set as any)._id;
-			}
-
-			if (this.conf.updateOnlyOnChange) {
-				(updateQuery.$setOnInsert as any)['objectInfos.lastModification'] = {
+			if (!this.conf.updateOnlyOnChange) {
+				(updateQuery.$set as any)['objectInfos.lastModification'] = {
 					date: now,
 					userId: formattedUserId,
 				};
 			}
-		}
 
-		let saveOldValue;
-		if (this.conf.keepHistoric || this.conf.updateOnlyOnChange) {
-			saveOldValue = await this.findOne(query);
-		}
+			if (upsert) {
+				updateQuery.$setOnInsert = {
+					...updateQuery.$setOnInsert,
+					'objectInfos.creation': {
+						date: now,
+						userId: formattedUserId,
+					},
+				} as any;
 
-		let newEntity = (
-			await this.collection.findOneAndUpdate(query, updateQuery, {
-				upsert,
-				arrayFilters,
-				returnOriginal: !returnNewValue,
-			})
-		).value as U;
-		if (returnNewValue || this.conf.keepHistoric || this.conf.updateOnlyOnChange) {
-			newEntity = MongoUtils.mapObjectToClass(
-				this.type,
-				MongoUtils.unRemoveSpecialCharactersInKeys(newEntity),
-			);
-		}
-
-		if (this.conf.keepHistoric || this.conf.updateOnlyOnChange) {
-			const diffs = deepDiff(saveOldValue, newEntity, (path: string[], key: string) => {
-				return [
-					'objectInfos.creation',
-					'objectInfos.lastUpdate',
-					'objectInfos.lastModification',
-				].includes([...path, key].join('.'));
-			});
-			if (diffs) {
-				await this.historicManager.insertOne(newEntity._id, diffs, saveOldValue, now, userId);
+				if (updateQuery.$set._id) {
+					this.logger.warn(
+						`Trying to set _id field to ${updateQuery.$set._id} (${updateQuery.$set._id.constructor.name})`,
+					);
+					delete (updateQuery.$set as any)._id;
+				}
 
 				if (this.conf.updateOnlyOnChange) {
-					const newUpdate = await this.updateLastModificationDate(
-						newEntity._id,
-						diffs,
-						now,
-						userId,
-					);
+					(updateQuery.$setOnInsert as any)['objectInfos.lastModification'] = {
+						date: now,
+						userId: formattedUserId,
+					};
+				}
+			}
 
-					if (returnNewValue && newUpdate) {
-						newEntity = newUpdate.value;
-						newEntity = MongoUtils.mapObjectToClass(
-							this.type,
-							MongoUtils.unRemoveSpecialCharactersInKeys(newEntity),
+			let saveOldValue;
+			if (this.conf.keepHistoric || this.conf.updateOnlyOnChange) {
+				saveOldValue = await this.findOne(query);
+			}
+
+			let newEntity = (
+				await this.collection.findOneAndUpdate(query, updateQuery, {
+					upsert,
+					arrayFilters,
+					returnOriginal: !returnNewValue,
+				})
+			).value as U;
+			if (returnNewValue || this.conf.keepHistoric || this.conf.updateOnlyOnChange) {
+				newEntity = MongoUtils.mapObjectToClass(
+					this.type,
+					MongoUtils.unRemoveSpecialCharactersInKeys(newEntity),
+				);
+			}
+
+			if (this.conf.keepHistoric || this.conf.updateOnlyOnChange) {
+				const diffs = deepDiff(saveOldValue, newEntity, (path: string[], key: string) => {
+					return [
+						'objectInfos.creation',
+						'objectInfos.lastUpdate',
+						'objectInfos.lastModification',
+					].includes([...path, key].join('.'));
+				});
+				if (diffs) {
+					await this.historicManager.insertOne(newEntity._id, diffs, saveOldValue, now, userId);
+
+					if (this.conf.updateOnlyOnChange) {
+						const newUpdate = await this.updateLastModificationDate(
+							newEntity._id,
+							diffs,
+							now,
+							userId,
 						);
+
+						if (returnNewValue && newUpdate) {
+							newEntity = newUpdate.value;
+							newEntity = MongoUtils.mapObjectToClass(
+								this.type,
+								MongoUtils.unRemoveSpecialCharactersInKeys(newEntity),
+							);
+						}
 					}
 				}
 			}
+			if (returnNewValue) return newEntity;
+			return;
+		} catch (e) {
+			LangUtils.throwN9ErrorFromError(e, {
+				query,
+				updateQuery,
+				userId,
+				internalCall,
+				upsert,
+				returnNewValue,
+				arrayFilters,
+			});
 		}
-		if (returnNewValue) return newEntity;
-		return;
 	}
 
 	// wrapper around findOneAndUpdate
@@ -566,10 +632,14 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		lockFieldPath: string,
 		userId: string,
 	): Promise<U> {
-		const query: FilterQuery<any> = {
-			_id: MongoUtils.oid(id),
-		};
-		return await this.findOneAndRemoveLock(query, lockFieldPath, userId);
+		try {
+			const query: FilterQuery<any> = {
+				_id: MongoUtils.oid(id),
+			};
+			return await this.findOneAndRemoveLock(query, lockFieldPath, userId);
+		} catch (e) {
+			LangUtils.throwN9ErrorFromError(e, { id, lockFieldPath, userId });
+		}
 	}
 
 	public async findOneByKeyAndRemoveLock(
@@ -578,10 +648,19 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		userId: string,
 		keyName: string = 'code',
 	): Promise<U> {
-		const query: FilterQuery<any> = {
-			[keyName]: keyValue,
-		};
-		return await this.findOneAndRemoveLock(query, lockFieldPath, userId);
+		try {
+			const query: FilterQuery<any> = {
+				[keyName]: keyValue,
+			};
+			return await this.findOneAndRemoveLock(query, lockFieldPath, userId);
+		} catch (e) {
+			LangUtils.throwN9ErrorFromError(e, {
+				keyValue,
+				lockFieldPath,
+				userId,
+				keyName,
+			});
+		}
 	}
 
 	public async findOneAndRemoveLock(
@@ -589,28 +668,36 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		lockFieldPath: string,
 		userId: string,
 	): Promise<U> {
-		if (!this.conf.lockFields) {
-			throw new N9Error('invalid-function-call', 500, {
+		try {
+			if (!this.conf.lockFields) {
+				throw new N9Error('invalid-function-call', 500, {
+					query,
+					lockFieldPath,
+					name: 'findOneByIdAndRemoveLock',
+				});
+			}
+
+			return await this.findOneAndUpdate(
+				query,
+				({
+					$pull: {
+						'objectInfos.lockFields': {
+							path: lockFieldPath,
+						},
+					},
+				} as any) as UpdateQuery<U>,
+				userId,
+				true,
+				false,
+				true,
+			);
+		} catch (e) {
+			LangUtils.throwN9ErrorFromError(e, {
 				query,
 				lockFieldPath,
-				name: 'findOneByIdAndRemoveLock',
+				userId,
 			});
 		}
-
-		return await this.findOneAndUpdate(
-			query,
-			({
-				$pull: {
-					'objectInfos.lockFields': {
-						path: lockFieldPath,
-					},
-				},
-			} as any) as UpdateQuery<U>,
-			userId,
-			true,
-			false,
-			true,
-		);
 	}
 
 	public async findOneAndUpdateByIdWithLocks(
@@ -620,88 +707,100 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		lockNewFields: boolean = true,
 		forceEditLockFields: boolean = false,
 	): Promise<U> {
-		if (this.conf.lockFields) {
-			const existingEntity = await this.findOneById(id);
-			if (!existingEntity) {
-				this.logger.warn(`Entity not found with id ${id} (${this.type.name})`, {
-					userId,
-					newEntity,
-					id,
-				});
-				return;
-			}
-
-			let newEntityWithOnlyDataToUpdate;
-			let newEntityToSave;
-			if (forceEditLockFields) {
-				newEntityWithOnlyDataToUpdate = newEntity;
-				newEntityToSave = this.lockFieldsManager.mergeOldEntityWithNewOne(
-					newEntity,
-					existingEntity,
-					'',
-					[],
-				);
-			} else {
-				newEntityWithOnlyDataToUpdate = this.lockFieldsManager.pruneEntityWithLockFields(
-					newEntity,
-					existingEntity.objectInfos.lockFields,
-				);
-				// console.log('-- client.ts ', newEntityWithOnlyDataToUpdate, ` <<-- newEntityWithOnlyDataToUpdate`);
-				newEntityToSave = this.lockFieldsManager.mergeOldEntityWithNewOne(
-					newEntity,
-					existingEntity,
-					'',
-					existingEntity.objectInfos.lockFields,
-				);
-				// TODO : add function in parameters or in mongoClient conf to allow validation here
-			}
-
-			const updateQuery: UpdateQuery<U> = {
-				$set: newEntityToSave,
-			};
-			if (lockNewFields) {
-				if (!newEntityToSave?.objectInfos?.lockFields) {
-					_.set(newEntityToSave, 'objectInfos.lockFields', []);
+		try {
+			if (this.conf.lockFields) {
+				const existingEntity = await this.findOneById(id);
+				if (!existingEntity) {
+					this.logger.warn(`Entity not found with id ${id} (${this.type.name})`, {
+						userId,
+						newEntity,
+						id,
+					});
+					return;
 				}
-				const allLockFieldsFromEntity = this.lockFieldsManager.getAllLockFieldsFromEntity(
-					newEntityWithOnlyDataToUpdate,
-					new Date(),
-					userId,
-					existingEntity,
-				);
 
-				if (!LodashReplacerUtils.IS_ARRAY_EMPTY(allLockFieldsFromEntity)) {
-					const lockFields = [];
-					for (const lockField of allLockFieldsFromEntity) {
-						if (!existingEntity.objectInfos.lockFields?.find((lf) => lf.path === lockField.path)) {
-							lockFields.push(lockField);
-						}
+				let newEntityWithOnlyDataToUpdate;
+				let newEntityToSave;
+				if (forceEditLockFields) {
+					newEntityWithOnlyDataToUpdate = newEntity;
+					newEntityToSave = this.lockFieldsManager.mergeOldEntityWithNewOne(
+						newEntity,
+						existingEntity,
+						'',
+						[],
+					);
+				} else {
+					newEntityWithOnlyDataToUpdate = this.lockFieldsManager.pruneEntityWithLockFields(
+						newEntity,
+						existingEntity.objectInfos.lockFields,
+					);
+					// console.log('-- client.ts ', newEntityWithOnlyDataToUpdate, ` <<-- newEntityWithOnlyDataToUpdate`);
+					newEntityToSave = this.lockFieldsManager.mergeOldEntityWithNewOne(
+						newEntity,
+						existingEntity,
+						'',
+						existingEntity.objectInfos.lockFields,
+					);
+					// TODO : add function in parameters or in mongoClient conf to allow validation here
+				}
+
+				const updateQuery: UpdateQuery<U> = {
+					$set: newEntityToSave,
+				};
+				if (lockNewFields) {
+					if (!newEntityToSave?.objectInfos?.lockFields) {
+						_.set(newEntityToSave, 'objectInfos.lockFields', []);
 					}
+					const allLockFieldsFromEntity = this.lockFieldsManager.getAllLockFieldsFromEntity(
+						newEntityWithOnlyDataToUpdate,
+						new Date(),
+						userId,
+						existingEntity,
+					);
 
-					updateQuery.$push = {
-						'objectInfos.lockFields': {
-							$each: lockFields,
-						},
-					} as any;
+					if (!LodashReplacerUtils.IS_ARRAY_EMPTY(allLockFieldsFromEntity)) {
+						const lockFields = [];
+						for (const lockField of allLockFieldsFromEntity) {
+							if (
+								!existingEntity.objectInfos.lockFields?.find((lf) => lf.path === lockField.path)
+							) {
+								lockFields.push(lockField);
+							}
+						}
+
+						updateQuery.$push = {
+							'objectInfos.lockFields': {
+								$each: lockFields,
+							},
+						} as any;
+					}
 				}
+				delete newEntityToSave.objectInfos;
+				delete newEntityToSave._id;
+				// console.log(`--   --    --  newEntityToSave  --    --   --    --   --`);
+				// console.log(JSON.stringify(newEntityToSave, null, 2));
+				// console.log(`--   --    --   --    --   --    --   --`);
+				// console.log(JSON.stringify(updateQuery, null, 2));
+				// console.log(`--   --    --  updateQuery  --    --   --    --   --`);
+
+				const updatedValue = await this.findOneAndUpdateById(id, updateQuery, userId, true);
+				// console.log(JSON.stringify(updatedValue, null, 2));
+				// console.log(`--   --    --   --    --   --    --   --`);
+
+				return updatedValue;
 			}
-			delete newEntityToSave.objectInfos;
-			delete newEntityToSave._id;
-			// console.log(`--   --    --  newEntityToSave  --    --   --    --   --`);
-			// console.log(JSON.stringify(newEntityToSave, null, 2));
-			// console.log(`--   --    --   --    --   --    --   --`);
-			// console.log(JSON.stringify(updateQuery, null, 2));
-			// console.log(`--   --    --  updateQuery  --    --   --    --   --`);
-
-			const updatedValue = await this.findOneAndUpdateById(id, updateQuery, userId, true);
-			// console.log(JSON.stringify(updatedValue, null, 2));
-			// console.log(`--   --    --   --    --   --    --   --`);
-
-			return updatedValue;
+			delete newEntity._id;
+			delete newEntity.objectInfos;
+			return await this.findOneAndUpdateById(id, { $set: newEntity }, userId, true);
+		} catch (e) {
+			LangUtils.throwN9ErrorFromError(e, {
+				id,
+				newEntity,
+				userId,
+				lockNewFields,
+				forceEditLockFields,
+			});
 		}
-		delete newEntity._id;
-		delete newEntity.objectInfos;
-		return await this.findOneAndUpdateById(id, { $set: newEntity }, userId, true);
 	}
 
 	public async deleteOneById(id: string): Promise<U> {
@@ -709,21 +808,33 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 	}
 
 	public async deleteOneByKey(keyValue: any, keyName: string = 'code'): Promise<U> {
-		const query: StringMap<any> = {
-			[MongoUtils.escapeSpecialCharacters(keyName)]: keyValue,
-		};
+		try {
+			const query: StringMap<any> = {
+				[MongoUtils.escapeSpecialCharacters(keyName)]: keyValue,
+			};
 
-		return await this.deleteOne(query);
+			return await this.deleteOne(query);
+		} catch (e) {
+			LangUtils.throwN9ErrorFromError(e, { keyValue, keyName });
+		}
 	}
 
 	public async deleteOne(query: object): Promise<U> {
-		const entity = await this.findOne(query);
-		await this.collection.deleteOne(query);
-		return entity;
+		try {
+			const entity = await this.findOne(query);
+			await this.collection.deleteOne(query);
+			return entity;
+		} catch (e) {
+			LangUtils.throwN9ErrorFromError(e, { query });
+		}
 	}
 
 	public async deleteMany(query: object): Promise<void> {
-		await this.collection.deleteMany(query);
+		try {
+			await this.collection.deleteMany(query);
+		} catch (e) {
+			LangUtils.throwN9ErrorFromError(e, { query });
+		}
 	}
 
 	/**
@@ -738,19 +849,23 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		userId: string,
 		options: UpdateManyAtOnceOptions<U> = {},
 	): Promise<Cursor<U>> {
-		options.upsert = LodashReplacerUtils.IS_BOOLEAN(options.upsert) ? options.upsert : false;
-		options.lockNewFields = LodashReplacerUtils.IS_BOOLEAN(options.lockNewFields)
-			? options.lockNewFields
-			: true;
-		options.forceEditLockFields = LodashReplacerUtils.IS_BOOLEAN(options.forceEditLockFields)
-			? options.forceEditLockFields
-			: false;
-		options.unsetUndefined = LodashReplacerUtils.IS_BOOLEAN(options.unsetUndefined)
-			? options.unsetUndefined
-			: true;
-		const updateQueries = await this.buildUpdatesQueries(entities, userId, options);
-		// console.log(`-- client.ts>updateManyAtOnce updateQueries --`, JSON.stringify(updateQueries, null, 2));
-		return await this.updateMany(updateQueries, userId, options.upsert);
+		try {
+			options.upsert = LodashReplacerUtils.IS_BOOLEAN(options.upsert) ? options.upsert : false;
+			options.lockNewFields = LodashReplacerUtils.IS_BOOLEAN(options.lockNewFields)
+				? options.lockNewFields
+				: true;
+			options.forceEditLockFields = LodashReplacerUtils.IS_BOOLEAN(options.forceEditLockFields)
+				? options.forceEditLockFields
+				: false;
+			options.unsetUndefined = LodashReplacerUtils.IS_BOOLEAN(options.unsetUndefined)
+				? options.unsetUndefined
+				: true;
+			const updateQueries = await this.buildUpdatesQueries(entities, userId, options);
+			// console.log(`-- client.ts>updateManyAtOnce updateQueries --`, JSON.stringify(updateQueries, null, 2));
+			return await this.updateMany(updateQueries, userId, options.upsert);
+		} catch (e) {
+			LangUtils.throwN9ErrorFromError(e, { userId, options });
+		}
 	}
 
 	public async updateManyToSameValue(
@@ -759,44 +874,53 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		userId: string,
 		options: UpdateManyToSameValueOptions<U> = {},
 	): Promise<{ matchedCount: number; modifiedCount: number }> {
-		this.ifHasLockFieldsThrow();
+		try {
+			this.ifHasLockFieldsThrow();
 
-		if (this.conf.keepHistoric) {
-			throw new N9Error('not-supported-operation-for-collection-with-historic', 501, {
-				conf: this.conf,
+			if (this.conf.keepHistoric) {
+				throw new N9Error('not-supported-operation-for-collection-with-historic', 501, {
+					conf: this.conf,
+				});
+			}
+
+			if (this.conf.updateOnlyOnChange && !options.forceLastModificationDate) {
+				throw new N9Error('force-last-modification-required', 501, {
+					conf: this.conf,
+				});
+			}
+
+			if (!updateQuery.$set) {
+				updateQuery.$set = {};
+			}
+
+			const now = new Date();
+
+			updateQuery.$set = {
+				...updateQuery.$set,
+				'objectInfos.lastUpdate': {
+					date: now,
+					userId: ObjectId.isValid(userId) ? MongoUtils.oid(userId) : userId,
+				},
+				'objectInfos.lastModification': {
+					date: now,
+					userId: ObjectId.isValid(userId) ? MongoUtils.oid(userId) : userId,
+				},
+			} as any;
+
+			const updateResult = await this.collection.updateMany(query, updateQuery);
+
+			return {
+				matchedCount: updateResult.matchedCount,
+				modifiedCount: updateResult.modifiedCount,
+			};
+		} catch (e) {
+			LangUtils.throwN9ErrorFromError(e, {
+				query,
+				updateQuery,
+				userId,
+				options,
 			});
 		}
-
-		if (this.conf.updateOnlyOnChange && !options.forceLastModificationDate) {
-			throw new N9Error('force-last-modification-required', 501, {
-				conf: this.conf,
-			});
-		}
-
-		if (!updateQuery.$set) {
-			updateQuery.$set = {};
-		}
-
-		const now = new Date();
-
-		updateQuery.$set = {
-			...updateQuery.$set,
-			'objectInfos.lastUpdate': {
-				date: now,
-				userId: ObjectId.isValid(userId) ? MongoUtils.oid(userId) : userId,
-			},
-			'objectInfos.lastModification': {
-				date: now,
-				userId: ObjectId.isValid(userId) ? MongoUtils.oid(userId) : userId,
-			},
-		} as any;
-
-		const updateResult = await this.collection.updateMany(query, updateQuery);
-
-		return {
-			matchedCount: updateResult.matchedCount,
-			modifiedCount: updateResult.modifiedCount,
-		};
 	}
 
 	/**
@@ -868,15 +992,22 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		dropHistoryIfExists: boolean = true,
 		throwIfNotExists: boolean = false,
 	): Promise<void> {
-		if (dropHistoryIfExists && this.conf.keepHistoric) {
-			await this.dropHistory();
-		}
 		try {
-			if (throwIfNotExists || (await this.collectionExists())) {
-				await this.collection.drop();
+			if (dropHistoryIfExists && this.conf.keepHistoric) {
+				await this.dropHistory();
+			}
+			try {
+				if (throwIfNotExists || (await this.collectionExists())) {
+					await this.collection.drop();
+				}
+			} catch (e) {
+				throw new N9Error('mongodb-drop-collection-error', 500, { srcError: e });
 			}
 		} catch (e) {
-			throw new N9Error('mongodb-drop-collection-error', 500, { mongodbError: e });
+			LangUtils.throwN9ErrorFromError(e, {
+				dropHistoryIfExists,
+				throwIfNotExists,
+			});
 		}
 	}
 

@@ -1,4 +1,5 @@
 import { Collection, IndexOptions } from 'mongodb';
+import { LangUtils } from './lang-utils';
 
 /**
  * Class that handlez the creation, update and deletion of mongodb indexes
@@ -16,7 +17,11 @@ export class IndexManager {
 	 * @param options extra mongodb index creation options
 	 */
 	public async createIndex(fieldOrSpec: string | any, options?: IndexOptions): Promise<void> {
-		await this.collection.createIndex(fieldOrSpec, options);
+		try {
+			await this.collection.createIndex(fieldOrSpec, options);
+		} catch (e) {
+			LangUtils.throwN9ErrorFromError(e, { fieldOrSpec, options });
+		}
 	}
 
 	/**
@@ -52,10 +57,22 @@ export class IndexManager {
 			// 85 means different parameters
 			// 86 means different fields
 			if (e.code === 85 || e.code === 86) {
-				await this.collection.dropIndex(options.name);
-				await this.collection.createIndex(fieldOrSpec, options);
+				try {
+					await this.collection.dropIndex(options.name);
+					await this.collection.createIndex(fieldOrSpec, options);
+				} catch (e) {
+					LangUtils.throwN9ErrorFromError(e, {
+						fieldOrSpec,
+						ttlInDays,
+						options,
+					});
+				}
 			} else {
-				throw e;
+				LangUtils.throwN9ErrorFromError(e, {
+					fieldOrSpec,
+					ttlInDays,
+					options,
+				});
 			}
 		}
 	}
@@ -66,8 +83,12 @@ export class IndexManager {
 	 * @param indexName name of the index to drop
 	 */
 	public async dropIndex(indexName: string): Promise<void> {
-		if (await this.collection.indexExists(indexName)) {
-			await this.collection.dropIndex(indexName);
+		try {
+			if (await this.collection.indexExists(indexName)) {
+				await this.collection.dropIndex(indexName);
+			}
+		} catch (e) {
+			LangUtils.throwN9ErrorFromError(e, { indexName });
 		}
 	}
 }

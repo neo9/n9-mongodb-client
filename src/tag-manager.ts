@@ -1,4 +1,5 @@
 import { Collection, ObjectId, UpdateQuery } from 'mongodb';
+import { LangUtils } from './lang-utils';
 import { LodashReplacerUtils } from './lodash-replacer.utils';
 import { AddTagOptions, RemoveTagOptions } from './models';
 import { MongoUtils } from './mongo-utils';
@@ -57,10 +58,18 @@ export class TagManager {
 		userId: string,
 		options: AddTagOptions = {},
 	): Promise<string> {
-		options.tag = options.tag || new ObjectId().toHexString();
-		const update = TagManager.buildAddTagUpdate(userId, options);
-		await this.collection.findOneAndUpdate(query, update, { returnOriginal: false });
-		return options.tag;
+		try {
+			options.tag = options.tag || new ObjectId().toHexString();
+			const update = TagManager.buildAddTagUpdate(userId, options);
+			await this.collection.findOneAndUpdate(query, update, { returnOriginal: false });
+			return options.tag;
+		} catch (e) {
+			LangUtils.throwN9ErrorFromError(e, {
+				query,
+				userId,
+				options,
+			});
+		}
 	}
 
 	/**
@@ -82,10 +91,18 @@ export class TagManager {
 		userId: string,
 		options: AddTagOptions = {},
 	): Promise<string> {
-		options.tag = options.tag || new ObjectId().toHexString();
-		const update = TagManager.buildAddTagUpdate(userId, options);
-		await this.collection.updateMany(query, update);
-		return options.tag;
+		try {
+			options.tag = options.tag || new ObjectId().toHexString();
+			const update = TagManager.buildAddTagUpdate(userId, options);
+			await this.collection.updateMany(query, update);
+			return options.tag;
+		} catch (e) {
+			LangUtils.throwN9ErrorFromError(e, {
+				query,
+				userId,
+				options,
+			});
+		}
 	}
 
 	/**
@@ -103,8 +120,17 @@ export class TagManager {
 		userId: string,
 		options: RemoveTagOptions = {},
 	): Promise<void> {
-		const update = TagManager.buildRemoveTagUpdate(tag, userId, options);
-		await this.collection.findOneAndUpdate(query, update, { returnOriginal: false });
+		try {
+			const update = TagManager.buildRemoveTagUpdate(tag, userId, options);
+			await this.collection.findOneAndUpdate(query, update, { returnOriginal: false });
+		} catch (e) {
+			LangUtils.throwN9ErrorFromError(e, {
+				query,
+				tag,
+				userId,
+				options,
+			});
+		}
 	}
 
 	/**
@@ -128,14 +154,27 @@ export class TagManager {
 		userId: string,
 		options: RemoveTagOptions = {},
 	): Promise<void> {
-		const update = TagManager.buildRemoveTagUpdate(tag, userId, options);
-		await this.collection.updateMany(query, update);
+		try {
+			const update = TagManager.buildRemoveTagUpdate(tag, userId, options);
+			await this.collection.updateMany(query, update);
+		} catch (e) {
+			LangUtils.throwN9ErrorFromError(e, {
+				query,
+				tag,
+				userId,
+				options,
+			});
+		}
 	}
 
 	/**
 	 * Delete all entities with the given tag
 	 */
 	public async deleteManyWithTag(tag: string): Promise<void> {
-		await this.collection.deleteMany({ 'objectInfos.tags': tag });
+		try {
+			await this.collection.deleteMany({ 'objectInfos.tags': tag });
+		} catch (e) {
+			LangUtils.throwN9ErrorFromError(e, { tag });
+		}
 	}
 }

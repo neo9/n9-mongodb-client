@@ -2,6 +2,7 @@ import { N9Log } from '@neo9/n9-node-log';
 import { Diff } from 'deep-diff';
 import { Collection, Cursor, Db, IndexOptions, ObjectId } from 'mongodb';
 import { IndexManager } from './index-manager';
+import { LangUtils } from './lang-utils';
 import { BaseMongoObject, EntityHistoric, StringMap } from './models';
 import { MongoUtils } from './mongo-utils';
 
@@ -66,14 +67,24 @@ export class HistoricManager<U extends BaseMongoObject> {
 		updateDate: Date,
 		userId: string,
 	): Promise<void> {
-		const change: EntityHistoric<U> = {
-			entityId: MongoUtils.oid(entityId) as any,
-			date: updateDate,
-			userId: ObjectId.isValid(userId) ? (MongoUtils.oid(userId) as any) : userId,
-			dataEdited: diffs,
-			snapshot: MongoUtils.removeSpecialCharactersInKeys(snapshot),
-		};
-		await this.collection.insertOne(change as any);
+		try {
+			const change: EntityHistoric<U> = {
+				entityId: MongoUtils.oid(entityId) as any,
+				date: updateDate,
+				userId: ObjectId.isValid(userId) ? (MongoUtils.oid(userId) as any) : userId,
+				dataEdited: diffs,
+				snapshot: MongoUtils.removeSpecialCharactersInKeys(snapshot),
+			};
+			await this.collection.insertOne(change as any);
+		} catch (e) {
+			LangUtils.throwN9ErrorFromError(e, {
+				entityId,
+				diffs,
+				snapshot,
+				updateDate,
+				userId,
+			});
+		}
 	}
 
 	public async findByEntityId(
@@ -81,84 +92,118 @@ export class HistoricManager<U extends BaseMongoObject> {
 		page: number = 0,
 		size: number = 10,
 	): Promise<Cursor<EntityHistoric<U>>> {
-		return await this.collection
-			.find<EntityHistoric<U>>({ entityId: MongoUtils.oid(id) as any })
-			.sort('_id', -1)
-			.skip(page * size)
-			.limit(size)
-			.map((a: EntityHistoric<U>) =>
-				MongoUtils.mapObjectToClass<EntityHistoric<U>, EntityHistoric<U>>(
-					EntityHistoric,
-					MongoUtils.unRemoveSpecialCharactersInKeys(a),
-				),
-			);
+		try {
+			return await this.collection
+				.find<EntityHistoric<U>>({ entityId: MongoUtils.oid(id) as any })
+				.sort('_id', -1)
+				.skip(page * size)
+				.limit(size)
+				.map((a: EntityHistoric<U>) =>
+					MongoUtils.mapObjectToClass<EntityHistoric<U>, EntityHistoric<U>>(
+						EntityHistoric,
+						MongoUtils.unRemoveSpecialCharactersInKeys(a),
+					),
+				);
+		} catch (e) {
+			LangUtils.throwN9ErrorFromError(e, {
+				id,
+				page,
+				size,
+			});
+		}
 	}
 
 	public async findOneByUserIdMostRecent(
 		entityId: string,
 		userId: string,
 	): Promise<EntityHistoric<U>> {
-		const cursor = await this.collection
-			.find<EntityHistoric<U>>({
-				entityId: MongoUtils.oid(entityId) as any,
-				userId: ObjectId.isValid(userId) ? (MongoUtils.oid(userId) as any) : userId,
-			})
-			.sort('_id', -1)
-			.limit(1)
-			.map((a: EntityHistoric<U>) =>
-				MongoUtils.mapObjectToClass<EntityHistoric<U>, EntityHistoric<U>>(
-					EntityHistoric,
-					MongoUtils.unRemoveSpecialCharactersInKeys(a),
-				),
-			);
-		if (await cursor.hasNext()) {
-			return await cursor.next();
+		try {
+			const cursor = await this.collection
+				.find<EntityHistoric<U>>({
+					entityId: MongoUtils.oid(entityId) as any,
+					userId: ObjectId.isValid(userId) ? (MongoUtils.oid(userId) as any) : userId,
+				})
+				.sort('_id', -1)
+				.limit(1)
+				.map((a: EntityHistoric<U>) =>
+					MongoUtils.mapObjectToClass<EntityHistoric<U>, EntityHistoric<U>>(
+						EntityHistoric,
+						MongoUtils.unRemoveSpecialCharactersInKeys(a),
+					),
+				);
+			if (await cursor.hasNext()) {
+				return await cursor.next();
+			}
+			return;
+		} catch (e) {
+			LangUtils.throwN9ErrorFromError(e, {
+				entityId,
+				userId,
+			});
 		}
-		return;
 	}
 
 	public async findOneByJustAfterAnother(
 		entityId: string,
 		historicId: string,
 	): Promise<EntityHistoric<U>> {
-		const cursor = await this.collection
-			.find<EntityHistoric<U>>({
-				entityId: MongoUtils.oid(entityId) as any,
-				_id: {
-					$gt: MongoUtils.oid(historicId) as any,
-				},
-			})
-			.sort('_id', 1)
-			.limit(1)
-			.map((a: EntityHistoric<U>) =>
-				MongoUtils.mapObjectToClass<EntityHistoric<U>, EntityHistoric<U>>(
-					EntityHistoric,
-					MongoUtils.unRemoveSpecialCharactersInKeys(a),
-				),
-			);
-		if (await cursor.hasNext()) {
-			return await cursor.next();
+		try {
+			const cursor = await this.collection
+				.find<EntityHistoric<U>>({
+					entityId: MongoUtils.oid(entityId) as any,
+					_id: {
+						$gt: MongoUtils.oid(historicId) as any,
+					},
+				})
+				.sort('_id', 1)
+				.limit(1)
+				.map((a: EntityHistoric<U>) =>
+					MongoUtils.mapObjectToClass<EntityHistoric<U>, EntityHistoric<U>>(
+						EntityHistoric,
+						MongoUtils.unRemoveSpecialCharactersInKeys(a),
+					),
+				);
+			if (await cursor.hasNext()) {
+				return await cursor.next();
+			}
+			return;
+		} catch (e) {
+			LangUtils.throwN9ErrorFromError(e, {
+				entityId,
+				historicId,
+			});
 		}
-		return;
 	}
 
 	public async countByEntityId(id: string): Promise<number> {
-		return await this.collection.countDocuments({ entityId: MongoUtils.oid(id) as any });
+		try {
+			return await this.collection.countDocuments({ entityId: MongoUtils.oid(id) as any });
+		} catch (e) {
+			LangUtils.throwN9ErrorFromError(e, { id });
+		}
 	}
 
 	public async countSince(entityId: string, historicIdReference?: string): Promise<number> {
-		const query: StringMap<any> = {
-			entityId: MongoUtils.oid(entityId),
-		};
-		if (historicIdReference) {
-			query._id = {
-				$gt: MongoUtils.oid(historicIdReference),
+		try {
+			const query: StringMap<any> = {
+				entityId: MongoUtils.oid(entityId),
 			};
+			if (historicIdReference) {
+				query._id = {
+					$gt: MongoUtils.oid(historicIdReference),
+				};
+			}
+			return await this.collection.countDocuments(query);
+		} catch (e) {
+			LangUtils.throwN9ErrorFromError(e, { entityId, historicIdReference });
 		}
-		return await this.collection.countDocuments(query);
 	}
 
 	public async drop(): Promise<void> {
-		await this.collection.drop();
+		try {
+			await this.collection.drop();
+		} catch (e) {
+			LangUtils.throwN9ErrorFromError(e);
+		}
 	}
 }

@@ -3,6 +3,7 @@ import * as _ from 'lodash';
 import { Cursor, FilterQuery } from 'mongodb';
 import { Readable, Writable } from 'stream';
 import { MongoClient } from './client';
+import { LangUtils } from './lang-utils';
 import { BaseMongoObject } from './models';
 import { ClassType } from './models/class-type.models';
 import { MongoUtils } from './mongo-utils';
@@ -81,8 +82,12 @@ export class MongoReadStream<
 		private customType?: ClassType<Partial<U | L>>,
 	) {
 		super({ objectMode: true });
-		if ((projection as FilterQuery<any>)._id === 0) {
-			throw new N9Error('can-t-create-projection-without-_id', 400, { projection });
+		try {
+			if ((projection as FilterQuery<any>)._id === 0) {
+				throw new N9Error('can-t-create-projection-without-_id', 400, { projection });
+			}
+		} catch (e) {
+			LangUtils.throwN9ErrorFromError(e, { pageSize, projection, customType, query: _query });
 		}
 	}
 
