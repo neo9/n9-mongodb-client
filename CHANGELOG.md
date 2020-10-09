@@ -1,3 +1,14 @@
+# [0.16.0](https://github.com/neo9/n9-mongo-client/compare/0.15.3...0.16.0) (2020-10-09)
+
+
+### errors
+
+* Wrap errors to n9 errors ([e5e5dcb](https://github.com/neo9/n9-mongo-client/commit/e5e5dcb62ab059c269c93c561be9ca15c32a0ce1))
+
+### yarn
+
+* Upgrade n9-node-utils to V 2.0.0 ([ba50498](https://github.com/neo9/n9-mongo-client/commit/ba504987ce022136d7e68feedcaa85a4ac148533))
+
 ## [0.15.3](https://github.com/neo9/n9-mongo-client/compare/0.15.2...0.15.3) (2020-10-07)
 
 
