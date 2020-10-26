@@ -45,6 +45,7 @@ const d = {
  */
 ava('[LOCK-FIELDS-ARRAY C] Import twice should remove element', async (t: Assertions) => {
 	const vC: SampleEntityWithArray = {
+		code: 'c',
 		parameters: {
 			items: [a, b, c],
 		},
@@ -97,6 +98,7 @@ ava('[LOCK-FIELDS-ARRAY C] Import twice should remove element', async (t: Assert
  */
 ava('[LOCK-FIELDS-ARRAY D] Lock fields order should be keept', async (t: Assertions) => {
 	const vD: SampleEntityWithArray = {
+		code: 'd',
 		parameters: {
 			items: _.cloneDeep([a, b, c]),
 		},

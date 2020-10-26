@@ -6,6 +6,7 @@ const { add, complete, cycle, save, suite } = require('benny');
 class TestEntity {
 	test;
 	n;
+	i;
 }
 
 async function runInsertBench(defaultCaseRunOptions, version) {
@@ -33,6 +34,133 @@ async function runInsertBench(defaultCaseRunOptions, version) {
 				const mongoClient = new MongoClient('test-2', TestEntity, TestEntity);
 				return async () => {
 					await mongoClient.insertMany(dataToInsert, 'userId', undefined, false);
+				};
+			},
+			defaultCaseRunOptions,
+		),
+		cycle(),
+		complete(),
+		save({
+			version,
+			format: 'json',
+			details: false,
+			file: `${suiteName} ${version}`,
+		}),
+	);
+}
+
+async function runUpdateManyAtOnceBench(defaultCaseRunOptions, version) {
+	const nbElement = 100;
+	const suiteName = `Update many at once Case ${nbElement}`;
+	let i = 0;
+	const dataToInsert = Array(nbElement)
+		.fill({
+			test: 'a string',
+			n: 123456,
+		})
+		.map((elmt) => {
+			i += 1;
+			return { ...elmt, i };
+		});
+	await suite(
+		suiteName,
+		add(
+			'Update many at once mongodb native',
+			async () => {
+				const db = global.dbClient.db();
+				return async () => {
+					await db.collection('test-1').bulkWrite(
+						dataToInsert.map((dataToInsert) => ({
+							updateOne: {
+								filter: {
+									i: dataToInsert.i,
+								},
+								update: {
+									$set: dataToInsert,
+								},
+								upsert: true,
+							},
+						})),
+					);
+				};
+			},
+			defaultCaseRunOptions,
+		),
+		add(
+			'Update many at once N9MongoClient with query a string',
+			async () => {
+				const mongoClient = new MongoClient('test-2', TestEntity, TestEntity);
+				return async () => {
+					await mongoClient.updateManyAtOnce(dataToInsert, 'userId', {
+						unsetUndefined: true,
+						forceEditLockFields: true,
+						upsert: true,
+						query: 'i',
+						lockNewFields: false,
+						onlyInsertFieldsKey: ['i'],
+						returnNewEntities: true, // default
+					});
+				};
+			},
+			defaultCaseRunOptions,
+		),
+		add(
+			'Update many at once N9MongoClient with query a string without returning new values',
+			async () => {
+				const mongoClient = new MongoClient('test-2', TestEntity, TestEntity);
+				return async () => {
+					await mongoClient.updateManyAtOnce(dataToInsert, 'userId', {
+						unsetUndefined: true,
+						forceEditLockFields: true,
+						upsert: true,
+						query: 'i',
+						lockNewFields: false,
+						onlyInsertFieldsKey: ['i'],
+						returnNewEntities: false,
+					});
+				};
+			},
+			defaultCaseRunOptions,
+		),
+		add(
+			'Update many at once N9MongoClient with query as function',
+			async () => {
+				const mongoClient = new MongoClient('test-2', TestEntity, TestEntity);
+				return async () => {
+					await mongoClient.updateManyAtOnce(dataToInsert, 'userId', {
+						unsetUndefined: true,
+						forceEditLockFields: true,
+						upsert: true,
+						query: (e) => ({ i: e.i }),
+						lockNewFields: false,
+						onlyInsertFieldsKey: ['i'],
+					});
+				};
+			},
+			defaultCaseRunOptions,
+		),
+		add('Update many at once N9MongoClient with lock fields', async () => {
+			const mongoClient = new MongoClient('test-2', TestEntity, TestEntity);
+			return async () => {
+				await mongoClient.updateManyAtOnce(dataToInsert, 'userId', {
+					unsetUndefined: true,
+					forceEditLockFields: true,
+					upsert: true,
+					query: 'i',
+					lockNewFields: true,
+					onlyInsertFieldsKey: ['i'],
+				});
+			};
+		}),
+		add(
+			'Update many at once N9MongoClient with no query',
+			async () => {
+				const mongoClient = new MongoClient('test-2', TestEntity, TestEntity);
+				return async () => {
+					await mongoClient.updateManyAtOnce(dataToInsert, 'userId', {
+						unsetUndefined: false,
+						upsert: true,
+					});
 				};
 			},
 			defaultCaseRunOptions,
@@ -114,6 +242,8 @@ async function start() {
 		await runInsertBench(defaultCaseRunOptions, version);
 		await global.db.dropDatabase();
 		await runFindBench(defaultCaseRunOptions, version);
+		await global.db.dropDatabase();
+		await runUpdateManyAtOnceBench(defaultCaseRunOptions, version);
 		await global.db.dropDatabase();
 	} catch (e) {
 		throw e;

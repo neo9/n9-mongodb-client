@@ -7,6 +7,11 @@ class SampleType extends BaseMongoObject {
 	public field1Number: number;
 }
 
+class SampleTypeWithKey extends BaseMongoObject {
+	public property1: number;
+	public field1Number: number;
+}
+
 global.log = new N9Log('tests').module('update-only-on-change-deep');
 
 init();
@@ -49,8 +54,8 @@ ava('[CRUD] Find one and update with omit', async (t: Assertions) => {
 ava('[CRUD] Find one and update with pick', async (t: Assertions) => {
 	const mongoClient = new MongoClient(
 		global.db.collection(`test-${Date.now()}`),
-		SampleType,
-		SampleType,
+		SampleTypeWithKey,
+		SampleTypeWithKey,
 		{
 			updateOnlyOnChange: {
 				changeFilters: {
@@ -67,6 +72,7 @@ ava('[CRUD] Find one and update with pick', async (t: Assertions) => {
 	const returnedEntityCursor = await mongoClient.updateManyAtOnce(
 		[
 			{
+				property1: 1,
 				field1Number: 2,
 			},
 		],

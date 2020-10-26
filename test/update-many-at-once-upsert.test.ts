@@ -128,3 +128,100 @@ ava('[UPDATE MANY AT ONCE] Should update one document', async (t: Assertions) =>
 	t.is(updateResult.find((res) => res.sku === newEntity1.sku).value, '1', 'value updated');
 	t.is(typeof sampleTypeFoundWithNativeClient._id, 'object', '_id is still an object');
 });
+
+ava(
+	'[UPDATE MANY AT ONCE] Update entity by query on attribut type number',
+	async (t: Assertions) => {
+		const collectionName = `test-${Date.now()}`;
+		class DataSample extends BaseMongoObject {
+			code: number;
+			value: string;
+		}
+		const mongoClient = new MongoClient(collectionName, DataSample, DataSample, {});
+
+		const dataSample: DataSample = {
+			code: 1,
+			value: 'init',
+		};
+		await mongoClient.insertOne(_.cloneDeep(dataSample), '', false, false);
+
+		const entities = await mongoClient.updateManyAtOnce(
+			[
+				{
+					code: 1,
+					value: 'update',
+				},
+			],
+			'TEST',
+			{
+				query: 'code',
+			},
+		);
+
+		t.deepEqual((await entities.toArray())[0].value, 'update', 'value is updated');
+	},
+);
+
+ava(
+	'[UPDATE MANY AT ONCE] Update entity by query on attribut type boolean',
+	async (t: Assertions) => {
+		const collectionName = `test-${Date.now()}`;
+		class DataSample extends BaseMongoObject {
+			code: boolean;
+			value: string;
+		}
+		const mongoClient = new MongoClient(collectionName, DataSample, DataSample, {});
+
+		const dataSample: DataSample = {
+			code: true,
+			value: 'init',
+		};
+		await mongoClient.insertOne(_.cloneDeep(dataSample), '', false);
+
+		const entities = await mongoClient.updateManyAtOnce(
+			[
+				{
+					code: true,
+					value: 'update',
+				},
+			],
+			'TEST',
+			{
+				query: 'code',
+			},
+		);
+
+		t.deepEqual((await entities.toArray())[0].value, 'update', 'value is updated');
+	},
+);
+
+ava('[UPDATE MANY AT ONCE] Throw on missing value', async (t: Assertions) => {
+	const collectionName = `test-${Date.now()}`;
+	class DataSample extends BaseMongoObject {
+		value: string;
+	}
+	const mongoClient = new MongoClient(collectionName, DataSample, DataSample, {});
+
+	const dataSample: DataSample = {
+		value: 'init',
+	};
+	await mongoClient.insertOne(_.cloneDeep(dataSample), '', false);
+
+	await t.throwsAsync(
+		mongoClient.updateManyAtOnce(
+			[
+				{
+					value: 'update',
+				},
+			],
+			'TEST',
+			{
+				query: 'code', // wrong property
+			},
+		),
+		{
+			message: 'entity-value-missing',
+		},
+		'throw error due to missing `code` in entity but requested with query',
+	);
+});

@@ -13,7 +13,6 @@ import {
 	Db,
 	FilterQuery,
 	FindAndModifyWriteOpResultObject,
-	FindOneOptions,
 	IndexOptions,
 	MatchKeysAndValues,
 	MongoClient as MongodbClient,
@@ -860,9 +859,18 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			options.unsetUndefined = LodashReplacerUtils.IS_BOOLEAN(options.unsetUndefined)
 				? options.unsetUndefined
 				: true;
+			options.returnNewEntities = LodashReplacerUtils.IS_BOOLEAN(options.returnNewEntities)
+				? options.returnNewEntities
+				: true;
 			const updateQueries = await this.buildUpdatesQueries(entities, userId, options);
 			// console.log(`-- client.ts>updateManyAtOnce updateQueries --`, JSON.stringify(updateQueries, null, 2));
-			return await this.updateMany(updateQueries, userId, options.upsert);
+			const res = (await this.updateMany(
+				updateQueries,
+				userId,
+				options.upsert,
+				options.returnNewEntities,
+			)) as Cursor<U>;
+			return res;
 		} catch (e) {
 			LangUtils.throwN9ErrorFromError(e, { userId, options });
 		}
@@ -1102,6 +1110,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		return await this.tagManager.deleteManyWithTag(tag);
 	}
 
+	// tslint:disable-next-line:cyclomatic-complexity
 	private async buildUpdatesQueries(
 		entities: MatchKeysAndValues<U>[],
 		userId: string,
@@ -1111,16 +1120,45 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		let now;
 		if (options.lockNewFields) now = new Date();
 
-		for (let entity of entities) {
-			let currentValue: U;
-			if (options.query) {
-				if (LodashReplacerUtils.IS_STRING(options.query)) {
-					currentValue = await this.findOneByKey(_.get(entity, options.query), options.query);
-				} else {
-					currentValue = await this.findOne(options.query.call(null, entity));
+		const currentValues: StringMap<U> = {};
+
+		if (options.query) {
+			if (LodashReplacerUtils.IS_STRING(options.query)) {
+				const queries: StringMap<number> = {};
+				const values: any[] = [];
+				for (const [index, entity] of entities.entries()) {
+					if (!_.isNil(entity[options.query])) {
+						queries[entity[options.query].toString()] = index;
+						values.push(entity[options.query]);
+					} else {
+						throw new N9Error('entity-value-missing', 404, { entity, index, query: options.query });
+					}
+				}
+				const allEntities = await (
+					await this.findWithType(
+						{
+							[options.query]: {
+								$in: values,
+							},
+						},
+						this.type,
+						0,
+						0,
+					)
+				).toArray();
+				for (const entity of allEntities) {
+					currentValues[queries[entity[options.query]]] = entity;
+				}
+			} else {
+				for (const [index, entity] of entities.entries()) {
+					currentValues[index] = await this.findOne(options.query.call(null, entity));
 				}
 			}
-			if (currentValue) {
+		}
+
+		for (let [index, entity] of entities.entries()) {
+			if (currentValues[index]) {
+				const currentValue = currentValues[index];
 				if (!!options.mapFunction) {
 					entity = await options.mapFunction(entity, currentValue);
 				}
@@ -1179,8 +1217,11 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 					}
 				}
 
-				const toSet = _.omit(entity, options.onlyInsertFieldsKey);
-				const toSetOnInsert = _.pick(entity, options.onlyInsertFieldsKey);
+				const toSet = LodashReplacerUtils.OMIT_PROPERTIES(entity, options.onlyInsertFieldsKey);
+				const toSetOnInsert = LodashReplacerUtils.PICK_PROPERTIES(
+					entity,
+					options.onlyInsertFieldsKey,
+				);
 
 				let setOnInsert;
 				if (!LodashReplacerUtils.IS_OBJECT_EMPTY(toSetOnInsert)) {
@@ -1194,7 +1235,11 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				// Unset only level 1, other are override by $set on objects
 				let unsetQuery;
 				if (options.unsetUndefined) {
-					const toUnset: object = _.omit(currentValue, [..._.keys(entity), '_id', 'objectInfos']);
+					const toUnset: object = LodashReplacerUtils.OMIT_PROPERTIES(currentValue, [
+						..._.keys(entity),
+						'_id',
+						'objectInfos',
+					]);
 					if (!LodashReplacerUtils.IS_OBJECT_EMPTY(toUnset)) {
 						unsetQuery = {
 							$unset: {
@@ -1223,8 +1268,11 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				}
 				LangUtils.removeEmptyDeep(entity, undefined, undefined, !!this.conf.lockFields); // keep null values for lockfields
 
-				const toSet = _.omit(entity, options.onlyInsertFieldsKey);
-				const toSetOnInsert = _.pick(entity, options.onlyInsertFieldsKey);
+				const toSet = LodashReplacerUtils.OMIT_PROPERTIES(entity, options.onlyInsertFieldsKey);
+				const toSetOnInsert = LodashReplacerUtils.PICK_PROPERTIES(
+					entity,
+					options.onlyInsertFieldsKey,
+				);
 
 				let setOnInsert;
 				if (!LodashReplacerUtils.IS_OBJECT_EMPTY(toSetOnInsert)) {
@@ -1248,7 +1296,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 					if (LodashReplacerUtils.IS_STRING(options.query)) {
 						update.key = {
 							name: options.query,
-							value: _.get(entity, options.query),
+							value: entity[options.query],
 						};
 					} else {
 						update.query = options.query.call(null, entity);
@@ -1264,6 +1312,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		newEntities: UpdateManyQuery<U>[],
 		userId: string,
 		upsert?: boolean,
+		returnNewEntities: boolean = true,
 	): Promise<Cursor<U>> {
 		if (LodashReplacerUtils.IS_ARRAY_EMPTY(newEntities)) {
 			return await this.getEmptyCursor<U>(this.type);
@@ -1339,21 +1388,19 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		}
 		let oldValuesSaved: StringMap<U>;
 		if (this.conf.keepHistoric || this.conf.updateOnlyOnChange) {
-			oldValuesSaved = _.keyBy(
-				await (
-					await this.findWithType(
-						{
-							_id: {
-								$in: MongoUtils.oids(newEntities.map((newEntity) => newEntity.id)),
-							},
+			const oldValues = await (
+				await this.findWithType(
+					{
+						_id: {
+							$in: MongoUtils.oids(newEntities.map((newEntity) => newEntity.id)),
 						},
-						this.type,
-						0,
-						newEntities.length,
-					)
-				).toArray(),
-				'_id',
-			);
+					},
+					this.type,
+					0,
+					newEntities.length,
+				)
+			).toArray();
+			oldValuesSaved = _.keyBy(oldValues, '_id');
 		}
 
 		// for (const bulkOperation of bulkOperations) {
@@ -1363,64 +1410,71 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		// }
 
 		const bulkResult = await this.collection.bulkWrite(bulkOperations);
-		const newValuesQuery = {
-			_id: {
-				$in: MongoUtils.oids(
-					_.concat(
-						newEntities.map((newEntity) => newEntity.id),
-						Object.values(bulkResult.insertedIds ?? {}),
-						Object.values(bulkResult.upsertedIds ?? {}),
-					),
-				),
-			},
-		};
-		let newValues: Cursor<U> = await this.findWithType(
-			newValuesQuery,
-			this.type,
-			0,
-			newEntities?.length,
-		);
 
-		if (this.conf.keepHistoric || this.conf.updateOnlyOnChange) {
-			let shouldResetResponse = false;
-			while (await newValues.hasNext()) {
-				const newEntity = await newValues.next();
-				const oldValueSaved: U = oldValuesSaved[newEntity._id];
+		if (returnNewEntities) {
+			const newValuesQuery = {
+				_id: {
+					$in: MongoUtils.oids([
+						...newEntities.map((newEntity) => newEntity.id),
+						...(Object.values(bulkResult.insertedIds ?? {}) as string[]),
+						...(Object.values(bulkResult.upsertedIds ?? {}) as string[]),
+					]),
+				},
+			};
+			let newValues: Cursor<U> = await this.findWithType(
+				newValuesQuery,
+				this.type,
+				0,
+				newEntities?.length,
+			);
 
-				if (oldValueSaved) {
-					const diffs = deepDiff(oldValueSaved, newEntity, (path: string[], key: string) => {
-						return [
-							'objectInfos.creation',
-							'objectInfos.lastUpdate',
-							'objectInfos.lastModification',
-						].includes([...path, key].join('.'));
-					});
-					if (diffs) {
-						await this.historicManager.insertOne(newEntity._id, diffs, oldValueSaved, now, userId);
+			if (this.conf.keepHistoric || this.conf.updateOnlyOnChange) {
+				let shouldResetResponse = false;
+				while (await newValues.hasNext()) {
+					const newEntity = await newValues.next();
+					const oldValueSaved: U = oldValuesSaved[newEntity._id];
 
-						if (this.conf.updateOnlyOnChange) {
-							const retValue = await this.updateLastModificationDate(
+					if (oldValueSaved) {
+						const diffs = deepDiff(oldValueSaved, newEntity, (path: string[], key: string) => {
+							return [
+								'objectInfos.creation',
+								'objectInfos.lastUpdate',
+								'objectInfos.lastModification',
+							].includes([...path, key].join('.'));
+						});
+						if (diffs) {
+							await this.historicManager.insertOne(
 								newEntity._id,
 								diffs,
+								oldValueSaved,
 								now,
 								userId,
-								false,
 							);
-							if (retValue) {
-								shouldResetResponse = true;
+
+							if (this.conf.updateOnlyOnChange) {
+								const retValue = await this.updateLastModificationDate(
+									newEntity._id,
+									diffs,
+									now,
+									userId,
+									false,
+								);
+								if (retValue) {
+									shouldResetResponse = true;
+								}
 							}
 						}
 					}
 				}
+				if (shouldResetResponse) {
+					await newValues.close();
+					newValues = await this.findWithType(newValuesQuery, this.type, 0, newEntities?.length);
+				} else {
+					newValues.rewind();
+				}
 			}
-			if (shouldResetResponse) {
-				await newValues.close();
-				newValues = await this.findWithType(newValuesQuery, this.type, 0, newEntities?.length);
-			} else {
-				newValues.rewind();
-			}
+			return newValues;
 		}
-		return newValues;
 	}
 
 	private ifHasLockFieldsThrow(): void {

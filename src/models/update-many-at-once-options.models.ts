@@ -42,4 +42,10 @@ export interface UpdateManyAtOnceOptions<U> {
 	 * Defaults to true.
 	 */
 	unsetUndefined?: boolean;
+
+	/**
+	 * Return cursor on new entities.
+	 * Default: true
+	 */
+	returnNewEntities?: boolean;
 }

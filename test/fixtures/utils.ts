@@ -10,12 +10,14 @@ export class ArrayElement {
 }
 
 export class SampleEntityWithArray extends BaseMongoObject {
+	public code: string;
 	public parameters: {
 		items: ArrayElement[];
 	};
 }
 
 export class SampleEntityWithSimpleArray extends BaseMongoObject {
+	public code: string;
 	public parameters: {
 		items: string[];
 	};
@@ -28,6 +30,7 @@ export function generateMongoClient(): MongoClient<SampleEntityWithArray, null> 
 			arrayWithReferences: {
 				'parameters.items': 'code',
 			},
+			excludedFields: ['code'],
 		},
 		keepHistoric: true,
 	});

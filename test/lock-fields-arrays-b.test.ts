@@ -55,6 +55,7 @@ ava(
 		];
 
 		const vB: SampleEntityWithArray = {
+			code: 'b',
 			parameters: {
 				items: [a, b, c],
 			},

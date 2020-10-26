@@ -44,6 +44,7 @@ const c = {
  */
 ava('[LOCK-FIELDS-ARRAY E] Lock fields array should not disappear', async (t: Assertions) => {
 	const vE: SampleEntityWithArray = {
+		code: 'e',
 		parameters: {
 			items: _.cloneDeep([a, b, c]),
 		},
@@ -89,6 +90,7 @@ ava('[LOCK-FIELDS-ARRAY E] Lock fields array should not disappear', async (t: As
  */
 ava('[LOCK-FIELDS-ARRAY E] Lock fields array delete array', async (t: Assertions) => {
 	const vE: SampleEntityWithArray = {
+		code: 'e',
 		parameters: {
 			items: _.cloneDeep([a, b, c]),
 		},
@@ -145,6 +147,7 @@ ava(
 	'[LOCK-FIELDS-ARRAY E] Lock fields array should not disappear with simple array',
 	async (t: Assertions) => {
 		const vE: SampleEntityWithSimpleArray = {
+			code: 'e',
 			parameters: {
 				items: ['a', 'b', 'c'],
 			},
@@ -152,7 +155,9 @@ ava(
 
 		const collectionName = `test-${Math.ceil(Math.random() * 10000)}-${Date.now()}`;
 		const mongoClient = new MongoClient(collectionName, SampleEntityWithSimpleArray, null, {
-			lockFields: {},
+			lockFields: {
+				excludedFields: ['code'],
+			},
 			keepHistoric: true,
 		});
 		await mongoClient.initHistoricIndexes();

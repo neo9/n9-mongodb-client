@@ -59,6 +59,7 @@ ava(
 			'parameters.items[code=b].label.fr-FR',
 		];
 		const vA: SampleEntityWithArray = {
+			code: 'a',
 			parameters: {
 				items: [a, b, c],
 			},

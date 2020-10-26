@@ -30,4 +30,32 @@ export class LodashReplacerUtils {
 	public static IS_OBJECT_EMPTY(value: object | string | number): boolean {
 		return !value || !Object.keys(value).length;
 	}
+
+	public static OMIT_PROPERTIES<T extends object, K extends keyof T>(
+		originalObject: T | null | undefined,
+		keysToOmit: K[] | string[],
+	): Omit<T, K> {
+		if (!originalObject) return originalObject;
+		if (!keysToOmit) return originalObject;
+
+		const clonedObject = { ...originalObject };
+		for (const path of keysToOmit) {
+			delete clonedObject[path as K];
+		}
+		return clonedObject;
+	}
+
+	public static PICK_PROPERTIES<T extends object, K extends keyof T>(
+		originalObject: T | null | undefined,
+		props: K[],
+	): Pick<T, K> {
+		if (!originalObject || !props) return;
+
+		const picked: any = {};
+		for (const prop of props) {
+			picked[prop] = originalObject[prop];
+		}
+
+		return picked;
+	}
 }
