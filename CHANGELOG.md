@@ -1,3 +1,15 @@
+## [0.16.2](https://github.com/neo9/n9-mongo-client/compare/0.16.1...0.16.2) (2020-10-27)
+
+
+### perf
+
+* Improve update many at once perf with query callback ([c69d0de](https://github.com/neo9/n9-mongo-client/commit/c69d0de9438e62ec3e3bee834388b6e041fee346))
+* Improve update many at once perf with query string ([084edec](https://github.com/neo9/n9-mongo-client/commit/084edecfa2d29be83d0bca9e2513bdbcf56f23b9))
+
+### yarn
+
+* Fix repository used for mingo ([e864cba](https://github.com/neo9/n9-mongo-client/commit/e864cba356ddfebf0c30fa3c4bc9106950cdf028))
+
 ## [0.16.1](https://github.com/neo9/n9-mongo-client/compare/0.16.0...0.16.1) (2020-10-09)
 
 
