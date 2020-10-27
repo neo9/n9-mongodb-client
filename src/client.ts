@@ -865,13 +865,12 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				: true;
 			const updateQueries = await this.buildUpdatesQueries(entities, userId, options);
 			// console.log(`-- client.ts>updateManyAtOnce updateQueries --`, JSON.stringify(updateQueries, null, 2));
-			const res = (await this.updateMany(
+			return (await this.updateMany(
 				updateQueries,
 				userId,
 				options.upsert,
 				options.returnNewEntities,
 			)) as Cursor<U>;
-			return res;
 		} catch (e) {
 			LangUtils.throwN9ErrorFromError(e, { userId, options });
 		}
@@ -1118,6 +1117,8 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		options: UpdateManyAtOnceOptions<U>,
 	): Promise<UpdateManyQuery<U>[]> {
 		const updates: UpdateManyQuery<U>[] = [];
+		if (LodashReplacerUtils.IS_ARRAY_EMPTY(entities)) return updates;
+
 		let now;
 		if (options.lockNewFields) now = new Date();
 

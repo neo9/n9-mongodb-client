@@ -14,6 +14,15 @@ class SampleType extends BaseMongoObject {
 	public value: string;
 }
 
+class DataSample extends BaseMongoObject {
+	value: string;
+}
+
+class DataSampleWithCode extends BaseMongoObject {
+	code: boolean | number;
+	value: string;
+}
+
 global.log = new N9Log('tests');
 
 init();
@@ -131,9 +140,6 @@ ava('[UPDATE MANY AT ONCE] Should update one document', async (t: Assertions) =>
 
 ava('[UPDATE MANY AT ONCE] Should update one document by _id ObjectID', async (t: Assertions) => {
 	const collectionName = `test-${Date.now()}`;
-	class DataSample extends BaseMongoObject {
-		value: string;
-	}
 	const mongoClient = new MongoClient(collectionName, DataSample, DataSample, {});
 
 	const dataSample: DataSample = {
@@ -159,17 +165,31 @@ ava('[UPDATE MANY AT ONCE] Should update one document by _id ObjectID', async (t
 	t.deepEqual(dataUpdatedArray[0].value, 'update', 'value is updated');
 });
 
+ava('[UPDATE MANY AT ONCE] Should update nothing with empty array', async (t: Assertions) => {
+	const collectionName = `test-${Date.now()}`;
+
+	const mongoClient = new MongoClient(collectionName, DataSample, DataSample, {});
+
+	const dataSample: DataSample = {
+		value: 'init',
+	};
+	await mongoClient.insertOne(_.cloneDeep(dataSample), '', false, true);
+
+	const entities = await mongoClient.updateManyAtOnce([], 'TEST', {
+		query: (e) => ({ _id: MongoUtils.oid(e._id) as any }),
+	});
+
+	const dataUpdatedArray = await entities.toArray();
+	t.is(dataUpdatedArray.length, 0, '0 value updated');
+});
+
 ava(
 	'[UPDATE MANY AT ONCE] Update entity by query on attribut type number',
 	async (t: Assertions) => {
 		const collectionName = `test-${Date.now()}`;
-		class DataSample extends BaseMongoObject {
-			code: number;
-			value: string;
-		}
-		const mongoClient = new MongoClient(collectionName, DataSample, DataSample, {});
+		const mongoClient = new MongoClient(collectionName, DataSampleWithCode, DataSampleWithCode, {});
 
-		const dataSample: DataSample = {
+		const dataSample: DataSampleWithCode = {
 			code: 1,
 			value: 'init',
 		};
@@ -196,13 +216,9 @@ ava(
 	'[UPDATE MANY AT ONCE] Update entity by query on attribut type boolean',
 	async (t: Assertions) => {
 		const collectionName = `test-${Date.now()}`;
-		class DataSample extends BaseMongoObject {
-			code: boolean;
-			value: string;
-		}
-		const mongoClient = new MongoClient(collectionName, DataSample, DataSample, {});
+		const mongoClient = new MongoClient(collectionName, DataSampleWithCode, DataSampleWithCode, {});
 
-		const dataSample: DataSample = {
+		const dataSample: DataSampleWithCode = {
 			code: true,
 			value: 'init',
 		};
@@ -227,9 +243,6 @@ ava(
 
 ava('[UPDATE MANY AT ONCE] Throw on missing value', async (t: Assertions) => {
 	const collectionName = `test-${Date.now()}`;
-	class DataSample extends BaseMongoObject {
-		value: string;
-	}
 	const mongoClient = new MongoClient(collectionName, DataSample, DataSample, {});
 
 	const dataSample: DataSample = {
