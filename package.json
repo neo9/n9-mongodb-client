@@ -55,6 +55,7 @@
     "class-transformer": "^0.2.0",
     "deep-diff": "^1.0.2",
     "lodash": "^4.17.20",
+    "mingo": "^3.1.0",
     "mongodb": "3.6.2",
     "mongodb-lock": "^1.0.1"
   },

@@ -2,6 +2,7 @@ import { N9Log } from '@neo9/n9-node-log';
 import { N9Error } from '@neo9/n9-node-utils';
 import { Diff, diff as deepDiff } from 'deep-diff';
 import * as _ from 'lodash';
+import * as mingo from 'mingo';
 import {
 	AggregationCursor,
 	BulkWriteOperation,
@@ -1149,10 +1150,35 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				for (const entity of allEntities) {
 					currentValues[queries[entity[options.query]]] = entity;
 				}
+				// for (const [index, entity] of entities.entries()) {
+				// 	currentValues[index] = await this.findOneByKey(entity[options.query], options.query);
+				// }
 			} else {
-				for (const [index, entity] of entities.entries()) {
-					currentValues[index] = await this.findOne(options.query.call(null, entity));
+				const queries: FilterQuery<Partial<U>>[] = [];
+				for (const entity of entities) {
+					queries.push(options.query.call(null, entity));
 				}
+				const allEntities = await (
+					await this.findWithType(
+						{
+							$or: queries,
+						},
+						this.type,
+						0,
+						0,
+					)
+				).toArray();
+				for (const [index, query] of Object.entries(queries)) {
+					// mingo all use to find in the array like mongo search in collection
+					const matchElements = mingo.find(allEntities, MongoUtils.mapObjectIdToStringHex(query));
+					if (matchElements.hasNext()) {
+						currentValues[index] = matchElements.next();
+					}
+					// else the entity is not in the bd, will do an insert with upsert true
+				}
+				// for (const [index, entity] of entities.entries()) {
+				// 	currentValues[index] = await this.findOne(options.query.call(null, entity));
+				// }
 			}
 		}
 

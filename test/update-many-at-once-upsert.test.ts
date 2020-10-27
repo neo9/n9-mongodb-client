@@ -129,6 +129,36 @@ ava('[UPDATE MANY AT ONCE] Should update one document', async (t: Assertions) =>
 	t.is(typeof sampleTypeFoundWithNativeClient._id, 'object', '_id is still an object');
 });
 
+ava('[UPDATE MANY AT ONCE] Should update one document by _id ObjectID', async (t: Assertions) => {
+	const collectionName = `test-${Date.now()}`;
+	class DataSample extends BaseMongoObject {
+		value: string;
+	}
+	const mongoClient = new MongoClient(collectionName, DataSample, DataSample, {});
+
+	const dataSample: DataSample = {
+		value: 'init',
+	};
+	const insertedValue = await mongoClient.insertOne(_.cloneDeep(dataSample), '', false, true);
+
+	const entities = await mongoClient.updateManyAtOnce(
+		[
+			{
+				_id: insertedValue._id,
+				value: 'update',
+			},
+		],
+		'TEST',
+		{
+			query: (e) => ({ _id: MongoUtils.oid(e._id) as any }),
+		},
+	);
+
+	const dataUpdatedArray = await entities.toArray();
+	t.is(dataUpdatedArray.length, 1, '1 value updated');
+	t.deepEqual(dataUpdatedArray[0].value, 'update', 'value is updated');
+});
+
 ava(
 	'[UPDATE MANY AT ONCE] Update entity by query on attribut type number',
 	async (t: Assertions) => {

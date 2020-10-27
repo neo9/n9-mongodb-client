@@ -3416,6 +3416,11 @@ min-indent@^1.0.0:
   resolved "https://registry.npmjs.org/min-indent/-/min-indent-1.0.1.tgz#a63f681673b30571fbe8bc25686ae746eefa9869"
   integrity sha512-I9jwMn07Sy/IwOj3zVkVik2JTvgpaykDZEigL6Rx6N9LbMywwUSMtxET+7lVoDLLd3O3IXwJwvuuns8UB/HeAg==
 
+mingo@^3.1.0:
+  version "3.1.0"
+  resolved "https://repo.neo9.pro/repository/npm-global/mingo/-/mingo-3.1.0.tgz#9efaa4db7bd8d185106cba474c3112dcac7bfd81"
+  integrity sha512-0Bb94A1IEz3Vwd9pbHjQEWpJfX9nVceD+hLeSue6yXvzgP7HayS6IvuOdrw2Wz3tNBgJALg6W38aq2mkBSWq/A==
+
 minimatch@^3.0.4:
   version "3.0.4"
   resolved "https://registry.npmjs.org/minimatch/-/minimatch-3.0.4.tgz#5166e286457f03306064be5497e8dbb0c3d32083"
