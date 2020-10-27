@@ -1,3 +1,10 @@
+## [0.16.3](https://github.com/neo9/n9-mongo-client/compare/0.16.2...0.16.3) (2020-10-27)
+
+
+### update
+
+* Fix update many at once on update with empty array ([ed1bd58](https://github.com/neo9/n9-mongo-client/commit/ed1bd58b4e224fecc14a8f89bc6ec11716197b49))
+
 ## [0.16.2](https://github.com/neo9/n9-mongo-client/compare/0.16.1...0.16.2) (2020-10-27)
 
 
