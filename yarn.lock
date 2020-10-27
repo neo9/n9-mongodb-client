@@ -3418,7 +3418,7 @@ min-indent@^1.0.0:
 
 mingo@^3.1.0:
   version "3.1.0"
-  resolved "https://repo.neo9.pro/repository/npm-global/mingo/-/mingo-3.1.0.tgz#9efaa4db7bd8d185106cba474c3112dcac7bfd81"
+  resolved "https://registry.npmjs.org/mingo/-/mingo-3.1.0.tgz#9efaa4db7bd8d185106cba474c3112dcac7bfd81"
   integrity sha512-0Bb94A1IEz3Vwd9pbHjQEWpJfX9nVceD+hLeSue6yXvzgP7HayS6IvuOdrw2Wz3tNBgJALg6W38aq2mkBSWq/A==
 
 minimatch@^3.0.4:
