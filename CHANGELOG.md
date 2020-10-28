@@ -1,3 +1,10 @@
+## [0.16.4](https://github.com/neo9/n9-mongo-client/compare/0.16.3...0.16.4) (2020-10-28)
+
+
+### tags
+
+* Fix init tags index to set index as sparse ([1898367](https://github.com/neo9/n9-mongo-client/commit/189836788492c3252d381b016c1f66652998dc5f))
+
 ## [0.16.3](https://github.com/neo9/n9-mongo-client/compare/0.16.2...0.16.3) (2020-10-27)
 
 
