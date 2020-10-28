@@ -17,6 +17,7 @@ init();
 ava('[Tags] Add tag to entities then remove them', async (t: Assertions) => {
 	const collection = global.db.collection(`test-${Date.now()}`);
 	const mongoClient = new MongoClient(collection, SampleType, null);
+	await mongoClient.initTagsIndex();
 
 	await mongoClient.insertOne({ field1String: 'string1' }, 'userId1');
 	await mongoClient.insertOne({ field1String: 'string2' }, 'userId1');
@@ -47,6 +48,7 @@ ava('[Tags] Add tag to entities then remove them', async (t: Assertions) => {
 ava('[Tags] Add tag to entities then delete them', async (t: Assertions) => {
 	const collection = global.db.collection(`test-${Date.now()}`);
 	const mongoClient = new MongoClient(collection, SampleType, null);
+	await mongoClient.initTagsIndex();
 
 	await mongoClient.insertOne({ field1String: 'string1' }, 'userId1');
 	await mongoClient.insertOne({ field1String: 'string2' }, 'userId1');
@@ -71,6 +73,7 @@ ava(
 	async (t: Assertions) => {
 		const collection = global.db.collection(`test-${Date.now()}`);
 		const mongoClient = new MongoClient(collection, SampleType, null);
+		await mongoClient.initTagsIndex();
 
 		let item1 = await mongoClient.insertOne({ field1String: 'string1' }, 'userId1');
 		const item1LastUpdateDate = item1.objectInfos.lastUpdate.date;
@@ -100,6 +103,7 @@ ava(
 	async (t: Assertions) => {
 		const collection = global.db.collection(`test-${Date.now()}`);
 		const mongoClient = new MongoClient(collection, SampleType, null);
+		await mongoClient.initTagsIndex();
 
 		let item1 = await mongoClient.insertOne({ field1String: 'string1' }, 'userId1');
 		const item1LastUpdateDate = item1.objectInfos.lastUpdate.date;

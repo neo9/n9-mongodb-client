@@ -127,7 +127,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 	}
 
 	public async initTagsIndex(): Promise<void> {
-		await this.indexManager.createIndex({ 'objectInfos.tags': 1 });
+		await this.indexManager.createIndex({ 'objectInfos.tags': 1 }, { sparse: true });
 	}
 
 	public async initHistoricIndexes(): Promise<void> {
