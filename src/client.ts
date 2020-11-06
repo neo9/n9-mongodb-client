@@ -1,6 +1,6 @@
 import { N9Log } from '@neo9/n9-node-log';
 import { N9Error } from '@neo9/n9-node-utils';
-import { Diff, diff as deepDiff } from 'deep-diff';
+import * as fastDeepEqual from 'fast-deep-equal/es6';
 import * as _ from 'lodash';
 import * as mingo from 'mingo';
 import {
@@ -13,7 +13,6 @@ import {
 	Cursor,
 	Db,
 	FilterQuery,
-	FindAndModifyWriteOpResultObject,
 	IndexOptions,
 	MatchKeysAndValues,
 	MongoClient as MongodbClient,
@@ -44,6 +43,7 @@ import { TagManager } from './tag-manager';
 
 const defaultConfiguration: MongoClientConfiguration = {
 	keepHistoric: false,
+	historicPageSize: 100,
 };
 
 export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
@@ -544,9 +544,9 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				}
 			}
 
-			let saveOldValue;
+			let snapshot;
 			if (this.conf.keepHistoric || this.conf.updateOnlyOnChange) {
-				saveOldValue = await this.findOne(query);
+				snapshot = await this.findOne(query);
 			}
 
 			let newEntity = (
@@ -564,29 +564,22 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			}
 
 			if (this.conf.keepHistoric || this.conf.updateOnlyOnChange) {
-				const diffs = deepDiff(saveOldValue, newEntity, (path: string[], key: string) => {
-					return [
-						'objectInfos.creation',
-						'objectInfos.lastUpdate',
-						'objectInfos.lastModification',
-					].includes([...path, key].join('.'));
-				});
-				if (diffs) {
-					await this.historicManager.insertOne(newEntity._id, diffs, saveOldValue, now, userId);
-
+				if (snapshot && !this.historicManager.areValuesEquals(snapshot, newEntity)) {
+					if (this.conf.keepHistoric) {
+						await this.historicManager.insertOne(newEntity._id, snapshot, now, userId);
+					}
 					if (this.conf.updateOnlyOnChange) {
 						const newUpdate = await this.updateLastModificationDate(
-							newEntity._id,
-							diffs,
+							snapshot,
+							newEntity,
 							now,
 							userId,
 						);
 
 						if (returnNewValue && newUpdate) {
-							newEntity = newUpdate.value;
 							newEntity = MongoUtils.mapObjectToClass(
 								this.type,
-								MongoUtils.unRemoveSpecialCharactersInKeys(newEntity),
+								MongoUtils.unRemoveSpecialCharactersInKeys(newUpdate),
 							);
 						}
 					}
@@ -961,25 +954,24 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 	}
 
 	public async findHistoricByEntityId(
-		id: string,
+		entityId: string,
 		page: number = 0,
 		size: number = 10,
 	): Promise<Cursor<EntityHistoric<U>>> {
-		return await this.historicManager.findByEntityId(id, page, size);
+		const latestEntityVersion: U = await this.findOneById(entityId);
+		return await this.historicManager.findByEntityId(entityId, latestEntityVersion, page, size);
 	}
 
 	public async findOneHistoricByUserIdMostRecent(
 		entityId: string,
 		userId: string,
 	): Promise<EntityHistoric<U>> {
-		return await this.historicManager.findOneByUserIdMostRecent(entityId, userId);
-	}
-
-	public async findOneHistoricByJustAfterAnother(
-		entityId: string,
-		historicId: string,
-	): Promise<EntityHistoric<U>> {
-		return await this.historicManager.findOneByJustAfterAnother(entityId, historicId);
+		const latestEntityVersion: U = await this.findOneById(entityId);
+		return await this.historicManager.findOneByUserIdMostRecent(
+			entityId,
+			userId,
+			latestEntityVersion,
+		);
 	}
 
 	public async countHistoricByEntityId(id: string): Promise<number> {
@@ -1448,59 +1440,41 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 					]),
 				},
 			};
-			let newValues: Cursor<U> = await this.findWithType(
-				newValuesQuery,
-				this.type,
-				0,
-				newEntities?.length,
-			);
 
 			if (this.conf.keepHistoric || this.conf.updateOnlyOnChange) {
-				let shouldResetResponse = false;
-				while (await newValues.hasNext()) {
-					const newEntity = await newValues.next();
-					const oldValueSaved: U = oldValuesSaved[newEntity._id];
+				const newValuesStream = await this.streamWithType(
+					newValuesQuery,
+					this.type,
+					this.conf.historicPageSize,
+				);
 
-					if (oldValueSaved) {
-						const diffs = deepDiff(oldValueSaved, newEntity, (path: string[], key: string) => {
-							return [
-								'objectInfos.creation',
-								'objectInfos.lastUpdate',
-								'objectInfos.lastModification',
-							].includes([...path, key].join('.'));
-						});
-						if (diffs) {
-							await this.historicManager.insertOne(
-								newEntity._id,
-								diffs,
-								oldValueSaved,
-								now,
-								userId,
-							);
+				await newValuesStream.forEachPage(async (newValuesEntities: U[]) => {
+					const modifications: { snapshot: U; newEntity: U }[] = [];
 
-							if (this.conf.updateOnlyOnChange) {
-								const retValue = await this.updateLastModificationDate(
-									newEntity._id,
-									diffs,
-									now,
-									userId,
-									false,
-								);
-								if (retValue) {
-									shouldResetResponse = true;
-								}
+					for (const newEntity of newValuesEntities) {
+						const snapshot: U = oldValuesSaved[newEntity._id];
+
+						if (snapshot) {
+							if (!this.historicManager.areValuesEquals(snapshot, newEntity)) {
+								modifications.push({
+									snapshot,
+									newEntity,
+								});
 							}
 						}
 					}
-				}
-				if (shouldResetResponse) {
-					await newValues.close();
-					newValues = await this.findWithType(newValuesQuery, this.type, 0, newEntities?.length);
-				} else {
-					newValues.rewind();
-				}
+					await this.historicManager.insertMany(
+						modifications.map((modification) => modification.snapshot),
+						now,
+						userId,
+					);
+
+					if (this.conf.updateOnlyOnChange) {
+						await this.updateLastModificationDateBulk(modifications, now, userId);
+					}
+				});
 			}
-			return newValues;
+			return await this.findWithType(newValuesQuery, this.type, 0, newEntities?.length);
 		}
 	}
 
@@ -1514,41 +1488,19 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		return await this.findWithType<X>({ $and: [{ _id: false }, { _id: true }] }, type, -1, 0);
 	}
 
-	/**
-	 * Return undefined if nothing has changed
-	 */
 	private async updateLastModificationDate(
-		entityId: string,
-		diffs: Diff<U, U>[],
+		snapshot: U,
+		newEntity: U,
 		updateDate: Date,
 		userId: string,
-		returnNewValue: boolean = true,
-	): Promise<FindAndModifyWriteOpResultObject<U> | undefined> {
-		// determine if the document has changed
-		// if omit is not empty, field names must not be in omit to be taken into account
-		// if pick is not empty, field names must be in pick to be taken into account
-		const pick = this.conf.updateOnlyOnChange?.changeFilters?.pick ?? [];
-		const omit = pick.length ? [] : this.conf.updateOnlyOnChange?.changeFilters?.omit ?? [];
-		let hasChanged = false;
-		for (const diff of diffs) {
-			if (diff.path) {
-				const path = diff.path.join('.');
-				const isOmitted = omit.length && omit.find((omittedPath) => path.startsWith(omittedPath));
-				const isPicked = !pick.length || pick.find((pickedPath) => path.startsWith(pickedPath));
-
-				if (!isOmitted && isPicked) {
-					hasChanged = true;
-					break;
-				}
-			}
-		}
+	): Promise<U> {
 		// if no change were detected, don't update lastModification
-		if (!hasChanged) {
-			return;
+		if (this.areEntitiesEqualToUpdateOnlyOnChange(snapshot, newEntity)) {
+			return newEntity;
 		}
 
-		return await this.collection.findOneAndUpdate(
-			{ _id: MongoUtils.oid(entityId) as any },
+		const updateResult = await this.collection.findOneAndUpdate(
+			{ _id: MongoUtils.oid(newEntity._id) as any },
 			{
 				$set: {
 					'objectInfos.lastModification': {
@@ -1558,8 +1510,81 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				} as any,
 			},
 			{
-				returnOriginal: !returnNewValue,
+				returnOriginal: false,
 			},
 		);
+		return updateResult.value;
+	}
+
+	private async updateLastModificationDateBulk(
+		modifications: { snapshot: U; newEntity: U }[],
+		updateDate: Date,
+		userId: string,
+	): Promise<void> {
+		const idsToUpdate: string[] = [];
+
+		for (const modification of modifications) {
+			if (
+				!this.areEntitiesEqualToUpdateOnlyOnChange(modification.snapshot, modification.newEntity)
+			) {
+				idsToUpdate.push(modification.newEntity._id);
+			}
+		}
+
+		if (LodashReplacerUtils.IS_ARRAY_EMPTY(idsToUpdate)) return;
+
+		await this.collection.updateMany(
+			{ _id: { $in: MongoUtils.oids(idsToUpdate) as any[] } },
+			{
+				$set: {
+					'objectInfos.lastModification': {
+						date: updateDate,
+						userId: (ObjectId.isValid(userId) ? MongoUtils.oid(userId) : userId) as string,
+					},
+				} as any,
+			},
+		);
+	}
+
+	private areEntitiesEqualToUpdateOnlyOnChange(snapshot: U, newEntity: U): boolean {
+		// determine if the document has changed
+		// if omit is not empty, field names must not be in omit to be taken into account
+		// if pick is not empty, field names must be in pick to be taken into account
+		const pickPaths = this.conf.updateOnlyOnChange?.changeFilters?.pick;
+		const omitPaths = !pickPaths?.length
+			? this.conf.updateOnlyOnChange?.changeFilters?.omit
+			: undefined;
+
+		let snapshotOmitted: Partial<U> = { ...snapshot };
+		let newEntityOmitted: Partial<U> = { ...newEntity };
+		if (snapshotOmitted.objectInfos) {
+			snapshotOmitted.objectInfos = { ...snapshotOmitted.objectInfos };
+			delete snapshotOmitted.objectInfos.creation;
+			delete snapshotOmitted.objectInfos.lastUpdate;
+			delete snapshotOmitted.objectInfos.lastModification;
+		}
+
+		if (newEntityOmitted.objectInfos) {
+			newEntityOmitted.objectInfos = { ...newEntityOmitted.objectInfos };
+			delete newEntityOmitted.objectInfos.creation;
+			delete newEntityOmitted.objectInfos.lastUpdate;
+			delete newEntityOmitted.objectInfos.lastModification;
+		}
+		if (omitPaths) {
+			snapshotOmitted = _.omit(snapshotOmitted, omitPaths);
+			newEntityOmitted = _.omit(newEntityOmitted, omitPaths);
+		}
+
+		let snapshotFiltered: Partial<U>;
+		let newEntityFiltered: Partial<U>;
+		if (pickPaths) {
+			snapshotFiltered = _.pick(snapshotOmitted, pickPaths);
+			newEntityFiltered = _.pick(newEntityOmitted, pickPaths);
+		} else {
+			snapshotFiltered = snapshotOmitted;
+			newEntityFiltered = newEntityOmitted;
+		}
+
+		return fastDeepEqual(snapshotFiltered, newEntityFiltered);
 	}
 }

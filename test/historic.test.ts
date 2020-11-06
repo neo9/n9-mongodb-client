@@ -94,6 +94,35 @@ ava('[CRUD] Insert one update it and remove it', async (t: Assertions) => {
 		_.omit(initialValue, ['_id', 'objectInfos.lastModification', 'objectInfos.lastUpdate']),
 		'historic store the previous value',
 	);
+	t.deepEqual(
+		JSON.parse(JSON.stringify(historic[0].dataEdited[0])),
+		{
+			kind: 'E',
+			path: ['field1String'],
+			lhs: 'string1',
+			rhs: 'string2',
+		},
+		'historic store the edited data',
+	);
+	const lastestUserIdEdition = await mongoClient.findOneHistoricByUserIdMostRecent(
+		insertedDocument._id,
+		insertedDocument.objectInfos.lastUpdate.userId,
+	);
+
+	t.is(lastestUserIdEdition._id, historic[0]._id, 'historic found for latest user');
+	t.truthy(lastestUserIdEdition.dataEdited, 'data edited is set');
+	t.deepEqual(
+		JSON.parse(JSON.stringify(lastestUserIdEdition.dataEdited)),
+		[
+			{
+				kind: 'E',
+				path: ['field1String'],
+				lhs: 'string1',
+				rhs: 'string2',
+			},
+		],
+		'historic store the edited data by the user',
+	);
 
 	const historicSinceLength = await mongoClient.countHistoricSince(
 		insertedDocument._id,
@@ -103,7 +132,7 @@ ava('[CRUD] Insert one update it and remove it', async (t: Assertions) => {
 
 	await mongoClient.deleteOneById(insertedDocument._id);
 	historicLength = await mongoClient.countHistoricByEntityId(insertedDocument._id);
-	t.is(historicLength, 1, 'historic is keept after deletion');
+	t.is(historicLength, 1, 'historic is kept after deletion');
 
 	await mongoClient.dropCollection();
 });

@@ -1,9 +1,9 @@
 import { N9Error } from '@neo9/n9-node-utils';
-import * as _ from 'lodash';
 import { Cursor, FilterQuery } from 'mongodb';
 import { Readable, Writable } from 'stream';
 import { MongoClient } from './client';
 import { LangUtils } from './lang-utils';
+import { LodashReplacerUtils } from './lodash-replacer.utils';
 import { BaseMongoObject } from './models';
 import { ClassType } from './models/class-type.models';
 import { MongoUtils } from './mongo-utils';
@@ -69,23 +69,25 @@ export class MongoReadStream<
 	private lastId: string = null;
 	private cursor: Cursor<Partial<U | L>> = null;
 	private hasAlreadyAddedIdConditionOnce: boolean = false;
+	private readonly _query: FilterQuery<any>;
 
 	get query(): FilterQuery<any> {
-		return _.cloneDeep(this._query);
+		return LodashReplacerUtils.CLONE_DEEP(this._query);
 	}
 
 	constructor(
-		private mongoClient: MongoClient<U, L>,
-		private _query: FilterQuery<any>,
-		private pageSize: number,
-		private projection: object = {},
-		private customType?: ClassType<Partial<U | L>>,
+		private readonly mongoClient: MongoClient<U, L>,
+		_query: FilterQuery<any>,
+		private readonly pageSize: number,
+		private readonly projection: object = {},
+		private readonly customType?: ClassType<Partial<U | L>>,
 	) {
 		super({ objectMode: true });
 		try {
 			if ((projection as FilterQuery<any>)._id === 0) {
 				throw new N9Error('can-t-create-projection-without-_id', 400, { projection });
 			}
+			this._query = { ..._query };
 		} catch (e) {
 			LangUtils.throwN9ErrorFromError(e, { pageSize, projection, customType, query: _query });
 		}

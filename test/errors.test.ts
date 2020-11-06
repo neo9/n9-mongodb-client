@@ -223,11 +223,6 @@ ava('[Errors] Check error thrown on every client function', async (t: Assertions
 		'findOneHistoricByUserIdMostRecent error',
 	);
 	await t.throwsAsync(
-		client.findOneHistoricByJustAfterAnother('test', 'test'),
-		{ instanceOf: N9Error, message: 'invalid-mongo-id' },
-		'findOneHistoricByJustAfterAnother error',
-	);
-	await t.throwsAsync(
 		client.countHistoricByEntityId('test'),
 		{ instanceOf: N9Error, message: 'invalid-mongo-id' },
 		'countHistoricByEntityId error',

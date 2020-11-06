@@ -2,6 +2,7 @@ import { N9Log } from '@neo9/n9-node-log';
 import { waitFor } from '@neo9/n9-node-utils';
 import ava, { Assertions } from 'ava';
 
+import { FilterQuery } from 'mongodb';
 import { MongoClient, MongoUtils } from '../src';
 import { BaseMongoObject } from '../src/models';
 import { init } from './fixtures/utils';
@@ -151,16 +152,25 @@ ava('[MONGO-READ-STREAM] Does not override conditions on _id', async (t: Asserti
 	}
 	let length = 0;
 	// filter on even docs, lower than 21, so 11 docs
-	await mongoClient
-		.stream({ _id: { $in: ids }, $and: [{ i: { $lt: 21 } }] }, pageSize)
-		.forEachAsync(async (item: TestItem) => {
-			if (item) {
-				length += 1;
-			} else {
-				t.fail('missing item');
-			}
-		});
+	const query: FilterQuery<TestItem> = {
+		_id: { $in: ids },
+		$and: [{ i: { $lt: 21 } }],
+	};
+	const stream = await mongoClient.stream(query, pageSize);
+	await stream.forEachAsync(async (item: TestItem) => {
+		if (item) {
+			length += 1;
+		} else {
+			t.fail('missing item');
+		}
+	});
 
+	t.not(query, stream.query, 'query fetched from mongo read stream is a copy');
+	t.deepEqual(
+		MongoUtils.mapObjectIdToStringHex(query),
+		MongoUtils.mapObjectIdToStringHex(stream.query),
+		'query fetched from mongo read stream has the same body',
+	);
 	t.is(length, 11, 'nb elements in collection');
 	await mongoClient.dropCollection();
 });

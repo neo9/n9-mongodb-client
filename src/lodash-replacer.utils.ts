@@ -1,3 +1,6 @@
+import * as _ from 'lodash';
+import * as v8 from 'v8';
+
 export class LodashReplacerUtils {
 	public static IS_NIL(value: any): value is null | undefined {
 		return value === undefined || value === null;
@@ -57,5 +60,13 @@ export class LodashReplacerUtils {
 		}
 
 		return picked;
+	}
+
+	public static CLONE_DEEP<T>(value: T): T {
+		if (v8.deserialize) {
+			// Added in Node 11
+			return v8.deserialize(v8.serialize(value));
+		}
+		return _.cloneDeep(value);
 	}
 }

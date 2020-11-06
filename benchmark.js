@@ -176,6 +176,196 @@ async function runUpdateManyAtOnceBench(defaultCaseRunOptions, version) {
 	);
 }
 
+async function runUpdateManyAtOnceHistoricBench(defaultCaseRunOptions, version) {
+	const nbElement = 100;
+	const suiteName = `Update many at once with history Case ${nbElement}`;
+	let i = 0;
+	const dataToInsert = Array(nbElement)
+		.fill({
+			test: 'a string',
+			n: 123456,
+		})
+		.map((elmt) => {
+			i += 1;
+			return { ...elmt, i };
+		});
+	await suite(
+		suiteName,
+		add(
+			'Update many at once mongodb native without historic',
+			async () => {
+				const db = global.dbClient.db();
+				return async () => {
+					let newValue = 'a string updated' + process.hrtime.bigint().toString(10);
+					const newEntities = dataToInsert.map((d) => ({
+						...d,
+						test: newValue,
+					}));
+					await db.collection('test-1').bulkWrite(
+						newEntities.map((dataToInsert) => ({
+							updateOne: {
+								filter: {
+									i: dataToInsert.i,
+								},
+								update: {
+									$set: dataToInsert,
+								},
+								upsert: true,
+							},
+						})),
+					);
+				};
+			},
+			defaultCaseRunOptions,
+		),
+		add(
+			'Update many at once N9MongoClient with historic',
+			async () => {
+				const mongoClient = new MongoClient('test-2', TestEntity, TestEntity, {
+					keepHistoric: true,
+				});
+				return async () => {
+					let newValue = 'a string updated' + process.hrtime.bigint().toString(10);
+					const newEntities = dataToInsert.map((d) => ({
+						...d,
+						test: newValue,
+					}));
+					await mongoClient.updateManyAtOnce(newEntities, 'userId', {
+						unsetUndefined: true,
+						forceEditLockFields: true,
+						upsert: true,
+						query: 'i',
+						lockNewFields: false,
+						onlyInsertFieldsKey: ['i'],
+						returnNewEntities: true, // default
+					});
+				};
+			},
+			defaultCaseRunOptions,
+		),
+		add(
+			'Update many at once N9MongoClient with historic & update on change',
+			async () => {
+				const mongoClient = new MongoClient('test-2', TestEntity, TestEntity, {
+					keepHistoric: true,
+					updateOnlyOnChange: {},
+				});
+				return async () => {
+					let newValue = 'a string updated' + process.hrtime.bigint().toString(10);
+					const newEntities = dataToInsert.map((d) => ({
+						...d,
+						test: newValue,
+					}));
+					await mongoClient.updateManyAtOnce(newEntities, 'userId', {
+						unsetUndefined: true,
+						forceEditLockFields: true,
+						upsert: true,
+						query: 'i',
+						lockNewFields: false,
+						onlyInsertFieldsKey: ['i'],
+						returnNewEntities: true, // default
+					});
+				};
+			},
+			defaultCaseRunOptions,
+		),
+		add(
+			'Update many at once N9MongoClient with update on change only',
+			async () => {
+				const mongoClient = new MongoClient('test-2', TestEntity, TestEntity, {
+					keepHistoric: false,
+					updateOnlyOnChange: {},
+				});
+				return async () => {
+					let newValue = 'a string updated' + process.hrtime.bigint().toString(10);
+					const newEntities = dataToInsert.map((d) => ({
+						...d,
+						test: newValue,
+					}));
+					await mongoClient.updateManyAtOnce(newEntities, 'userId', {
+						unsetUndefined: true,
+						forceEditLockFields: true,
+						upsert: true,
+						query: 'i',
+						lockNewFields: false,
+						onlyInsertFieldsKey: ['i'],
+						returnNewEntities: true, // default
+					});
+				};
+			},
+			defaultCaseRunOptions,
+		),
+		add(
+			'Update many at once N9MongoClient with update on change omit',
+			async () => {
+				const mongoClient = new MongoClient('test-2', TestEntity, TestEntity, {
+					keepHistoric: false,
+					updateOnlyOnChange: {
+						changeFilters: {
+							omit: ['aPropertyThatDoesNotExists'],
+						},
+					},
+				});
+				return async () => {
+					let newValue = 'a string updated' + process.hrtime.bigint().toString(10);
+					const newEntities = dataToInsert.map((d) => ({
+						...d,
+						test: newValue,
+					}));
+					await mongoClient.updateManyAtOnce(newEntities, 'userId', {
+						unsetUndefined: true,
+						forceEditLockFields: true,
+						upsert: true,
+						query: 'i',
+						lockNewFields: false,
+						onlyInsertFieldsKey: ['i'],
+						returnNewEntities: true, // default
+					});
+				};
+			},
+			defaultCaseRunOptions,
+		),
+		add(
+			'Update many at once N9MongoClient with update on change pick',
+			async () => {
+				const mongoClient = new MongoClient('test-2', TestEntity, TestEntity, {
+					keepHistoric: false,
+					updateOnlyOnChange: {
+						changeFilters: {
+							pick: ['test'],
+						},
+					},
+				});
+				return async () => {
+					let newValue = 'a string updated' + process.hrtime.bigint().toString(10);
+					const newEntities = dataToInsert.map((d) => ({
+						...d,
+						test: newValue,
+					}));
+					await mongoClient.updateManyAtOnce(newEntities, 'userId', {
+						unsetUndefined: true,
+						forceEditLockFields: true,
+						upsert: true,
+						query: 'i',
+						lockNewFields: false,
+						onlyInsertFieldsKey: ['i'],
+						returnNewEntities: true, // default
+					});
+				};
+			},
+			defaultCaseRunOptions,
+		),
+		cycle(),
+		complete(),
+		save({
+			version,
+			format: 'json',
+			details: false,
+			file: `${suiteName} ${version}`,
+		}),
+	);
+}
+
 async function runFindBench(defaultCaseRunOptions, version) {
 	const nbElement = 100;
 	const suiteName = `Read Case ${nbElement}`;
@@ -244,6 +434,8 @@ async function start() {
 		await runFindBench(defaultCaseRunOptions, version);
 		await global.db.dropDatabase();
 		await runUpdateManyAtOnceBench(defaultCaseRunOptions, version);
+		await global.db.dropDatabase();
+		await runUpdateManyAtOnceHistoricBench(defaultCaseRunOptions, version);
 		await global.db.dropDatabase();
 	} catch (e) {
 		throw e;

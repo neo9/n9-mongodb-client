@@ -48,6 +48,11 @@ export interface MongoClientConfiguration {
 	keepHistoric?: boolean;
 
 	/**
+	 * Page size used to save historic data as bulk
+	 */
+	historicPageSize?: number;
+
+	/**
 	 * If set, methods to lock and unlock fields will be enabled.
 	 * Fields that are locked will not be updated in later updates. This behaviour is overridable at each method call.
 	 * Defaults to undefined.

@@ -1,16 +1,18 @@
 import { N9Log } from '@neo9/n9-node-log';
-import { Diff } from 'deep-diff';
+import { diff as deepDiff } from 'deep-diff';
+import * as fastDeepEqual from 'fast-deep-equal/es6';
 import { Collection, Cursor, Db, IndexOptions, ObjectId } from 'mongodb';
 import { IndexManager } from './index-manager';
 import { LangUtils } from './lang-utils';
-import { BaseMongoObject, EntityHistoric, StringMap } from './models';
+import { LodashReplacerUtils } from './lodash-replacer.utils';
+import { BaseMongoObject, EntityHistoric, EntityHistoricStored, StringMap } from './models';
 import { MongoUtils } from './mongo-utils';
 
 /**
  * Class that handles the historisation of entity changes
  */
 export class HistoricManager<U extends BaseMongoObject> {
-	private readonly collection: Collection<EntityHistoric<U>>;
+	private readonly collection: Collection<EntityHistoricStored<U>>;
 	private readonly logger: N9Log;
 	private readonly db: Db;
 	private readonly indexManager: IndexManager;
@@ -55,31 +57,27 @@ export class HistoricManager<U extends BaseMongoObject> {
 	 * Insert a change of an entity in database.
 	 *
 	 * @param entityId id of the entity that changed
-	 * @param diffs list of changes
 	 * @param snapshot snapshot of the entity before the changes
 	 * @param updateDate date at which the update occurred
 	 * @param userId id of the user who performed the update
 	 */
 	public async insertOne(
 		entityId: string,
-		diffs: Diff<U, U>[],
 		snapshot: U,
 		updateDate: Date,
 		userId: string,
 	): Promise<void> {
 		try {
-			const change: EntityHistoric<U> = {
+			const change: EntityHistoricStored<U> = {
 				entityId: MongoUtils.oid(entityId) as any,
 				date: updateDate,
 				userId: ObjectId.isValid(userId) ? (MongoUtils.oid(userId) as any) : userId,
-				dataEdited: diffs,
 				snapshot: MongoUtils.removeSpecialCharactersInKeys(snapshot),
 			};
 			await this.collection.insertOne(change as any);
 		} catch (e) {
 			LangUtils.throwN9ErrorFromError(e, {
 				entityId,
-				diffs,
 				snapshot,
 				updateDate,
 				userId,
@@ -87,26 +85,60 @@ export class HistoricManager<U extends BaseMongoObject> {
 		}
 	}
 
+	public async insertMany(snapshots: U[], updateDate: Date, userId: string): Promise<void> {
+		try {
+			if (LodashReplacerUtils.IS_ARRAY_EMPTY(snapshots)) {
+				return;
+			}
+			const changes: EntityHistoricStored<U>[] = [];
+			for (const snapshot of snapshots) {
+				changes.push({
+					entityId: MongoUtils.oid(snapshot._id) as any,
+					date: updateDate,
+					userId: ObjectId.isValid(userId) ? (MongoUtils.oid(userId) as any) : userId,
+					snapshot: MongoUtils.removeSpecialCharactersInKeys(snapshot),
+				});
+			}
+			await this.collection.insertMany(changes as any);
+		} catch (e) {
+			LangUtils.throwN9ErrorFromError(e, {
+				snapshots,
+				updateDate,
+				userId,
+			});
+		}
+	}
+
 	public async findByEntityId(
-		id: string,
+		entityId: string,
+		latestEntityVersion: U,
 		page: number = 0,
 		size: number = 10,
 	): Promise<Cursor<EntityHistoric<U>>> {
 		try {
+			let previousEntityHistoricSnapshot: U = latestEntityVersion;
 			return await this.collection
-				.find<EntityHistoric<U>>({ entityId: MongoUtils.oid(id) as any })
+				.find<EntityHistoricStored<U>>({ entityId: MongoUtils.oid(entityId) as any })
 				.sort('_id', -1)
 				.skip(page * size)
 				.limit(size)
-				.map((a: EntityHistoric<U>) =>
-					MongoUtils.mapObjectToClass<EntityHistoric<U>, EntityHistoric<U>>(
+				.map((a: EntityHistoric<U>) => {
+					const entityHistoric = MongoUtils.mapObjectToClass<EntityHistoric<U>, EntityHistoric<U>>(
 						EntityHistoric,
 						MongoUtils.unRemoveSpecialCharactersInKeys(a),
-					),
-				);
+					);
+					// old vs new
+					const { oldValue, newValue } = this.cleanObjectInfos(
+						entityHistoric.snapshot,
+						previousEntityHistoricSnapshot,
+					);
+					entityHistoric.dataEdited = deepDiff(oldValue, newValue);
+					previousEntityHistoricSnapshot = entityHistoric.snapshot;
+					return entityHistoric;
+				});
 		} catch (e) {
 			LangUtils.throwN9ErrorFromError(e, {
-				id,
+				entityId,
 				page,
 				size,
 			});
@@ -116,6 +148,7 @@ export class HistoricManager<U extends BaseMongoObject> {
 	public async findOneByUserIdMostRecent(
 		entityId: string,
 		userId: string,
+		lastestValue: U,
 	): Promise<EntityHistoric<U>> {
 		try {
 			const cursor = await this.collection
@@ -124,53 +157,42 @@ export class HistoricManager<U extends BaseMongoObject> {
 					userId: ObjectId.isValid(userId) ? (MongoUtils.oid(userId) as any) : userId,
 				})
 				.sort('_id', -1)
-				.limit(1)
-				.map((a: EntityHistoric<U>) =>
-					MongoUtils.mapObjectToClass<EntityHistoric<U>, EntityHistoric<U>>(
-						EntityHistoric,
-						MongoUtils.unRemoveSpecialCharactersInKeys(a),
-					),
-				);
+				.limit(1);
 			if (await cursor.hasNext()) {
-				return await cursor.next();
+				const entityHistoricRaw = await cursor.next();
+				const oneMoreRecentValueCursor = await this.collection
+					.find<EntityHistoric<U>>({
+						entityId: MongoUtils.oid(entityId) as any,
+						_id: {
+							$gt: MongoUtils.oid(entityHistoricRaw._id) as any,
+						},
+					})
+					.sort('_id', -1)
+					.limit(1);
+				let oneMoreRecentValue: U;
+				if (await oneMoreRecentValueCursor.hasNext()) {
+					oneMoreRecentValue = (await oneMoreRecentValueCursor.next()).snapshot;
+				} else {
+					oneMoreRecentValue = lastestValue;
+				}
+				const entityHistoric = MongoUtils.mapObjectToClass<EntityHistoric<U>, EntityHistoric<U>>(
+					EntityHistoric,
+					MongoUtils.unRemoveSpecialCharactersInKeys(entityHistoricRaw),
+				);
+
+				// old vs new
+				const { oldValue, newValue } = this.cleanObjectInfos(
+					entityHistoric.snapshot,
+					oneMoreRecentValue,
+				);
+				entityHistoric.dataEdited = deepDiff(oldValue, newValue);
+				return entityHistoric;
 			}
 			return;
 		} catch (e) {
 			LangUtils.throwN9ErrorFromError(e, {
 				entityId,
 				userId,
-			});
-		}
-	}
-
-	public async findOneByJustAfterAnother(
-		entityId: string,
-		historicId: string,
-	): Promise<EntityHistoric<U>> {
-		try {
-			const cursor = await this.collection
-				.find<EntityHistoric<U>>({
-					entityId: MongoUtils.oid(entityId) as any,
-					_id: {
-						$gt: MongoUtils.oid(historicId) as any,
-					},
-				})
-				.sort('_id', 1)
-				.limit(1)
-				.map((a: EntityHistoric<U>) =>
-					MongoUtils.mapObjectToClass<EntityHistoric<U>, EntityHistoric<U>>(
-						EntityHistoric,
-						MongoUtils.unRemoveSpecialCharactersInKeys(a),
-					),
-				);
-			if (await cursor.hasNext()) {
-				return await cursor.next();
-			}
-			return;
-		} catch (e) {
-			LangUtils.throwN9ErrorFromError(e, {
-				entityId,
-				historicId,
 			});
 		}
 	}
@@ -205,5 +227,29 @@ export class HistoricManager<U extends BaseMongoObject> {
 		} catch (e) {
 			LangUtils.throwN9ErrorFromError(e);
 		}
+	}
+
+	public areValuesEquals(snapshot: U, newEntity: U): boolean {
+		const { oldValue, newValue } = this.cleanObjectInfos(snapshot, newEntity);
+		return fastDeepEqual(oldValue, newValue);
+	}
+
+	private cleanObjectInfos(snapshot: U, newEntity: U): { oldValue: U; newValue: U } {
+		const oldValue: U = { ...snapshot };
+		if (oldValue.objectInfos) {
+			oldValue.objectInfos = { ...oldValue.objectInfos };
+			delete oldValue.objectInfos.creation;
+			delete oldValue.objectInfos.lastUpdate;
+			delete oldValue.objectInfos.lastModification;
+		}
+
+		const newValue: U = { ...newEntity };
+		if (newValue.objectInfos) {
+			newValue.objectInfos = { ...newValue.objectInfos };
+			delete newValue.objectInfos.creation;
+			delete newValue.objectInfos.lastUpdate;
+			delete newValue.objectInfos.lastModification;
+		}
+		return { oldValue, newValue };
 	}
 }
