@@ -1,3 +1,18 @@
+# [0.17.0](https://github.com/neo9/n9-mongo-client/compare/0.16.4...0.17.0) (2020-11-09)
+
+
+### errors
+
+* Change error status to match standard HTTP status ([c35208e](https://github.com/neo9/n9-mongo-client/commit/c35208ef8e6a82e56c0e2e2e7cda5d09ac0bae13))
+
+### historic
+
+* Improve historic management performances ([6b3e13a](https://github.com/neo9/n9-mongo-client/commit/6b3e13abe6e340927fe5abf5d71607dff22af734))
+
+### yarn
+
+* Fix repository url ([6cee980](https://github.com/neo9/n9-mongo-client/commit/6cee980da8fbbd8d17b33d54891949ae448c6063))
+
 ## [0.16.4](https://github.com/neo9/n9-mongo-client/compare/0.16.3...0.16.4) (2020-10-28)
 
 
