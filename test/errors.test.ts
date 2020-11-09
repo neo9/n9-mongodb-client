@@ -82,6 +82,14 @@ ava('[Errors] Check error thrown on every client function', async (t: Assertions
 		{ instanceOf: N9Error, message: '$or must be an array' },
 		'count error',
 	);
+	let error: N9Error;
+	try {
+		await client.count({ $or: {} });
+	} catch (e) {
+		error = e;
+	}
+	await t.is(error.status, 500, 'error status is translate to an HTTP status');
+	await t.is(error.context.srcError.code, 2, 'error original status is still accessible');
 
 	// STOP MONGO
 	await client.dropCollection();
