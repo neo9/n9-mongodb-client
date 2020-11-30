@@ -1,3 +1,10 @@
+## [0.17.1](https://github.com/neo9/n9-mongo-client/compare/0.17.0...0.17.1) (2020-11-30)
+
+
+### update
+
+* Fix usage of mingo to upsert documents ([8c8e449](https://github.com/neo9/n9-mongo-client/commit/8c8e449c4d8a1988905177f699cc23179b106947))
+
 # [0.17.0](https://github.com/neo9/n9-mongo-client/compare/0.16.4...0.17.0) (2020-11-09)
 
 
