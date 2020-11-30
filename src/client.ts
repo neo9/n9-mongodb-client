@@ -2,7 +2,7 @@ import { N9Log } from '@neo9/n9-node-log';
 import { N9Error } from '@neo9/n9-node-utils';
 import * as fastDeepEqual from 'fast-deep-equal/es6';
 import * as _ from 'lodash';
-import * as mingo from 'mingo';
+import * as mingo from 'mingo-fork-no-hash';
 import {
 	AggregationCursor,
 	BulkWriteOperation,

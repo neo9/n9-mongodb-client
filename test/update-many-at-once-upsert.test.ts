@@ -23,6 +23,12 @@ class DataSampleWithCode extends BaseMongoObject {
 	value: string;
 }
 
+class DataSampleWithCodes extends BaseMongoObject {
+	id: number;
+	codes: string[];
+	value: string;
+}
+
 global.log = new N9Log('tests');
 
 init();
@@ -211,6 +217,71 @@ ava(
 		t.deepEqual((await entities.toArray())[0].value, 'update', 'value is updated');
 	},
 );
+
+/**
+ * This test fail due to a hash computed in `mingo`. This hash is the same for `KNE_OC42-midas` and `KNE_OCS3-midas`.
+ */
+ava('[UPDATE MANY AT ONCE] Update with mingo hash collision ', async (t: Assertions) => {
+	const collectionName = `test-${Date.now()}`;
+	const mongoClient = new MongoClient(collectionName, DataSampleWithCodes, DataSampleWithCodes, {});
+	await mongoClient.createUniqueIndex('codes');
+	const dataSample1: DataSampleWithCodes = {
+		id: 1,
+		codes: ['KNE_OC42-midas'],
+		value: 'init',
+	};
+	const dataSample2: DataSampleWithCodes = {
+		id: 2,
+		codes: ['KNE_OCS3-midas'],
+		value: 'init',
+	};
+	await mongoClient.insertOne(_.cloneDeep(dataSample1), '', false, false);
+	await mongoClient.insertOne(_.cloneDeep(dataSample2), '', false, false);
+
+	await t.notThrowsAsync(
+		async () =>
+			await mongoClient.updateManyAtOnce(
+				[
+					{
+						id: 1,
+						codes: ['KNE_OC42-midas'],
+						value: 'init',
+					},
+					{
+						id: 2,
+						codes: ['KNE_OCS3-midas'],
+						value: 'init',
+					},
+				],
+				'TEST',
+				{
+					query: (entity) => {
+						const q = {
+							$or: [
+								{
+									id: entity.id,
+								},
+								{
+									codes: {
+										$in: entity.codes,
+									},
+								},
+							],
+						};
+						return q;
+					},
+					mapFunction: async (entity: DataSampleWithCodes, existingEntity) => {
+						t.is(entity.id, existingEntity.id, `Existing entity and new one have the same id`);
+						return {
+							...entity,
+							codes: [...entity.codes, ...existingEntity?.codes],
+						};
+					},
+				},
+			),
+	);
+	await mongoClient.dropCollection();
+});
 
 ava(
 	'[UPDATE MANY AT ONCE] Update entity by query on attribut type boolean',
