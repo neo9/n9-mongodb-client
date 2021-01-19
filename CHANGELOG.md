@@ -1,3 +1,14 @@
+# [0.18.0](https://github.com/neo9/n9-mongo-client/compare/0.17.1...0.18.0) (2021-01-19)
+
+
+### types
+
+* Fix types ([c610ba2](https://github.com/neo9/n9-mongo-client/commit/c610ba279f3cd2160a4b048c890519282d7df22c))
+
+### upgrade
+
+* Upgrade all dependencies class-transformer too ([5f4e0b3](https://github.com/neo9/n9-mongo-client/commit/5f4e0b36ae370b20b3391b7e36b0dd68e2f4d850))
+
 ## [0.17.1](https://github.com/neo9/n9-mongo-client/compare/0.17.0...0.17.1) (2020-11-30)
 
 
