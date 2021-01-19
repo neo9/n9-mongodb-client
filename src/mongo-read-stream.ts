@@ -131,7 +131,7 @@ export class MongoReadStream<
 			if (!(this.cursor && (await this.cursor.hasNext()))) {
 				if (this.lastId) {
 					this._query.$and = this._query.$and || [];
-					const andConditions: FilterQuery<BaseMongoObject>[] = (this._query as any).$and;
+					const andConditions: FilterQuery<any>[] = (this._query as any).$and;
 					// avoid to add multiple time the _id condition
 					if (this.hasAlreadyAddedIdConditionOnce) {
 						andConditions[andConditions.length - 1]._id.$gt = MongoUtils.oid(this.lastId);
