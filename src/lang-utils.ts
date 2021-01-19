@@ -71,7 +71,7 @@ export class LangUtils {
 
 	public static throwN9ErrorFromError(e: Error | N9Error | MongoError, context?: object): void {
 		if (e instanceof N9Error) throw e;
-		let status = (e as MongoError).code || 500;
+		let status: number = ((e as MongoError).code as number) || 500;
 		if (status < 100 || status > 599) {
 			status = 500;
 		}

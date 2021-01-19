@@ -71,10 +71,6 @@ export class MongoReadStream<
 	private hasAlreadyAddedIdConditionOnce: boolean = false;
 	private readonly _query: FilterQuery<any>;
 
-	get query(): FilterQuery<any> {
-		return LodashReplacerUtils.CLONE_DEEP(this._query);
-	}
-
 	constructor(
 		private readonly mongoClient: MongoClient<U, L>,
 		_query: FilterQuery<any>,
@@ -84,13 +80,17 @@ export class MongoReadStream<
 	) {
 		super({ objectMode: true });
 		try {
-			if ((projection as FilterQuery<any>)._id === 0) {
+			if ((projection as FilterQuery<BaseMongoObject>)._id === 0) {
 				throw new N9Error('can-t-create-projection-without-_id', 400, { projection });
 			}
 			this._query = { ..._query };
 		} catch (e) {
 			LangUtils.throwN9ErrorFromError(e, { pageSize, projection, customType, query: _query });
 		}
+	}
+
+	get query(): FilterQuery<any> {
+		return LodashReplacerUtils.CLONE_DEEP(this._query);
 	}
 
 	/**
@@ -131,12 +131,12 @@ export class MongoReadStream<
 			if (!(this.cursor && (await this.cursor.hasNext()))) {
 				if (this.lastId) {
 					this._query.$and = this._query.$and || [];
-					const andConditions: FilterQuery<any>[] = (this._query as any).$and;
+					const andConditions: FilterQuery<BaseMongoObject>[] = (this._query as any).$and;
 					// avoid to add multiple time the _id condition
 					if (this.hasAlreadyAddedIdConditionOnce) {
 						andConditions[andConditions.length - 1]._id.$gt = MongoUtils.oid(this.lastId);
 					} else {
-						andConditions.push({ _id: { $gt: MongoUtils.oid(this.lastId) } });
+						andConditions.push({ _id: { $gt: MongoUtils.oid(this.lastId) as any } });
 						this.hasAlreadyAddedIdConditionOnce = true;
 					}
 				}
