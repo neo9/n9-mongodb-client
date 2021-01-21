@@ -1,3 +1,14 @@
+## [0.18.1](https://github.com/neo9/n9-mongo-client/compare/0.18.0...0.18.1) (2021-01-21)
+
+
+### transformer
+
+* Fix date transformer signature ([d0dce0a](https://github.com/neo9/n9-mongo-client/commit/d0dce0aa8edc7d133320873a37a20190637a625d))
+
+### yarn
+
+* Downgrade class-transfomer to v 0.3.1 ([0b24225](https://github.com/neo9/n9-mongo-client/commit/0b242250f288d6eca5ef470dcd4aee47ec6cacdf))
+
 # [0.18.0](https://github.com/neo9/n9-mongo-client/compare/0.17.1...0.18.0) (2021-01-19)
 
 
