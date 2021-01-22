@@ -1,3 +1,10 @@
+# [0.19.0](https://github.com/neo9/n9-mongo-client/compare/0.18.1...0.19.0) (2021-01-22)
+
+
+### yarn
+
+* Move class-transformer to peer dependencies ([1398234](https://github.com/neo9/n9-mongo-client/commit/1398234de8889d1663ad681bc2386ecfb2e5ee23))
+
 ## [0.18.1](https://github.com/neo9/n9-mongo-client/compare/0.18.0...0.18.1) (2021-01-21)
 
 
