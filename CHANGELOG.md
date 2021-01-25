@@ -1,3 +1,10 @@
+## [0.17.2](https://github.com/neo9/n9-mongo-client/compare/0.17.1...0.17.2) (2021-01-25)
+
+
+### update
+
+* Expose updateMany function for advanced usages ([a6ae460](https://github.com/neo9/n9-mongo-client/commit/a6ae460e7981eb1dd7d6a6cc864496f94423c208))
+
 ## [0.17.1](https://github.com/neo9/n9-mongo-client/compare/0.17.0...0.17.1) (2020-11-30)
 
 
