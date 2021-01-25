@@ -71,10 +71,6 @@ export class MongoReadStream<
 	private hasAlreadyAddedIdConditionOnce: boolean = false;
 	private readonly _query: FilterQuery<any>;
 
-	get query(): FilterQuery<any> {
-		return LodashReplacerUtils.CLONE_DEEP(this._query);
-	}
-
 	constructor(
 		private readonly mongoClient: MongoClient<U, L>,
 		_query: FilterQuery<any>,
@@ -91,6 +87,10 @@ export class MongoReadStream<
 		} catch (e) {
 			LangUtils.throwN9ErrorFromError(e, { pageSize, projection, customType, query: _query });
 		}
+	}
+
+	get query(): FilterQuery<any> {
+		return LodashReplacerUtils.CLONE_DEEP(this._query);
 	}
 
 	/**

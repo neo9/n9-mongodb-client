@@ -1102,6 +1102,165 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		return await this.tagManager.deleteManyWithTag(tag);
 	}
 
+	/**
+	 * Function to run multiple updateOne queries as bulk.
+	 * Prefer usage of {@link updateManyAtOnce} that build queries for you.
+	 * @param newEntities information to run queries
+	 * @param userId userId that do the change
+	 * @param upsert upsert values or not
+	 * @param returnNewEntities return new values or not
+	 */
+	public async updateMany(
+		newEntities: UpdateManyQuery<U>[],
+		userId: string,
+		upsert?: boolean,
+		returnNewEntities: boolean = true,
+	): Promise<Cursor<U>> {
+		if (LodashReplacerUtils.IS_ARRAY_EMPTY(newEntities)) {
+			return await this.getEmptyCursor<U>(this.type);
+		}
+
+		const bulkOperations: BulkWriteOperation<U>[] = [];
+		const now = new Date();
+		for (const newEnt of newEntities) {
+			const updateQuery = newEnt.updateQuery;
+			if (!updateQuery.$set) {
+				updateQuery.$set = {};
+			}
+
+			const formattedUserId = ObjectId.isValid(userId) ? MongoUtils.oid(userId) : userId;
+			updateQuery.$set = {
+				...updateQuery.$set,
+				'objectInfos.lastUpdate': {
+					date: now,
+					userId: formattedUserId,
+				},
+			};
+
+			if (!this.conf.updateOnlyOnChange) {
+				(updateQuery.$set as any)['objectInfos.lastModification'] = {
+					date: now,
+					userId: formattedUserId,
+				};
+			}
+			if (updateQuery.$set._id) {
+				this.logger.warn(
+					`Trying to set _id field to ${updateQuery.$set._id} (${updateQuery.$set._id.constructor.name})`,
+				);
+				delete (updateQuery.$set as any)._id;
+			}
+
+			if (upsert) {
+				updateQuery.$setOnInsert = {
+					...updateQuery.$setOnInsert,
+					'objectInfos.creation': {
+						userId,
+						date: now,
+					},
+				};
+				if (this.conf.updateOnlyOnChange) {
+					(updateQuery.$setOnInsert as any)['objectInfos.lastModification'] = {
+						date: now,
+						userId: formattedUserId,
+					};
+				}
+			}
+
+			let filter: FilterQuery<any | BaseMongoObject> = {};
+
+			if (newEnt.id) {
+				filter._id = MongoUtils.oid(newEnt.id) as any;
+			} else if (newEnt.key) {
+				filter[newEnt.key.name] = newEnt.key.value;
+			} else if (newEnt.query) {
+				filter = newEnt.query;
+			} else {
+				filter._id = {
+					$exists: false,
+				};
+			}
+
+			bulkOperations.push({
+				updateOne: {
+					filter,
+					upsert,
+					update: updateQuery,
+				},
+			});
+		}
+		let oldValuesSaved: StringMap<U>;
+		if (this.conf.keepHistoric || this.conf.updateOnlyOnChange) {
+			const oldValues = await (
+				await this.findWithType(
+					{
+						_id: {
+							$in: MongoUtils.oids(newEntities.map((newEntity) => newEntity.id)),
+						},
+					},
+					this.type,
+					0,
+					newEntities.length,
+				)
+			).toArray();
+			oldValuesSaved = _.keyBy(oldValues, '_id');
+		}
+
+		// for (const bulkOperation of bulkOperations) {
+		// 	console.log(`--  bulkOperation --`);
+		// 	console.log(JSON.stringify(bulkOperation));
+		// 	console.log(`--                --`);
+		// }
+
+		const bulkResult = await this.collection.bulkWrite(bulkOperations);
+
+		if (returnNewEntities) {
+			const newValuesQuery = {
+				_id: {
+					$in: MongoUtils.oids([
+						...newEntities.map((newEntity) => newEntity.id),
+						...(Object.values(bulkResult.insertedIds ?? {}) as string[]),
+						...(Object.values(bulkResult.upsertedIds ?? {}) as string[]),
+					]),
+				},
+			};
+
+			if (this.conf.keepHistoric || this.conf.updateOnlyOnChange) {
+				const newValuesStream = await this.streamWithType(
+					newValuesQuery,
+					this.type,
+					this.conf.historicPageSize,
+				);
+
+				await newValuesStream.forEachPage(async (newValuesEntities: U[]) => {
+					const modifications: { snapshot: U; newEntity: U }[] = [];
+
+					for (const newEntity of newValuesEntities) {
+						const snapshot: U = oldValuesSaved[newEntity._id];
+
+						if (snapshot) {
+							if (!this.historicManager.areValuesEquals(snapshot, newEntity)) {
+								modifications.push({
+									snapshot,
+									newEntity,
+								});
+							}
+						}
+					}
+					await this.historicManager.insertMany(
+						modifications.map((modification) => modification.snapshot),
+						now,
+						userId,
+					);
+
+					if (this.conf.updateOnlyOnChange) {
+						await this.updateLastModificationDateBulk(modifications, now, userId);
+					}
+				});
+			}
+			return await this.findWithType(newValuesQuery, this.type, 0, newEntities?.length);
+		}
+	}
+
 	// tslint:disable-next-line:cyclomatic-complexity
 	private async buildUpdatesQueries(
 		entities: MatchKeysAndValues<U>[],
@@ -1325,157 +1484,6 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			}
 		}
 		return updates;
-	}
-
-	private async updateMany(
-		newEntities: UpdateManyQuery<U>[],
-		userId: string,
-		upsert?: boolean,
-		returnNewEntities: boolean = true,
-	): Promise<Cursor<U>> {
-		if (LodashReplacerUtils.IS_ARRAY_EMPTY(newEntities)) {
-			return await this.getEmptyCursor<U>(this.type);
-		}
-
-		const bulkOperations: BulkWriteOperation<U>[] = [];
-		const now = new Date();
-		for (const newEnt of newEntities) {
-			const updateQuery = newEnt.updateQuery;
-			if (!updateQuery.$set) {
-				updateQuery.$set = {};
-			}
-
-			const formattedUserId = ObjectId.isValid(userId) ? MongoUtils.oid(userId) : userId;
-			updateQuery.$set = {
-				...updateQuery.$set,
-				'objectInfos.lastUpdate': {
-					date: now,
-					userId: formattedUserId,
-				},
-			};
-
-			if (!this.conf.updateOnlyOnChange) {
-				(updateQuery.$set as any)['objectInfos.lastModification'] = {
-					date: now,
-					userId: formattedUserId,
-				};
-			}
-			if (updateQuery.$set._id) {
-				this.logger.warn(
-					`Trying to set _id field to ${updateQuery.$set._id} (${updateQuery.$set._id.constructor.name})`,
-				);
-				delete (updateQuery.$set as any)._id;
-			}
-
-			if (upsert) {
-				updateQuery.$setOnInsert = {
-					...updateQuery.$setOnInsert,
-					'objectInfos.creation': {
-						userId,
-						date: now,
-					},
-				};
-				if (this.conf.updateOnlyOnChange) {
-					(updateQuery.$setOnInsert as any)['objectInfos.lastModification'] = {
-						date: now,
-						userId: formattedUserId,
-					};
-				}
-			}
-
-			let filter: FilterQuery<any | BaseMongoObject> = {};
-
-			if (newEnt.id) {
-				filter._id = MongoUtils.oid(newEnt.id) as any;
-			} else if (newEnt.key) {
-				filter[newEnt.key.name] = newEnt.key.value;
-			} else if (newEnt.query) {
-				filter = newEnt.query;
-			} else {
-				filter._id = {
-					$exists: false,
-				};
-			}
-
-			bulkOperations.push({
-				updateOne: {
-					filter,
-					upsert,
-					update: updateQuery,
-				},
-			});
-		}
-		let oldValuesSaved: StringMap<U>;
-		if (this.conf.keepHistoric || this.conf.updateOnlyOnChange) {
-			const oldValues = await (
-				await this.findWithType(
-					{
-						_id: {
-							$in: MongoUtils.oids(newEntities.map((newEntity) => newEntity.id)),
-						},
-					},
-					this.type,
-					0,
-					newEntities.length,
-				)
-			).toArray();
-			oldValuesSaved = _.keyBy(oldValues, '_id');
-		}
-
-		// for (const bulkOperation of bulkOperations) {
-		// 	console.log(`--  bulkOperation --`);
-		// 	console.log(JSON.stringify(bulkOperation));
-		// 	console.log(`--                --`);
-		// }
-
-		const bulkResult = await this.collection.bulkWrite(bulkOperations);
-
-		if (returnNewEntities) {
-			const newValuesQuery = {
-				_id: {
-					$in: MongoUtils.oids([
-						...newEntities.map((newEntity) => newEntity.id),
-						...(Object.values(bulkResult.insertedIds ?? {}) as string[]),
-						...(Object.values(bulkResult.upsertedIds ?? {}) as string[]),
-					]),
-				},
-			};
-
-			if (this.conf.keepHistoric || this.conf.updateOnlyOnChange) {
-				const newValuesStream = await this.streamWithType(
-					newValuesQuery,
-					this.type,
-					this.conf.historicPageSize,
-				);
-
-				await newValuesStream.forEachPage(async (newValuesEntities: U[]) => {
-					const modifications: { snapshot: U; newEntity: U }[] = [];
-
-					for (const newEntity of newValuesEntities) {
-						const snapshot: U = oldValuesSaved[newEntity._id];
-
-						if (snapshot) {
-							if (!this.historicManager.areValuesEquals(snapshot, newEntity)) {
-								modifications.push({
-									snapshot,
-									newEntity,
-								});
-							}
-						}
-					}
-					await this.historicManager.insertMany(
-						modifications.map((modification) => modification.snapshot),
-						now,
-						userId,
-					);
-
-					if (this.conf.updateOnlyOnChange) {
-						await this.updateLastModificationDateBulk(modifications, now, userId);
-					}
-				});
-			}
-			return await this.findWithType(newValuesQuery, this.type, 0, newEntities?.length);
-		}
 	}
 
 	private ifHasLockFieldsThrow(): void {

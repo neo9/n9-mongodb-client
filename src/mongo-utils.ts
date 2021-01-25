@@ -7,8 +7,6 @@ import { LodashReplacerUtils } from './lodash-replacer.utils';
 import { ClassType } from './models/class-type.models';
 
 export class MongoUtils {
-	private static readonly MONGO_ID_REGEXP: RegExp = /^[0-9a-f]{24}$/;
-
 	public static async connect(
 		url: string,
 		options: mongodb.MongoClientOptions = { useNewUrlParser: true },
@@ -149,4 +147,5 @@ export class MongoUtils {
 
 		return uri.replace(regex, '********');
 	}
+	private static readonly MONGO_ID_REGEXP: RegExp = /^[0-9a-f]{24}$/;
 }
