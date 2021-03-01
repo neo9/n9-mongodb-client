@@ -6,6 +6,7 @@ import * as mingo from 'mingo-fork-no-hash';
 import {
 	AggregationCursor,
 	BulkWriteOperation,
+	ClientSession,
 	CollationDocument,
 	Collection,
 	CollectionAggregationOptions,
@@ -101,6 +102,15 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		} else {
 			this.collectionSourceForAggregation = this.collection;
 		}
+	}
+
+	public async renameCollection(
+		newName: string,
+		dropTarget: boolean = false,
+		options?: { session?: ClientSession },
+	): Promise<MongoClient<U, L>> {
+		await this.collection.rename(newName, { ...options, dropTarget });
+		return new MongoClient<U, L>(newName, this.type, this.typeList, this.conf);
 	}
 
 	public async createIndex(fieldOrSpec: string | any, options?: IndexOptions): Promise<void> {
