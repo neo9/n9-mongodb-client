@@ -1,3 +1,14 @@
+## [0.19.1](https://github.com/neo9/n9-mongo-client/compare/0.19.0...0.19.1) (2021-03-02)
+
+
+### rename
+
+* Add function to rename collection ([ee5d137](https://github.com/neo9/n9-mongo-client/commit/ee5d137373e2419eac3873164f21ce4688f4a404))
+
+### update
+
+* Expose updateMany function for advanced usages ([b1a576f](https://github.com/neo9/n9-mongo-client/commit/b1a576f0398b4be7e637e25050a29b618ab5a8d8))
+
 # [0.19.0](https://github.com/neo9/n9-mongo-client/compare/0.18.1...0.19.0) (2021-01-22)
 
 
