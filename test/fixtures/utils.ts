@@ -38,19 +38,39 @@ export function generateMongoClient(): MongoClient<SampleEntityWithArray, null> 
 
 export function init(): void {
 	let mongod: MongoMemoryServer;
+	let isInMemory: boolean;
 
 	ava.before(async () => {
-		mongod = new MongoMemoryServer();
-		const uri = await mongod.getConnectionString();
-		await MongoUtils.connect(uri);
+		let mongoConnectionString;
+		try {
+			await MongoUtils.connect('mongodb://127.0.0.1:27017', {});
+			global.log.warn(`Using local MongoDB`);
+		} catch (e) {
+			if (e.name === 'MongoNetworkError') {
+				global.log.warn(`Using MongoDB in memory`);
+				isInMemory = true;
+				// no classic mongodb available, so use one in memory
+				mongod = new MongoMemoryServer({
+					binary: {
+						version: '4.2.12',
+					},
+				});
+				mongoConnectionString = await mongod.getUri();
+				await MongoUtils.connect(mongoConnectionString);
+			} else {
+				throw e;
+			}
+		}
 	});
 
 	ava.after(async () => {
-		global.log.info(`DROP DB after tests OK`);
-		if (global.db) {
-			await (global.db as mongodb.Db).dropDatabase();
-			await MongoUtils.disconnect();
+		if (isInMemory) {
+			global.log.info(`DROP DB after tests OK`);
+			if (global.db) {
+				await (global.db as mongodb.Db).dropDatabase();
+				await MongoUtils.disconnect();
+			}
+			await mongod.stop();
 		}
-		await mongod.stop();
 	});
 }
