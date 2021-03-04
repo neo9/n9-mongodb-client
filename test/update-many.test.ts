@@ -65,7 +65,7 @@ ava(
 				],
 				'userId',
 				true,
-				true,
+				undefined, // default to true
 				{
 					updateLastModificationDateOnlyOnInsert: true,
 				},
