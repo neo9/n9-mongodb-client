@@ -1,3 +1,14 @@
+## [0.17.4](https://github.com/neo9/n9-mongo-client/compare/0.17.3...0.17.4) (2021-03-04)
+
+
+### tests
+
+* Improve code banches coverage ([b83b927](https://github.com/neo9/n9-mongo-client/commit/b83b927c8b5ca60686d21992dc5fd2eabde9a593))
+
+### update
+
+* Add update many option to set last modification date only on insert ([0000042](https://github.com/neo9/n9-mongo-client/commit/0000042a7bb0eb179f27e66cbeb478071784bf97))
+
 ## [0.17.3](https://github.com/neo9/n9-mongo-client/compare/0.17.2...0.17.3) (2021-03-01)
 
 
