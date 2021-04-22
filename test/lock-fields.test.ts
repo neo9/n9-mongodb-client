@@ -83,7 +83,7 @@ const locksDataSample: SampleComplexType = {
 };
 
 const getLockFieldsMongoClient = (keepHistoric: boolean = false) => {
-	return new MongoClient(`test-${Date.now()}`, SampleComplexType, null, {
+	return new MongoClient(`test-${Date.now()}`, SampleComplexType, SampleComplexType, {
 		keepHistoric,
 		lockFields: {
 			excludedFields: ['excludedField', 'excludedArray'],

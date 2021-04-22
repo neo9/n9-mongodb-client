@@ -305,15 +305,30 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			findCursor = findCursor.collation(collation);
 		}
 
+		let transformFunction: (a: Partial<U | L>) => any;
+		if (type) {
+			transformFunction = (a: Partial<U | L>): T => {
+				const b = MongoUtils.unRemoveSpecialCharactersInKeys(a);
+				return MongoUtils.mapObjectToClass(type, b);
+			};
+		} else if (
+			LodashReplacerUtils.IS_NIL(type) &&
+			!LodashReplacerUtils.IS_OBJECT_EMPTY(projection)
+		) {
+			transformFunction = this.mapEntityFromMongoWithoutClassTransformer;
+		} else {
+			throw new N9Error('type or projection is required', 400, {
+				query,
+				collectionName: this.collection.collectionName,
+			});
+		}
+
 		return findCursor
 			.sort(sort)
 			.skip(page * size)
 			.limit(size)
 			.project(projection)
-			.map((a: Partial<U | L>) => {
-				const b = MongoUtils.unRemoveSpecialCharactersInKeys(a);
-				return MongoUtils.mapObjectToClass(type, b);
-			});
+			.map(transformFunction);
 	}
 
 	public stream<T extends Partial<U | L>>(
@@ -1619,5 +1634,9 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		}
 
 		return fastDeepEqual(snapshotFiltered, newEntityFiltered);
+	}
+
+	private mapEntityFromMongoWithoutClassTransformer(entity: Partial<U | L>): U {
+		return MongoUtils.unRemoveSpecialCharactersInKeys(entity);
 	}
 }

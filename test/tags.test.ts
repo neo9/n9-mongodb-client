@@ -16,7 +16,7 @@ init();
 
 ava('[Tags] Add tag to entities then remove them', async (t: Assertions) => {
 	const collection = global.db.collection(`test-${Date.now()}`);
-	const mongoClient = new MongoClient(collection, SampleType, null);
+	const mongoClient = new MongoClient(collection, SampleType, SampleType);
 	await mongoClient.initTagsIndex();
 
 	await mongoClient.insertOne({ field1String: 'string1' }, 'userId1');
@@ -47,7 +47,7 @@ ava('[Tags] Add tag to entities then remove them', async (t: Assertions) => {
 
 ava('[Tags] Add tag to entities then delete them', async (t: Assertions) => {
 	const collection = global.db.collection(`test-${Date.now()}`);
-	const mongoClient = new MongoClient(collection, SampleType, null);
+	const mongoClient = new MongoClient(collection, SampleType, SampleType);
 	await mongoClient.initTagsIndex();
 
 	await mongoClient.insertOne({ field1String: 'string1' }, 'userId1');

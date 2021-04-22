@@ -16,7 +16,7 @@ global.log = new N9Log('tests');
 init();
 
 ava('[Cursor] call hasNext before using in a for async', async (t: Assertions) => {
-	const mongoClient = new MongoClient(`test-${Date.now()}`, SampleType, null);
+	const mongoClient = new MongoClient(`test-${Date.now()}`, SampleType, SampleType);
 
 	await mongoClient.insertOne({ field1String: 'string1' }, 'userId1');
 	await mongoClient.insertOne({ field1String: 'string2' }, 'userId1');
@@ -36,7 +36,7 @@ ava('[Cursor] call hasNext before using in a for async', async (t: Assertions) =
 });
 
 ava('[Cursor] sort and call hasNext before using in a for async', async (t: Assertions) => {
-	const mongoClient = new MongoClient(`test-${Date.now()}`, SampleType, null);
+	const mongoClient = new MongoClient(`test-${Date.now()}`, SampleType, SampleType);
 
 	await mongoClient.insertOne({ field1String: 'string1' }, 'userId1');
 	await mongoClient.insertOne({ field1String: 'string2' }, 'userId1');
@@ -62,7 +62,7 @@ ava('[Cursor] sort and call hasNext before using in a for async', async (t: Asse
 
 // Test for https://jira.mongodb.org/browse/NODE-2454
 ava('[Cursor] hasNext before piping into a stream ', async (t: Assertions) => {
-	const mongoClient = new MongoClient(`test-${Date.now()}`, SampleType, null);
+	const mongoClient = new MongoClient(`test-${Date.now()}`, SampleType, SampleType);
 
 	await mongoClient.insertOne({ field1String: 'string1' }, 'userId1');
 	await mongoClient.insertOne({ field1String: 'string2' }, 'userId1');
@@ -96,7 +96,7 @@ ava('[Cursor] hasNext before piping into a stream ', async (t: Assertions) => {
 
 // Test for https://jira.mongodb.org/browse/NODE-2454
 ava('[Cursor] sort and hasNext before piping into a stream ', async (t: Assertions) => {
-	const mongoClient = new MongoClient(`test-${Date.now()}`, SampleType, null);
+	const mongoClient = new MongoClient(`test-${Date.now()}`, SampleType, SampleType);
 
 	await mongoClient.insertOne({ field1String: 'string1' }, 'userId1');
 	await mongoClient.insertOne({ field1String: 'string2' }, 'userId1');

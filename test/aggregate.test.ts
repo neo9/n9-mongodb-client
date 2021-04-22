@@ -20,7 +20,7 @@ global.log = new N9Log('tests');
 init();
 
 ava('[AGG] Insert some and aggregate it 2', async (t: Assertions) => {
-	const mongoClient = new MongoClient(`test-${Date.now()}`, SampleType, null);
+	const mongoClient = new MongoClient(`test-${Date.now()}`, SampleType, SampleType);
 	const size = await mongoClient.count();
 
 	t.true(size === 0, 'collection should be empty');
