@@ -1,3 +1,10 @@
+# [0.21.0](https://github.com/neo9/n9-mongo-client/compare/0.20.0...0.21.0) (2021-04-22)
+
+
+### find
+
+* Add option to not run objectToClass for performance cases ([4db2e49](https://github.com/neo9/n9-mongo-client/commit/4db2e490bbb0afb2513664e7cfc5d717da9249dd))
+
 # [0.20.0](https://github.com/neo9/n9-mongo-client/compare/0.19.1...0.20.0) (2021-03-09)
 
 
