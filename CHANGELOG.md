@@ -1,3 +1,14 @@
+# [0.22.0](https://github.com/neo9/n9-mongo-client/compare/0.21.0...0.22.0) (2021-05-18)
+
+
+### node
+
+* Drop support of node 10 and add node 16 ([4284e85](https://github.com/neo9/n9-mongo-client/commit/4284e85fe76f98f193ec7ebefb27937b87030f04))
+
+### yarn
+
+* Update dependencies ([299a783](https://github.com/neo9/n9-mongo-client/commit/299a783b76ced952dc2b187b7871462e209b719e))
+
 # [0.21.0](https://github.com/neo9/n9-mongo-client/compare/0.20.0...0.21.0) (2021-04-22)
 
 
