@@ -210,7 +210,8 @@ export class LockFieldsManager<U extends BaseMongoObject> {
 	 * @param entity
 	 */
 	private translatePathToLodashPath(path: string, entity: Partial<U>): string {
-		const objectsArrayPathRegex = /(?<basePath>.*)\[(?<code>[^\]]+)=(?<value>[^\]]+)](?<pathLeft>.*)/;
+		const objectsArrayPathRegex =
+			/(?<basePath>.*)\[(?<code>[^\]]+)=(?<value>[^\]]+)](?<pathLeft>.*)/;
 		const simpleArrayPathRegex = /(?<basePath>.*)\[(?<value>[^\]]+)](?<pathLeft>.*)/;
 		const match = path.match(objectsArrayPathRegex);
 		const matchSimpleArray = path.match(simpleArrayPathRegex);

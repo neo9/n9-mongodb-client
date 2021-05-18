@@ -118,7 +118,7 @@ export class HistoricManager<U extends BaseMongoObject> {
 		try {
 			let previousEntityHistoricSnapshot: U = latestEntityVersion;
 			return await this.collection
-				.find<EntityHistoricStored<U>>({ entityId: MongoUtils.oid(entityId) as any })
+				.find({ entityId: MongoUtils.oid(entityId) as any })
 				.sort('_id', -1)
 				.skip(page * size)
 				.limit(size)
@@ -152,7 +152,7 @@ export class HistoricManager<U extends BaseMongoObject> {
 	): Promise<EntityHistoric<U>> {
 		try {
 			const cursor = await this.collection
-				.find<EntityHistoric<U>>({
+				.find({
 					entityId: MongoUtils.oid(entityId) as any,
 					userId: ObjectId.isValid(userId) ? (MongoUtils.oid(userId) as any) : userId,
 				})
@@ -161,7 +161,7 @@ export class HistoricManager<U extends BaseMongoObject> {
 			if (await cursor.hasNext()) {
 				const entityHistoricRaw = await cursor.next();
 				const oneMoreRecentValueCursor = await this.collection
-					.find<EntityHistoric<U>>({
+					.find({
 						entityId: MongoUtils.oid(entityId) as any,
 						_id: {
 							$gt: MongoUtils.oid(entityHistoricRaw._id) as any,

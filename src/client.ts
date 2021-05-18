@@ -207,11 +207,12 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 					newEntityWithoutForbiddenCharacters.objectInfos.lockFields = [];
 				}
 				if (lockFields) {
-					newEntityWithoutForbiddenCharacters.objectInfos.lockFields = this.lockFieldsManager.getAllLockFieldsFromEntity(
-						newEntityWithoutForbiddenCharacters,
-						date,
-						userId,
-					);
+					newEntityWithoutForbiddenCharacters.objectInfos.lockFields =
+						this.lockFieldsManager.getAllLockFieldsFromEntity(
+							newEntityWithoutForbiddenCharacters,
+							date,
+							userId,
+						);
 				}
 			}
 
@@ -299,7 +300,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		projection: object = {},
 		collation?: CollationDocument,
 	): Promise<Cursor<T>> {
-		let findCursor: Cursor<T> = this.collection.find<T>(query);
+		let findCursor: Cursor<U> = this.collection.find(query);
 
 		if (collation) {
 			findCursor = findCursor.collation(collation);
@@ -528,9 +529,9 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			}
 
 			const now = new Date();
-			const formattedUserId = (ObjectId.isValid(userId)
-				? MongoUtils.oid(userId)
-				: userId) as string;
+			const formattedUserId = (
+				ObjectId.isValid(userId) ? MongoUtils.oid(userId) : userId
+			) as string;
 
 			updateQuery.$set = {
 				...updateQuery.$set,
@@ -698,13 +699,13 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 
 			return await this.findOneAndUpdate(
 				query,
-				({
+				{
 					$pull: {
 						'objectInfos.lockFields': {
 							path: lockFieldPath,
 						},
 					},
-				} as any) as UpdateQuery<U>,
+				} as any as UpdateQuery<U>,
 				userId,
 				true,
 				false,

@@ -64,7 +64,7 @@ export class ItemConsumerWritable<T> extends Writable {
 
 export class MongoReadStream<
 	U extends BaseMongoObject,
-	L extends BaseMongoObject
+	L extends BaseMongoObject,
 > extends Readable {
 	private lastId: string = null;
 	private cursor: Cursor<Partial<U | L>> = null;
