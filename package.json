@@ -47,7 +47,7 @@
     "routing-controllers"
   ],
   "engines": {
-    "node": ">=10.0.0"
+    "node": ">=12.0.0"
   },
   "dependencies": {
     "@neo9/n9-node-log": "^3.2.0",
