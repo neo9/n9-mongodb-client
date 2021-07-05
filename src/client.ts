@@ -114,6 +114,10 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		return new MongoClient<U, L>(newName, this.type, this.typeList, this.conf);
 	}
 
+	public async findAllIndexes(): Promise<any> {
+		return await this.indexManager.findAllIndexes();
+	}
+
 	public async createIndex(fieldOrSpec: string | any, options?: IndexOptions): Promise<void> {
 		await this.indexManager.createIndex(fieldOrSpec, options);
 	}

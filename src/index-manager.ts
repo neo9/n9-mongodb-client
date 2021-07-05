@@ -11,6 +11,17 @@ export class IndexManager {
 	constructor(private readonly collection: Collection) {}
 
 	/**
+	 * Returns a list of all indexes.
+	 */
+	public async findAllIndexes(): Promise<any> {
+		try {
+			return await this.collection.listIndexes();
+		} catch (e) {
+			LangUtils.throwN9ErrorFromError(e);
+		}
+	}
+
+	/**
 	 * Create an index on the given field(s).
 	 *
 	 * @param fieldOrSpec name / spec of the indexed field(s)
