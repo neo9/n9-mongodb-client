@@ -1,3 +1,14 @@
+# [0.23.0](https://github.com/neo9/n9-mongo-client/compare/0.22.0...0.23.0) (2021-07-06)
+
+
+### indexes
+
+* Add new path to list all indexes ([06e8516](https://github.com/neo9/n9-mongo-client/commit/06e851699692c9f03a18ef607f45656259287ec5))
+
+### yarn
+
+* Upgrade glob-parent from 5.1.1 to 5.1.2 (#42) ([ec4302f](https://github.com/neo9/n9-mongo-client/commit/ec4302fecbedf7f898b1f153d014c370511a5146)), closes [#42](https://github.com/neo9/n9-mongo-client/issues/42)
+
 # [0.22.0](https://github.com/neo9/n9-mongo-client/compare/0.21.0...0.22.0) (2021-05-18)
 
 
