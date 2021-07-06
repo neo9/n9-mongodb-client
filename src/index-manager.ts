@@ -1,4 +1,4 @@
-import { Collection, IndexOptions } from 'mongodb';
+import { Collection, CommandCursor, IndexOptions, IndexSpecification } from 'mongodb';
 import { LangUtils } from './lang-utils';
 
 /**
@@ -9,6 +9,17 @@ export class IndexManager {
 	 * @param collection the mongodb collection in which the indexes will be managed
 	 */
 	constructor(private readonly collection: Collection) {}
+
+	/**
+	 * Returns a list of all indexes.
+	 */
+	public async findAllIndexes(): Promise<IndexSpecification[]> {
+		try {
+			return await (await this.collection.listIndexes()).toArray();
+		} catch (e) {
+			LangUtils.throwN9ErrorFromError(e);
+		}
+	}
 
 	/**
 	 * Create an index on the given field(s).

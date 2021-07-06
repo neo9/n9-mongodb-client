@@ -11,10 +11,12 @@ import {
 	Collection,
 	CollectionAggregationOptions,
 	CollectionInsertManyOptions,
+	CommandCursor,
 	Cursor,
 	Db,
 	FilterQuery,
 	IndexOptions,
+	IndexSpecification,
 	MatchKeysAndValues,
 	MongoClient as MongodbClient,
 	ObjectId,
@@ -112,6 +114,10 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 	): Promise<MongoClient<U, L>> {
 		await this.collection.rename(newName, { ...options, dropTarget });
 		return new MongoClient<U, L>(newName, this.type, this.typeList, this.conf);
+	}
+
+	public async findAllIndexes(): Promise<IndexSpecification[]> {
+		return await this.indexManager.findAllIndexes();
 	}
 
 	public async createIndex(fieldOrSpec: string | any, options?: IndexOptions): Promise<void> {
