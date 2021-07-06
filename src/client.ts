@@ -11,6 +11,7 @@ import {
 	Collection,
 	CollectionAggregationOptions,
 	CollectionInsertManyOptions,
+	CommandCursor,
 	Cursor,
 	Db,
 	FilterQuery,
@@ -114,7 +115,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		return new MongoClient<U, L>(newName, this.type, this.typeList, this.conf);
 	}
 
-	public async findAllIndexes(): Promise<any> {
+	public async findAllIndexes(): Promise<CommandCursor> {
 		return await this.indexManager.findAllIndexes();
 	}
 

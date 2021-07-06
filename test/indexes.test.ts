@@ -21,6 +21,26 @@ ava('[Indexes] Create index', async (t: Assertions) => {
 	await mongoClient.dropCollection();
 });
 
+ava('[Indexes] List all indexes', async (t: Assertions) => {
+	const collection = global.db.collection(`test-${Date.now()}`);
+	const mongoClient = new MongoClient(collection, Object, null);
+
+	await mongoClient.createIndex('index_1');
+	await mongoClient.createIndex('index_2');
+	await mongoClient.createIndex('index_3');
+
+	const createdIndexes = await (await mongoClient.findAllIndexes()).toArray();
+	const correctIndexes =
+		createdIndexes[1].name === 'index_1_1' &&
+		createdIndexes[2].name === 'index_2_1' &&
+		createdIndexes[3].name === 'index_3_1';
+
+	t.true(createdIndexes.length === 4, 'correct number retrieved');
+	t.true(correctIndexes, 'all indexes retrieved');
+
+	await mongoClient.dropCollection();
+});
+
 ava('[Indexes] Create unique index', async (t: Assertions) => {
 	const collection = global.db.collection(`test-${Date.now()}`);
 	const mongoClient = new MongoClient(collection, Object, null);
