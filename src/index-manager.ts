@@ -1,4 +1,4 @@
-import { Collection, CommandCursor, IndexOptions } from 'mongodb';
+import { Collection, CommandCursor, IndexOptions, IndexSpecification } from 'mongodb';
 import { LangUtils } from './lang-utils';
 
 /**
@@ -13,9 +13,9 @@ export class IndexManager {
 	/**
 	 * Returns a list of all indexes.
 	 */
-	public async findAllIndexes(): Promise<CommandCursor> {
+	public async findAllIndexes(): Promise<IndexSpecification[]> {
 		try {
-			return await this.collection.listIndexes();
+			return await this.collection.listIndexes().toArray();
 		} catch (e) {
 			LangUtils.throwN9ErrorFromError(e);
 		}

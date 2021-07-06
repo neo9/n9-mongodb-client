@@ -16,6 +16,7 @@ import {
 	Db,
 	FilterQuery,
 	IndexOptions,
+	IndexSpecification,
 	MatchKeysAndValues,
 	MongoClient as MongodbClient,
 	ObjectId,
@@ -115,7 +116,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		return new MongoClient<U, L>(newName, this.type, this.typeList, this.conf);
 	}
 
-	public async findAllIndexes(): Promise<CommandCursor> {
+	public async findAllIndexes(): Promise<IndexSpecification[]> {
 		return await this.indexManager.findAllIndexes();
 	}
 
