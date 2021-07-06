@@ -15,7 +15,7 @@ export class IndexManager {
 	 */
 	public async findAllIndexes(): Promise<IndexSpecification[]> {
 		try {
-			return await this.collection.listIndexes().toArray();
+			return await (await this.collection.listIndexes()).toArray();
 		} catch (e) {
 			LangUtils.throwN9ErrorFromError(e);
 		}
