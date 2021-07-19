@@ -207,7 +207,7 @@ ava(
 				'objects[code=k3].value',
 				'id',
 			],
-			'no new lock field has been added',
+			"date hasn't changed, so no new lock field has been added",
 		);
 	},
 );
@@ -292,7 +292,7 @@ ava('[LOCK-FIELDS] Insert&Update one with Date and change to String', async (t: 
 			'id',
 			'date',
 		],
-		'new date lock field has appeared',
+		'updated date with same value but a different format (Date), so new date lock field has appeared',
 	);
 });
 
@@ -376,7 +376,7 @@ ava('[LOCK-FIELDS] Insert&Update one with String and change to Date', async (t: 
 			'id',
 			'date',
 		],
-		'new date lock field has appeared',
+		'updated date with same value but a different format (String), so new date lock field has appeared',
 	);
 });
 
