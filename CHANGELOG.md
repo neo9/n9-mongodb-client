@@ -1,3 +1,14 @@
+## [0.23.1](https://github.com/neo9/n9-mongo-client/compare/0.23.0...0.23.1) (2021-07-19)
+
+
+### lockfields
+
+* Handle date object when changing lockfields and add new tests (#45) ([bccc467](https://github.com/neo9/n9-mongo-client/commit/bccc467ccd02d1b50f4dda87641e392394daffcf)), closes [#45](https://github.com/neo9/n9-mongo-client/issues/45)
+
+### yarn
+
+* Upgrade color-string from 1.5.4 to 1.5.5 (#44) ([8ad6f70](https://github.com/neo9/n9-mongo-client/commit/8ad6f70cab4faf7fad22c0afe13f328deff188c2)), closes [#44](https://github.com/neo9/n9-mongo-client/issues/44)
+
 # [0.23.0](https://github.com/neo9/n9-mongo-client/compare/0.22.0...0.23.0) (2021-07-06)
 
 
