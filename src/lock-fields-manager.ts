@@ -366,10 +366,16 @@ export class LockFieldsManager<U extends BaseMongoObject> {
 				if (existingEntityElementToCompare instanceof ObjectID) {
 					existingEntityElementToCompare = existingEntityElementToCompare.toHexString();
 				}
+				if (existingEntityElementToCompare instanceof Date) {
+					existingEntityElementToCompare = existingEntityElementToCompare.toISOString();
+				}
 
 				let newEntityElementToCompare = newEntity[key];
 				if (newEntityElementToCompare instanceof ObjectID) {
 					newEntityElementToCompare = newEntityElementToCompare.toHexString();
+				}
+				if (newEntityElementToCompare instanceof Date) {
+					newEntityElementToCompare = newEntityElementToCompare.toISOString();
 				}
 
 				if (

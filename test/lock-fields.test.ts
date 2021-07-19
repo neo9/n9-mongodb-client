@@ -126,21 +126,239 @@ ava('[LOCK-FIELDS] Insert one and check locks', async (t: Assertions) => {
 	);
 });
 
-ava('[LOCK-FIELDS] Insert one with mongoID and Date and check locks', async (t: Assertions) => {
-	const mongoClient = getLockFieldsMongoClient();
+ava(
+	'[LOCK-FIELDS] Insert&Update one with mongoID and Date and check locks',
+	async (t: Assertions) => {
+		const mongoClient = getLockFieldsMongoClient();
+		const date = new Date('2020-01-01');
+		const newDate = new Date('2020-01-01');
 
-	const data = {
+		const dataWithDate = {
+			..._.cloneDeep(locksDataSample),
+			date,
+			id: new ObjectID(),
+		};
+		const dataWithDate2 = {
+			..._.cloneDeep(dataWithDate),
+			date: newDate,
+		};
+
+		const insertedEntity = await mongoClient.insertOne(dataWithDate, '');
+
+		const entity = await mongoClient.findOneById(insertedEntity._id);
+
+		t.true(!_.isEmpty(entity.objectInfos.lockFields), 'is there some lock fields');
+		t.deepEqual(
+			_.map(entity.objectInfos.lockFields, 'path'),
+			[
+				'text',
+				'property.value',
+				'strings["a"]',
+				'strings["b"]',
+				'objects[code=k1].value',
+				'objects[code=k2].value',
+				'objects[code=k3].value',
+				'id',
+				'date',
+			],
+			'all lock fields are present',
+		);
+
+		await mongoClient.findOneByIdAndRemoveLock(insertedEntity._id, 'date', 'userId');
+
+		const newEntity = await mongoClient.findOneById(insertedEntity._id);
+
+		t.is(newEntity.objectInfos.lockFields.length, 8, 'Number of lock fields');
+		t.deepEqual(
+			_.map(newEntity.objectInfos.lockFields, 'path'),
+			[
+				'text',
+				'property.value',
+				'strings["a"]',
+				'strings["b"]',
+				'objects[code=k1].value',
+				'objects[code=k2].value',
+				'objects[code=k3].value',
+				'id',
+			],
+			'all lock fields are present',
+		);
+
+		const updatedData = await mongoClient.findOneAndUpdateByIdWithLocks(
+			insertedEntity._id,
+			_.cloneDeep(dataWithDate2),
+			'userId',
+			true,
+			true,
+		);
+
+		t.is(updatedData.objectInfos.lockFields.length, 8, 'Number of lock fields');
+		t.deepEqual(
+			_.map(updatedData.objectInfos.lockFields, 'path'),
+			[
+				'text',
+				'property.value',
+				'strings["a"]',
+				'strings["b"]',
+				'objects[code=k1].value',
+				'objects[code=k2].value',
+				'objects[code=k3].value',
+				'id',
+			],
+			'all lock fields are present',
+		);
+	},
+);
+
+ava('[LOCK-FIELDS] Insert&Update one with Date and change to String', async (t: Assertions) => {
+	const mongoClient = getLockFieldsMongoClient();
+	const date = new Date('2020-01-01');
+	const dateString = date.toUTCString();
+
+	const dataWithDate = {
+		..._.cloneDeep(locksDataSample),
+		date,
+	};
+
+	const dataWithString = {
 		..._.cloneDeep(locksDataSample),
 		id: new ObjectID(),
-		date: new Date(),
+		date: dateString,
 	};
-	const insertedEntity = await mongoClient.insertOne(data, '');
+	const insertedEntity = await mongoClient.insertOne(dataWithString, '');
 
 	const entity = await mongoClient.findOneById(insertedEntity._id);
 
 	t.true(!_.isEmpty(entity.objectInfos.lockFields), 'is there some lock fields');
 	t.deepEqual(
 		_.map(entity.objectInfos.lockFields, 'path'),
+		[
+			'text',
+			'property.value',
+			'strings["a"]',
+			'strings["b"]',
+			'objects[code=k1].value',
+			'objects[code=k2].value',
+			'objects[code=k3].value',
+			'id',
+			'date',
+		],
+		'all lock fields are present',
+	);
+
+	await mongoClient.findOneByIdAndRemoveLock(insertedEntity._id, 'date', 'userId');
+
+	const newEntity = await mongoClient.findOneById(insertedEntity._id);
+
+	t.is(newEntity.objectInfos.lockFields.length, 8, 'Number of lock fields');
+	t.deepEqual(
+		_.map(newEntity.objectInfos.lockFields, 'path'),
+		[
+			'text',
+			'property.value',
+			'strings["a"]',
+			'strings["b"]',
+			'objects[code=k1].value',
+			'objects[code=k2].value',
+			'objects[code=k3].value',
+			'id',
+		],
+		'all lock fields are present',
+	);
+
+	const updatedDataWithDate = await mongoClient.findOneAndUpdateByIdWithLocks(
+		insertedEntity._id,
+		dataWithDate,
+		'userId',
+		true,
+		true,
+	);
+
+	t.is(updatedDataWithDate.objectInfos.lockFields.length, 9, 'Number of lock fields');
+	t.deepEqual(
+		_.map(updatedDataWithDate.objectInfos.lockFields, 'path'),
+		[
+			'text',
+			'property.value',
+			'strings["a"]',
+			'strings["b"]',
+			'objects[code=k1].value',
+			'objects[code=k2].value',
+			'objects[code=k3].value',
+			'id',
+			'date',
+		],
+		'all lock fields are present',
+	);
+});
+
+ava('[LOCK-FIELDS] Insert&Update one with String and change to Date', async (t: Assertions) => {
+	const mongoClient = getLockFieldsMongoClient();
+	const date = new Date('2020-01-01');
+	const dateString = date.toUTCString();
+
+	const dataWithDate = {
+		..._.cloneDeep(locksDataSample),
+		date,
+		id: new ObjectID(),
+	};
+
+	const dataWithString = {
+		..._.cloneDeep(locksDataSample),
+		date: dateString,
+	};
+	const insertedEntity = await mongoClient.insertOne(dataWithDate, '');
+
+	const entity = await mongoClient.findOneById(insertedEntity._id);
+
+	t.true(!_.isEmpty(entity.objectInfos.lockFields), 'is there some lock fields');
+	t.deepEqual(
+		_.map(entity.objectInfos.lockFields, 'path'),
+		[
+			'text',
+			'property.value',
+			'strings["a"]',
+			'strings["b"]',
+			'objects[code=k1].value',
+			'objects[code=k2].value',
+			'objects[code=k3].value',
+			'id',
+			'date',
+		],
+		'all lock fields are present',
+	);
+
+	await mongoClient.findOneByIdAndRemoveLock(insertedEntity._id, 'date', 'userId');
+
+	const newEntity = await mongoClient.findOneById(insertedEntity._id);
+
+	t.is(newEntity.objectInfos.lockFields.length, 8, 'Number of lock fields');
+	t.deepEqual(
+		_.map(newEntity.objectInfos.lockFields, 'path'),
+		[
+			'text',
+			'property.value',
+			'strings["a"]',
+			'strings["b"]',
+			'objects[code=k1].value',
+			'objects[code=k2].value',
+			'objects[code=k3].value',
+			'id',
+		],
+		'all lock fields are present',
+	);
+
+	const updatedDataWithStringDate = await mongoClient.findOneAndUpdateByIdWithLocks(
+		insertedEntity._id,
+		dataWithString,
+		'userId',
+		true,
+		true,
+	);
+
+	t.is(updatedDataWithStringDate.objectInfos.lockFields.length, 9, 'Number of lock fields');
+	t.deepEqual(
+		_.map(updatedDataWithStringDate.objectInfos.lockFields, 'path'),
 		[
 			'text',
 			'property.value',
