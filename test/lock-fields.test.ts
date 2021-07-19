@@ -138,7 +138,7 @@ ava(
 			date,
 			id: new ObjectID(),
 		};
-		const dataWithDate2 = {
+		const dataWithNewDate = {
 			..._.cloneDeep(dataWithDate),
 			date: newDate,
 		};
@@ -158,15 +158,17 @@ ava(
 				'objects[code=k1].value',
 				'objects[code=k2].value',
 				'objects[code=k3].value',
-				'id',
 				'date',
+				'id',
 			],
 			'all lock fields are present',
 		);
 
-		await mongoClient.findOneByIdAndRemoveLock(insertedEntity._id, 'date', 'userId');
-
-		const newEntity = await mongoClient.findOneById(insertedEntity._id);
+		const newEntity = await mongoClient.findOneByIdAndRemoveLock(
+			insertedEntity._id,
+			'date',
+			'userId',
+		);
 
 		t.is(newEntity.objectInfos.lockFields.length, 8, 'Number of lock fields');
 		t.deepEqual(
@@ -181,12 +183,12 @@ ava(
 				'objects[code=k3].value',
 				'id',
 			],
-			'all lock fields are present',
+			'date lock fields has been removed',
 		);
 
 		const updatedData = await mongoClient.findOneAndUpdateByIdWithLocks(
 			insertedEntity._id,
-			_.cloneDeep(dataWithDate2),
+			_.cloneDeep(dataWithNewDate),
 			'userId',
 			true,
 			true,
@@ -205,7 +207,7 @@ ava(
 				'objects[code=k3].value',
 				'id',
 			],
-			'all lock fields are present',
+			'no new lock field has been added',
 		);
 	},
 );
@@ -246,9 +248,11 @@ ava('[LOCK-FIELDS] Insert&Update one with Date and change to String', async (t: 
 		'all lock fields are present',
 	);
 
-	await mongoClient.findOneByIdAndRemoveLock(insertedEntity._id, 'date', 'userId');
-
-	const newEntity = await mongoClient.findOneById(insertedEntity._id);
+	const newEntity = await mongoClient.findOneByIdAndRemoveLock(
+		insertedEntity._id,
+		'date',
+		'userId',
+	);
 
 	t.is(newEntity.objectInfos.lockFields.length, 8, 'Number of lock fields');
 	t.deepEqual(
@@ -263,7 +267,7 @@ ava('[LOCK-FIELDS] Insert&Update one with Date and change to String', async (t: 
 			'objects[code=k3].value',
 			'id',
 		],
-		'all lock fields are present',
+		'date lock fields has been removed',
 	);
 
 	const updatedDataWithDate = await mongoClient.findOneAndUpdateByIdWithLocks(
@@ -288,7 +292,7 @@ ava('[LOCK-FIELDS] Insert&Update one with Date and change to String', async (t: 
 			'id',
 			'date',
 		],
-		'all lock fields are present',
+		'new date lock field has appeared',
 	);
 });
 
@@ -322,15 +326,17 @@ ava('[LOCK-FIELDS] Insert&Update one with String and change to Date', async (t: 
 			'objects[code=k1].value',
 			'objects[code=k2].value',
 			'objects[code=k3].value',
-			'id',
 			'date',
+			'id',
 		],
 		'all lock fields are present',
 	);
 
-	await mongoClient.findOneByIdAndRemoveLock(insertedEntity._id, 'date', 'userId');
-
-	const newEntity = await mongoClient.findOneById(insertedEntity._id);
+	const newEntity = await mongoClient.findOneByIdAndRemoveLock(
+		insertedEntity._id,
+		'date',
+		'userId',
+	);
 
 	t.is(newEntity.objectInfos.lockFields.length, 8, 'Number of lock fields');
 	t.deepEqual(
@@ -345,7 +351,7 @@ ava('[LOCK-FIELDS] Insert&Update one with String and change to Date', async (t: 
 			'objects[code=k3].value',
 			'id',
 		],
-		'all lock fields are present',
+		'date lock fields has been removed',
 	);
 
 	const updatedDataWithStringDate = await mongoClient.findOneAndUpdateByIdWithLocks(
@@ -370,7 +376,7 @@ ava('[LOCK-FIELDS] Insert&Update one with String and change to Date', async (t: 
 			'id',
 			'date',
 		],
-		'all lock fields are present',
+		'new date lock field has appeared',
 	);
 });
 
