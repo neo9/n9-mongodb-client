@@ -11,7 +11,6 @@ import {
 	Collection,
 	CollectionAggregationOptions,
 	CollectionInsertManyOptions,
-	CommandCursor,
 	Cursor,
 	Db,
 	FilterQuery,
@@ -224,7 +223,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 
 			newEntityWithoutForbiddenCharacters = LangUtils.removeEmptyDeep(
 				newEntityWithoutForbiddenCharacters,
-				undefined,
+				true,
 				undefined,
 				!!this.conf.lockFields,
 			);
@@ -734,6 +733,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		forceEditLockFields: boolean = false,
 	): Promise<U> {
 		try {
+			LangUtils.removeEmptyDeep(newEntity, true, false, !!this.conf.lockFields);
 			if (this.conf.lockFields) {
 				const existingEntity = await this.findOneById(id);
 				if (!existingEntity) {
@@ -815,6 +815,11 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 
 				return updatedValue;
 			}
+
+			if (lockNewFields) {
+				throw new N9Error('can-t-lock-fields-with-disabled-feature', 400, { lockNewFields });
+			}
+
 			delete newEntity._id;
 			delete newEntity.objectInfos;
 			return await this.findOneAndUpdateById(id, { $set: newEntity }, userId, true);

@@ -22,7 +22,14 @@ export class LangUtils {
 		for (const key of Object.keys(obj)) {
 			const objElement = obj[key];
 			if (compactArrays && Array.isArray(objElement)) {
-				obj[key] = _.filter(objElement, (elm) => !LodashReplacerUtils.IS_NIL(elm)) as any;
+				obj[key] = _.filter(
+					objElement,
+					(elm) =>
+						!(
+							(keepNullValues && elm === undefined) ||
+							(!keepNullValues && LodashReplacerUtils.IS_NIL(elm))
+						),
+				) as any;
 			}
 			if (
 				removeEmptyObjects &&
