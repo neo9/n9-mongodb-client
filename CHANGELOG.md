@@ -1,3 +1,10 @@
+## [0.23.2](https://github.com/neo9/n9-mongo-client/compare/0.23.1...0.23.2) (2021-07-26)
+
+
+### locks
+
+* Fix lockFields disabled and findOneAndUpdateByIdWithLocks usage ([c5666d3](https://github.com/neo9/n9-mongo-client/commit/c5666d32e50dc4b672dd4d981bb323194f4dd29b))
+
 ## [0.23.1](https://github.com/neo9/n9-mongo-client/compare/0.23.0...0.23.1) (2021-07-19)
 
 
