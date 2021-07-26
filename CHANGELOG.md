@@ -1,3 +1,10 @@
+## [0.23.3](https://github.com/neo9/n9-mongo-client/compare/0.23.2...0.23.3) (2021-07-26)
+
+
+### locks
+
+* Fix lockFields disabled and update to delete values ([0c303c3](https://github.com/neo9/n9-mongo-client/commit/0c303c3b6934406c680590ea7175a512575c519d))
+
 ## [0.23.2](https://github.com/neo9/n9-mongo-client/compare/0.23.1...0.23.2) (2021-07-26)
 
 
