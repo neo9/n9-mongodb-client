@@ -733,7 +733,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		forceEditLockFields: boolean = false,
 	): Promise<U> {
 		try {
-			LangUtils.removeEmptyDeep(newEntity, true, false, !!this.conf.lockFields);
+			LangUtils.removeEmptyDeep(newEntity, true, false, true);
 			if (this.conf.lockFields) {
 				const existingEntity = await this.findOneById(id);
 				if (!existingEntity) {

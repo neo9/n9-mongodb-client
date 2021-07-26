@@ -99,22 +99,18 @@ ava(
 			},
 			{ message: 'can-t-lock-fields-with-disabled-feature' },
 		);
-		await mongoClient.findOneAndUpdateByIdWithLocks(
-			entity._id,
-			_.cloneDeep(locksDataSample),
-			'',
-			false,
-		);
+
+		const newValue: any = _.omit(entity, ['_id', 'objectInfos']);
+		newValue.objects[2].value = null; // delete one value
+		newValue.text = null; // delete one value
+		await mongoClient.findOneAndUpdateByIdWithLocks(entity._id, _.cloneDeep(newValue), '', false);
 
 		const entityUpdated = await mongoClient.findOneById(entity._id);
 
-		const newValue: any = _.omit(entityUpdated, ['_id', 'objectInfos']);
-		newValue.objects[2].value = null; // delete one value
-
 		t.deepEqual(
-			newValue,
+			_.omit(entityUpdated, ['_id', 'objectInfos']),
 			{
-				text: 'text sample',
+				text: null,
 				excludedField: 'not locked field',
 				excludedArray: ['excludeArrayValue1'],
 				property: {},
@@ -131,8 +127,8 @@ ava(
 						value: null,
 					},
 				],
-			},
-			'check after update, null are kept only while deleting values',
+			} as any,
+			'check after update, null values delete the values',
 		);
 	},
 );
