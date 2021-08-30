@@ -147,5 +147,28 @@ export class MongoUtils {
 
 		return uri.replace(regex, '********');
 	}
+
+	public static listCollections(
+		filter?: object,
+		options?: {
+			nameOnly?: boolean;
+			batchSize?: number;
+			readPreference?: mongodb.ReadPreferenceOrMode;
+			session?: mongodb.ClientSession;
+		},
+	): mongodb.CommandCursor {
+		return (global.db as mongodb.Db).listCollections(filter, options);
+	}
+
+	public static async listCollectionsNames(filter?: object): Promise<string[]> {
+		const cursor = MongoUtils.listCollections(filter, { nameOnly: true });
+		const ret: string[] = [];
+		while (await cursor.hasNext()) {
+			const item: any = await cursor.next();
+			ret.push(item.name);
+		}
+		return ret;
+	}
+
 	private static readonly MONGO_ID_REGEXP: RegExp = /^[0-9a-f]{24}$/;
 }

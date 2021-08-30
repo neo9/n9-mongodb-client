@@ -4,7 +4,11 @@ import * as _ from 'lodash';
 import { ObjectID } from 'mongodb';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import * as stdMocks from 'std-mocks';
-import { MongoUtils } from '../src';
+import { BaseMongoObject, MongoClient, MongoUtils } from '../src';
+
+class SampleType extends BaseMongoObject {
+	public test: string;
+}
 
 global.log = new N9Log('tests').module('mongo-utils');
 
@@ -34,7 +38,7 @@ ava('[MONGO-UTILS] mapObjectToClass null', async (t: Assertions) => {
 
 ava('[MONGO-UTILS] URI connection log', async (t: Assertions) => {
 	mongod = new MongoMemoryServer();
-	const mongoURI = await mongod.getConnectionString();
+	const mongoURI = await mongod.getUri();
 	const mongoURIregex = new RegExp(_.escapeRegExp(mongoURI));
 
 	stdMocks.use();
@@ -57,4 +61,51 @@ ava('[MONGO-UTILS] URI connection log', async (t: Assertions) => {
 	t.notRegex(output.stdout[0], mongoURIPasswordRegex, 'Password should not be displayed in URI');
 
 	await mongod.stop();
+});
+
+ava('[MONGO-UTILS] List collection names', async (t: Assertions) => {
+	mongod = new MongoMemoryServer();
+	const mongoURI = await mongod.getUri();
+
+	stdMocks.use({ print: false });
+	await MongoUtils.connect(mongoURI);
+
+	let names = await MongoUtils.listCollectionsNames();
+
+	t.deepEqual(names, [], 'no collection in mongodb by default');
+
+	const collectionName1 = `test1-${Date.now()}`;
+	const collectionName2 = `test2-${Date.now()}`;
+	const mongoClient1 = new MongoClient(collectionName1, SampleType, null);
+	const mongoClient2 = new MongoClient(collectionName2, SampleType, null);
+
+	await mongoClient1.insertOne({ test: 'test-1' }, 'userId1');
+	await mongoClient2.insertOne({ test: 'test-2' }, 'userId2');
+
+	t.true(await mongoClient1.collectionExists(), 'collection exists');
+	t.is(await mongoClient1.count(), 1, 'collection1 has one document');
+	t.true(await mongoClient2.collectionExists(), 'collection2 exists');
+	t.is(await mongoClient2.count(), 1, 'collection2 has one documents');
+
+	names = await MongoUtils.listCollectionsNames();
+
+	t.true(names.includes(collectionName1), 'collection 1 is in the listing');
+	t.true(names.includes(collectionName2), 'collection 2 is in the listing');
+
+	names = await MongoUtils.listCollectionsNames({ name: { $regex: /test1.*/g } });
+	t.deepEqual(names, [collectionName1], 'collection 1 is found');
+
+	names = await MongoUtils.listCollectionsNames({ name: { $regex: /test2.*/g } });
+	t.deepEqual(names, [collectionName2], 'collection 2 is found');
+
+	const cursor = await MongoUtils.listCollections(
+		{ name: { $regex: /test1.*/g } },
+		{ nameOnly: false },
+	);
+	while (await cursor.hasNext()) {
+		const item: any = await cursor.next();
+		t.false(item.info.readOnly, 'Additional infos can be found on collections');
+	}
+
+	await MongoUtils.disconnect();
 });
