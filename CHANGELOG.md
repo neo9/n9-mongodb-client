@@ -1,3 +1,14 @@
+## [0.23.4](https://github.com/neo9/n9-mongo-client/compare/0.23.3...0.23.4) (2021-08-30)
+
+
+### locks
+
+* Fix ignoreLockFields management on updateManyAtOnce ([f6fbd4b](https://github.com/neo9/n9-mongo-client/commit/f6fbd4b952ee783fa5ba3826cb28ba9205f7e6d5))
+
+### utils
+
+* Add utils to list collections on db ([356b838](https://github.com/neo9/n9-mongo-client/commit/356b838c64bb899ec377e156148e9cabdb2e4240))
+
 ## [0.23.3](https://github.com/neo9/n9-mongo-client/compare/0.23.2...0.23.3) (2021-07-26)
 
 
