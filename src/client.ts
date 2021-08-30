@@ -870,6 +870,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 
 	/**
 	 * Update multiple entities in one update. The update will be performed through a bulkWrite.
+	 * This function doesn't support dot key notation yet.
 	 *
 	 * @param entities list of entities to update
 	 * @param userId id of the user that is performing the operation. Will be stored in objectInfos.
@@ -914,7 +915,9 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		options: UpdateManyToSameValueOptions<U> = {},
 	): Promise<{ matchedCount: number; modifiedCount: number }> {
 		try {
-			this.ifHasLockFieldsThrow();
+			if (!options.ignoreLockFields) {
+				this.ifHasLockFieldsThrow();
+			}
 
 			if (this.conf.keepHistoric) {
 				throw new N9Error('not-supported-operation-for-collection-with-historic', 501, {
@@ -1339,18 +1342,13 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 						throw new N9Error('entity-value-missing', 404, { entity, index, query: options.query });
 					}
 				}
-				const allEntities = await (
-					await this.findWithType(
-						{
-							[options.query]: {
-								$in: values,
-							},
+				const allEntities: U[] = (await (
+					await this.collection.find({
+						[options.query]: {
+							$in: values,
 						},
-						this.type,
-						0,
-						0,
-					)
-				).toArray();
+					} as any)
+				).toArray()) as any;
 				for (const entity of allEntities) {
 					currentValues[queries[entity[options.query]]] = entity;
 				}

@@ -6,4 +6,10 @@ export interface UpdateManyToSameValueOptions<U> {
 	 * even if no modification is done to a document.
 	 */
 	forceLastModificationDate?: boolean;
+
+	/**
+	 * Ignore the lock fields configuration. Use it carefully !
+	 * Default to false.
+	 */
+	ignoreLockFields?: boolean;
 }

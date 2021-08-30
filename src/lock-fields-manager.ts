@@ -417,7 +417,7 @@ export class LockFieldsManager<U extends BaseMongoObject> {
 				_.get(newEntityElement, [i]),
 				currentPath,
 			);
-			const codeKeyName = this.conf.arrayWithReferences[currentPath];
+			const codeKeyName = this.conf.arrayWithReferences?.[currentPath];
 
 			if (!LodashReplacerUtils.IS_NIL(newValue)) {
 				if (codeKeyName) {
@@ -430,7 +430,7 @@ export class LockFieldsManager<U extends BaseMongoObject> {
 		// If one delete an array element, we lock the others
 		if (existingEntityArray?.length > newEntityElement?.length) {
 			for (const newEntityElementArrayElement of newEntityElement) {
-				const codeKeyName = this.conf.arrayWithReferences[currentPath];
+				const codeKeyName = this.conf.arrayWithReferences?.[currentPath];
 
 				if (codeKeyName) {
 					const existingElementIndex = _.findIndex(ret, {
