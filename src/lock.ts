@@ -2,6 +2,7 @@ import { N9Error, waitFor } from '@neo9/n9-node-utils';
 import * as _ from 'lodash';
 import * as mongodb from 'mongodb';
 import * as mongoDbLock from 'mongodb-lock';
+import { StringMap } from '.';
 import { LockOptions } from './models/lock-options.models';
 
 /**
@@ -9,8 +10,10 @@ import { LockOptions } from './models/lock-options.models';
  * https://www.npmjs.com/package/mongodb-lock
  */
 export class N9MongoLock {
-	private lock: mongoDbLock.MongodbLock;
+	private lock: StringMap<mongoDbLock.MongodbLock> = {};
 	private options: LockOptions;
+	private collection: string;
+	private defaultLock: string;
 	private readonly waitDurationMsRandomPart: number;
 
 	/**
@@ -24,6 +27,8 @@ export class N9MongoLock {
 		lockName: string = 'default-lock',
 		options?: LockOptions,
 	) {
+		this.collection = collection;
+		this.defaultLock = lockName;
 		this.options = _.defaultsDeep(options, {
 			timeout: 30 * 1000,
 			removeExpired: true,
@@ -39,16 +44,17 @@ export class N9MongoLock {
 		this.waitDurationMsRandomPart =
 			this.options.n9MongoLockOptions.waitDurationMsMax -
 			this.options.n9MongoLockOptions.waitDurationMsMin;
-		this.lock = mongoDbLock(db.collection(collection), lockName, options);
+		this.lock[lockName] = mongoDbLock(db.collection(collection), lockName, options);
 	}
 
 	/**
 	 * Function to call at the beginning
 	 * https://github.com/chilts/mongodb-lock#mongodb-indexes
+	 * @param lockName : a key to identify the lock
 	 */
-	public async ensureIndexes(): Promise<void> {
+	public async ensureIndexes(lockName: string = this.defaultLock): Promise<void> {
 		return new Promise<void>((resolve, reject) => {
-			this.lock.ensureIndexes((err: any, result: any) => {
+			this.lock[lockName].ensureIndexes((err: any, result: any) => {
 				if (err) return reject(err);
 				return resolve(result);
 			});
@@ -57,10 +63,11 @@ export class N9MongoLock {
 
 	/**
 	 * Once you have a lock, you have a 30 second timeout until the lock is released. You can release it earlier by calling release
+	 * @param lockName : a key to identify the lock
 	 */
-	public async acquire(): Promise<string | undefined> {
+	public async acquire(lockName: string = this.defaultLock): Promise<string | undefined> {
 		return new Promise<string>((resolve, reject) => {
-			this.lock.acquire((err: any, code: string) => {
+			this.lock[lockName].acquire((err: any, code: string) => {
 				if (err) return reject(err);
 				return resolve(code);
 			});
@@ -70,11 +77,23 @@ export class N9MongoLock {
 	/**
 	 * Acquire a lock after waiting max timeoutMs
 	 * @param timeoutMs timeout in ms
+	 * @param lockName : a key to identify the lock
 	 */
-	public async acquireBlockingUntilAvailable(timeoutMs: number): Promise<string> {
+	public async acquireBlockingUntilAvailable(
+		timeoutMs: number,
+		lockName: string = this.defaultLock,
+	): Promise<string> {
 		const startTime = Date.now();
+		if (!this.lock[lockName]) {
+			const db = global.db as mongodb.Db;
+			if (!db) {
+				throw new N9Error('missing-db', 500);
+			}
+			this.lock[lockName] = mongoDbLock(db.collection(this.collection), lockName, this.options);
+			await this.ensureIndexes(lockName);
+		}
 		do {
-			const code = await this.acquire();
+			const code = await this.acquire(lockName);
 			if (code) return code;
 			await waitFor(
 				this.options.n9MongoLockOptions.waitDurationMsMin +
@@ -85,10 +104,11 @@ export class N9MongoLock {
 
 	/**
 	 * Release the lock
+	 * @param lockName : a key to identify the lock
 	 */
-	public async release(code: string): Promise<boolean> {
+	public async release(code: string, lockName: string = this.defaultLock): Promise<boolean> {
 		const ret: boolean = await new Promise<boolean>((resolve, reject) => {
-			this.lock.release(code, (err: any, ok: boolean) => {
+			this.lock[lockName].release(code, (err: any, ok: boolean) => {
 				if (err) return reject(err);
 				return resolve(ok);
 			});
@@ -97,5 +117,13 @@ export class N9MongoLock {
 		await waitFor(this.options.n9MongoLockOptions.waitDurationMsMax + 5);
 
 		return ret;
+	}
+
+	/**
+	 * Delete the targeted lock
+	 * @param lockName : a key to identify the lock
+	 */
+	public delete(lockName: string): void {
+		delete this.lock[lockName];
 	}
 }
