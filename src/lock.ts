@@ -53,11 +53,17 @@ export class N9MongoLock {
 	 * @param lockName : a key to identify the lock
 	 */
 	public async ensureIndexes(lockName: string = this.defaultLock): Promise<void> {
+		const fullLockName =
+			lockName === this.defaultLock ? lockName : `${this.defaultLock}_${lockName}`;
 		return new Promise<void>((resolve, reject) => {
-			this.lock[lockName].ensureIndexes((err: any, result: any) => {
-				if (err) return reject(err);
-				return resolve(result);
-			});
+			if (this.lock[fullLockName]) {
+				this.lock[fullLockName].ensureIndexes((err: any, result: any) => {
+					if (err) return reject(err);
+					return resolve(result);
+				});
+			} else {
+				return reject('Lock not found');
+			}
 		});
 	}
 
@@ -66,8 +72,11 @@ export class N9MongoLock {
 	 * @param lockName : a key to identify the lock
 	 */
 	public async acquire(lockName: string = this.defaultLock): Promise<string | undefined> {
+		await this.createIfNotExists(lockName);
 		return new Promise<string>((resolve, reject) => {
-			this.lock[lockName].acquire((err: any, code: string) => {
+			this.lock[
+				lockName === this.defaultLock ? lockName : `${this.defaultLock}_${lockName}`
+			].acquire((err: any, code: string) => {
 				if (err) return reject(err);
 				return resolve(code);
 			});
@@ -84,14 +93,6 @@ export class N9MongoLock {
 		lockName: string = this.defaultLock,
 	): Promise<string> {
 		const startTime = Date.now();
-		if (!this.lock[lockName]) {
-			const db = global.db as mongodb.Db;
-			if (!db) {
-				throw new N9Error('missing-db', 500);
-			}
-			this.lock[lockName] = mongoDbLock(db.collection(this.collection), lockName, this.options);
-			await this.ensureIndexes(lockName);
-		}
 		do {
 			const code = await this.acquire(lockName);
 			if (code) return code;
@@ -107,15 +108,21 @@ export class N9MongoLock {
 	 * @param lockName : a key to identify the lock
 	 */
 	public async release(code: string, lockName: string = this.defaultLock): Promise<boolean> {
+		await this.createIfNotExists(lockName);
 		const ret: boolean = await new Promise<boolean>((resolve, reject) => {
-			this.lock[lockName].release(code, (err: any, ok: boolean) => {
+			this.lock[
+				lockName === this.defaultLock ? lockName : `${this.defaultLock}_${lockName}`
+			].release(code, (err: any, ok: boolean) => {
 				if (err) return reject(err);
 				return resolve(ok);
 			});
 		});
 		// Wait to let enough time to someone else to pick the lock
 		await waitFor(this.options.n9MongoLockOptions.waitDurationMsMax + 5);
-
+		const unusedCode = await this.acquire(lockName);
+		if (unusedCode) {
+			this.deleteLock(lockName);
+		}
 		return ret;
 	}
 
@@ -123,7 +130,26 @@ export class N9MongoLock {
 	 * Delete the targeted lock
 	 * @param lockName : a key to identify the lock
 	 */
-	public delete(lockName: string): void {
-		delete this.lock[lockName];
+	public deleteLock(lockName: string): void {
+		delete this.lock[`${this.defaultLock}_${lockName}`];
+	}
+
+	/**
+	 * Check lock existence and create it if it is inexistent
+	 * @param lockName : a key to identify the lock
+	 */
+	private async createIfNotExists(lockName: string): Promise<void> {
+		if (lockName !== this.defaultLock && !this.lock[`${this.defaultLock}_${lockName}`]) {
+			const db = global.db as mongodb.Db;
+			if (!db) {
+				throw new N9Error('missing-db', 500);
+			}
+			this.lock[`${this.defaultLock}_${lockName}`] = mongoDbLock(
+				db.collection(this.collection),
+				`${this.defaultLock}_${lockName}`,
+				this.options,
+			);
+			await this.ensureIndexes(lockName);
+		}
 	}
 }
