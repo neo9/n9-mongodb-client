@@ -1,17 +1,13 @@
 import { N9Error, waitFor } from '@neo9/n9-node-utils';
+import * as crypto from 'crypto';
 import * as _ from 'lodash';
 import * as mongodb from 'mongodb';
 import { LockOptions } from './models/lock-options.models';
-import { MongodbLock } from './mongodb-lock';
 
-/**
- * Wrapper of mongodb-lock
- * https://www.npmjs.com/package/mongodb-lock
- */
 export class N9MongoLock {
 	private options: LockOptions;
 	private defaultLock: string;
-	private lock: MongodbLock;
+	private collection: string;
 	private readonly waitDurationMsRandomPart: number;
 
 	/**
@@ -26,6 +22,7 @@ export class N9MongoLock {
 		options?: LockOptions,
 	) {
 		this.defaultLock = lockName;
+		this.collection = collection;
 		this.options = _.defaultsDeep(options, {
 			timeout: 30 * 1000,
 			removeExpired: true,
@@ -34,7 +31,6 @@ export class N9MongoLock {
 				waitDurationMsMin: 5,
 			},
 		});
-		this.lock = new MongodbLock(collection, this.options);
 		const db = global.db as mongodb.Db;
 		if (!db) {
 			throw new N9Error('missing-db', 500);
@@ -46,11 +42,24 @@ export class N9MongoLock {
 
 	/**
 	 * Function to call at the beginning
-	 * https://github.com/chilts/mongodb-lock#mongodb-indexes
 	 * @param lockName : a key to identify the lock
 	 */
 	public async ensureIndexes(): Promise<void> {
-		return this.lock.ensureIndexes();
+		const db = global.db as mongodb.Db;
+		const indexes = [
+			{
+				name: 'name',
+				key: {
+					name: 1,
+				},
+				unique: true,
+			},
+		];
+		try {
+			return await db.collection(this.collection).createIndexes(indexes);
+		} catch (error) {
+			throw new N9Error(error);
+		}
 	}
 
 	/**
@@ -58,15 +67,48 @@ export class N9MongoLock {
 	 * @param lockName : a key to identify the lock
 	 */
 	public async acquire(suffix?: string): Promise<string | undefined> {
-		return new Promise<string>((resolve, reject) => {
-			this.lock.acquireLock(
-				(err: any, code: string) => {
-					if (err) return reject(err);
-					return resolve(code);
-				},
-				suffix ? `${this.defaultLock}_${suffix}` : this.defaultLock,
-			);
-		});
+		const now = Date.now();
+		const db = global.db as mongodb.Db;
+		const lockName = suffix ? `${this.defaultLock}_${suffix}` : this.defaultLock;
+
+		// firstly, expire any locks if they have timed out
+		const query = {
+			name: lockName,
+			expire: { $lt: now },
+		};
+		const update = {
+			$set: {
+				name: `${lockName}:${now}`,
+				expired: now,
+			},
+		};
+
+		try {
+			if (this.options.removeExpired) {
+				await db.collection(this.collection).findOneAndDelete(query);
+			} else {
+				await db.collection(this.collection).findOneAndUpdate(query, update);
+			}
+			const code = crypto.randomBytes(16).toString('hex');
+			const doc = {
+				code,
+				name: lockName,
+				expire: now + this.options.timeout,
+				inserted: now,
+			};
+			try {
+				const docs = await db.collection(this.collection).insertOne(doc);
+				return docs.ops ? docs.ops[0].code : docs[0].code;
+			} catch (error) {
+				if (error.code === 11000) {
+					// there is currently a valid lock in the datastore
+					return null;
+				}
+				throw new N9Error(error);
+			}
+		} catch (error) {
+			throw new N9Error(error);
+		}
 	}
 
 	/**
@@ -91,19 +133,36 @@ export class N9MongoLock {
 	 * @param lockName : a key to identify the lock
 	 */
 	public async release(code: string, suffix?: string): Promise<boolean> {
+		const now = Date.now();
 		const db = global.db as mongodb.Db;
-		const ret: boolean = await new Promise<boolean>((resolve, reject) => {
-			this.lock.releaseLock(
-				code,
-				(err: any, ok: boolean) => {
-					if (err) return reject(err);
-					return resolve(ok);
-				},
-				suffix ? `${this.defaultLock}_${suffix}` : this.defaultLock,
-			);
-		});
-		// Wait to let enough time to someone else to pick the lock
-		await waitFor(this.options.n9MongoLockOptions.waitDurationMsMax + 5);
-		return ret;
+		const lockName = suffix ? `${this.defaultLock}_${suffix}` : this.defaultLock;
+		// expire this lock if it is still valid
+		const query = {
+			code,
+			expire: { $gt: now },
+			expired: { $exists: false },
+		};
+		const update = {
+			$set: {
+				name: `${lockName}:${now}`,
+				expired: now,
+			},
+		};
+
+		try {
+			const oldLock = this.options.removeExpired
+				? await db.collection(this.collection).findOneAndDelete(query)
+				: await db.collection(this.collection).findOneAndUpdate(query, update);
+
+			// Wait to let enough time to someone else to pick the lock
+			await waitFor(this.options.n9MongoLockOptions.waitDurationMsMax + 5);
+			if ((oldLock && oldLock.hasOwnProperty('value') && !oldLock.value) || !oldLock) {
+				return false;
+			}
+			// unlocked correctly
+			return true;
+		} catch (error) {
+			throw new N9Error(error);
+		}
 	}
 }
