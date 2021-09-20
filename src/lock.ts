@@ -2,6 +2,7 @@ import { N9Error, waitFor } from '@neo9/n9-node-utils';
 import * as crypto from 'crypto';
 import * as _ from 'lodash';
 import * as mongodb from 'mongodb';
+import { LangUtils } from '.';
 import { LockOptions } from './models/lock-options.models';
 
 export class N9MongoLock {
@@ -58,7 +59,7 @@ export class N9MongoLock {
 		try {
 			return await db.collection(this.collection).createIndexes(indexes);
 		} catch (error) {
-			throw new N9Error(error);
+			LangUtils.throwN9ErrorFromError(error, { indexes });
 		}
 	}
 
@@ -104,10 +105,10 @@ export class N9MongoLock {
 					// there is currently a valid lock in the datastore
 					return null;
 				}
-				throw new N9Error(error);
+				LangUtils.throwN9ErrorFromError(error, { doc });
 			}
 		} catch (error) {
-			throw new N9Error(error);
+			LangUtils.throwN9ErrorFromError(error, { query, update });
 		}
 	}
 
@@ -162,7 +163,7 @@ export class N9MongoLock {
 			// unlocked correctly
 			return true;
 		} catch (error) {
-			throw new N9Error(error);
+			LangUtils.throwN9ErrorFromError(error, { query, update });
 		}
 	}
 }

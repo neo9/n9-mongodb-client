@@ -1,6 +1,4 @@
-import * as mongoDbLock from 'mongodb-lock';
-
-export class LockOptions implements mongoDbLock.LockOptions {
+export class LockOptions {
 	public timeout?: number;
 	public removeExpired?: boolean;
 	public n9MongoLockOptions?: {
