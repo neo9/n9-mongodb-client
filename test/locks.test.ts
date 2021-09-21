@@ -1,7 +1,6 @@
 import { N9Log } from '@neo9/n9-node-log';
 import { waitFor } from '@neo9/n9-node-utils';
 import ava, { Assertions } from 'ava';
-import { Logger } from 'mongodb';
 import { BaseMongoObject, MongoClient } from '../src';
 import { N9MongoLock } from '../src/lock';
 import { init } from './fixtures/utils';
@@ -13,7 +12,7 @@ export class TestItem extends BaseMongoObject {
 
 const codeRegexp = new RegExp(/^[0-9a-f]{32}$/);
 const col = 'locks';
-const threeSecs = 3_000;
+const threeSecsInMs = 3_000;
 global.log = new N9Log('tests').module('mongodb-lock');
 
 init();
@@ -95,7 +94,7 @@ ava('[LOCKS] Test that two specified locks are fine to acquire together', async 
 });
 
 ava('[LOCKS] Test that a 3s lock is released automatically', async (t: Assertions) => {
-	const lock = new N9MongoLock(col, 'three-secs', { timeout: threeSecs });
+	const lock = new N9MongoLock(col, 'three-secs', { timeout: threeSecsInMs });
 
 	let code1: string;
 	await t.notThrowsAsync(async () => {
@@ -103,7 +102,7 @@ ava('[LOCKS] Test that a 3s lock is released automatically', async (t: Assertion
 	});
 	t.truthy(code1.match(codeRegexp), '1. The lock code returned matches the code regexp');
 
-	await waitFor(threeSecs + 100);
+	await waitFor(threeSecsInMs + 100);
 
 	let code2: string;
 	await t.notThrowsAsync(async () => {
@@ -114,7 +113,7 @@ ava('[LOCKS] Test that a 3s lock is released automatically', async (t: Assertion
 });
 
 ava('[LOCKS] Test that a 3s specified lock is released automatically', async (t: Assertions) => {
-	const lock = new N9MongoLock(col, 'three-secs', { timeout: threeSecs });
+	const lock = new N9MongoLock(col, 'three-secs', { timeout: threeSecsInMs });
 
 	let code1: string;
 	await t.notThrowsAsync(async () => {
@@ -122,7 +121,7 @@ ava('[LOCKS] Test that a 3s specified lock is released automatically', async (t:
 	});
 	t.truthy(code1.match(codeRegexp), '1. The lock code returned matches the code regexp');
 
-	await waitFor(threeSecs + 100);
+	await waitFor(threeSecsInMs + 100);
 
 	let code2: string;
 	await t.notThrowsAsync(async () => {
@@ -133,7 +132,7 @@ ava('[LOCKS] Test that a 3s specified lock is released automatically', async (t:
 });
 
 ava('[LOCKS] Test that a 3s lock can be released and then re-acquired', async (t: Assertions) => {
-	const lock = new N9MongoLock(col, 'release-me', { timeout: threeSecs });
+	const lock = new N9MongoLock(col, 'release-me', { timeout: threeSecsInMs });
 
 	let code1: string;
 	await t.notThrowsAsync(async () => {
@@ -158,7 +157,7 @@ ava('[LOCKS] Test that a 3s lock can be released and then re-acquired', async (t
 ava(
 	'[LOCKS] Test that a 3s specified lock can be released and then re-acquired',
 	async (t: Assertions) => {
-		const lock = new N9MongoLock(col, 'release-me', { timeout: threeSecs });
+		const lock = new N9MongoLock(col, 'release-me', { timeout: threeSecsInMs });
 
 		let code1: string;
 		await t.notThrowsAsync(async () => {
@@ -226,7 +225,7 @@ ava('[LOCKS] Test that a specified lock will fail a 2nd .release()', async (t: A
 ava(
 	'[LOCKS] Test that when a 3s is released automatically, the lock release fails properly',
 	async (t: Assertions) => {
-		const lock = new N9MongoLock(col, 'bad-release', { timeout: threeSecs });
+		const lock = new N9MongoLock(col, 'bad-release', { timeout: threeSecsInMs });
 
 		let code: string;
 		await t.notThrowsAsync(async () => {
@@ -234,7 +233,7 @@ ava(
 		});
 		t.truthy(code.match(codeRegexp), 'The lock code returned matches the code regexp');
 
-		await waitFor(threeSecs + 100);
+		await waitFor(threeSecsInMs + 100);
 
 		let ok: boolean;
 		await t.notThrowsAsync(async () => {
@@ -247,7 +246,7 @@ ava(
 ava(
 	'[LOCKS] Test that when a 3s is released automatically, the specified lock release fails properly',
 	async (t: Assertions) => {
-		const lock = new N9MongoLock(col, 'bad-release', { timeout: threeSecs });
+		const lock = new N9MongoLock(col, 'bad-release', { timeout: threeSecsInMs });
 
 		let code: string;
 		await t.notThrowsAsync(async () => {
@@ -255,7 +254,7 @@ ava(
 		});
 		t.truthy(code.match(codeRegexp), 'The lock code returned matches the code regexp');
 
-		await waitFor(threeSecs + 100);
+		await waitFor(threeSecsInMs + 100);
 
 		let ok: boolean;
 		await t.notThrowsAsync(async () => {
@@ -323,7 +322,7 @@ ava(
 		const mongoClient = new MongoClient(`locks`, TestItem, TestItem);
 
 		const lock = new N9MongoLock(col, 'modify-expired-on-release', {
-			timeout: threeSecs,
+			timeout: threeSecsInMs,
 			removeExpired: false,
 		});
 
@@ -333,7 +332,7 @@ ava(
 		});
 		t.truthy(code.match(codeRegexp), 'The lock code returned matches the code regexp');
 
-		await waitFor(threeSecs + 100);
+		await waitFor(threeSecsInMs + 100);
 
 		let newCode: string;
 		await t.notThrowsAsync(async () => {
@@ -355,7 +354,7 @@ ava(
 		const mongoClient = new MongoClient(`locks`, TestItem, TestItem);
 
 		const lock = new N9MongoLock(col, 'modify-expired-on-release', {
-			timeout: threeSecs,
+			timeout: threeSecsInMs,
 			removeExpired: false,
 		});
 
@@ -365,7 +364,7 @@ ava(
 		});
 		t.truthy(code.match(codeRegexp), 'The lock code returned matches the code regexp');
 
-		await waitFor(threeSecs + 100);
+		await waitFor(threeSecsInMs + 100);
 
 		let newCode: string;
 		await t.notThrowsAsync(async () => {
@@ -442,7 +441,7 @@ ava(
 	async (t: Assertions) => {
 		const lock = new N9MongoLock(col, 'remove-expired-on-timeout', {
 			removeExpired: true,
-			timeout: threeSecs,
+			timeout: threeSecsInMs,
 		});
 		const mongoClient = new MongoClient(`locks`, TestItem, TestItem);
 
@@ -452,7 +451,7 @@ ava(
 		});
 		t.truthy(code.match(codeRegexp), 'The lock code returned matches the code regexp');
 
-		await waitFor(threeSecs + 100);
+		await waitFor(threeSecsInMs + 100);
 
 		let newCode: string;
 		await t.notThrowsAsync(async () => {
@@ -473,7 +472,7 @@ ava(
 	async (t: Assertions) => {
 		const lock = new N9MongoLock(col, 'remove-expired-on-timeout', {
 			removeExpired: true,
-			timeout: threeSecs,
+			timeout: threeSecsInMs,
 		});
 		const mongoClient = new MongoClient(`locks`, TestItem, TestItem);
 
@@ -483,7 +482,7 @@ ava(
 		});
 		t.truthy(code.match(codeRegexp), 'The lock code returned matches the code regexp');
 
-		await waitFor(threeSecs + 100);
+		await waitFor(threeSecsInMs + 100);
 
 		let newCode: string;
 		await t.notThrowsAsync(async () => {

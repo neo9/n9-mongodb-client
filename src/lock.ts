@@ -2,7 +2,7 @@ import { N9Error, waitFor } from '@neo9/n9-node-utils';
 import * as crypto from 'crypto';
 import * as _ from 'lodash';
 import * as mongodb from 'mongodb';
-import { LangUtils } from '.';
+import { LangUtils } from './lang-utils';
 import { LockOptions } from './models/lock-options.models';
 
 export class N9MongoLock {
@@ -14,15 +14,15 @@ export class N9MongoLock {
 	/**
 	 *
 	 * @param collection Collection name to use to save lock, default : n9MongoLock
-	 * @param lockName : a key to identify the lock
+	 * @param defaultLock : the default naem for this lock
 	 * @param options : timeout default to 30s and removeExpired default to true to avoid duplication keys on expiring
 	 */
 	constructor(
 		collection: string = 'n9MongoLock',
-		lockName: string = 'default-lock',
+		defaultLock: string = 'default-lock',
 		options?: LockOptions,
 	) {
-		this.defaultLock = lockName;
+		this.defaultLock = defaultLock;
 		this.collection = collection;
 		this.options = _.defaultsDeep(options, {
 			timeout: 30 * 1000,
@@ -134,10 +134,15 @@ export class N9MongoLock {
 	 * @param suffix : a key to identify the specific lock
 	 */
 	public async release(code: string, suffix?: string): Promise<boolean> {
+		const lockName = suffix ? `${this.defaultLock}_${suffix}` : this.defaultLock;
+		const ret = await this.releaseLock(code, lockName);
+		await waitFor(this.options.n9MongoLockOptions.waitDurationMsMax + 5);
+		return ret;
+	}
+
+	private async releaseLock(code: string, lockName: string): Promise<boolean> {
 		const now = Date.now();
 		const db = global.db as mongodb.Db;
-		const lockName = suffix ? `${this.defaultLock}_${suffix}` : this.defaultLock;
-		// expire this lock if it is still valid
 		const query = {
 			code,
 			expire: { $gt: now },
@@ -154,13 +159,9 @@ export class N9MongoLock {
 			const oldLock = this.options.removeExpired
 				? await db.collection(this.collection).findOneAndDelete(query)
 				: await db.collection(this.collection).findOneAndUpdate(query, update);
-
-			// Wait to let enough time to someone else to pick the lock
-			await waitFor(this.options.n9MongoLockOptions.waitDurationMsMax + 5);
 			if ((oldLock && oldLock.hasOwnProperty('value') && !oldLock.value) || !oldLock) {
 				return false;
 			}
-			// unlocked correctly
 			return true;
 		} catch (error) {
 			LangUtils.throwN9ErrorFromError(error, { query, update });
