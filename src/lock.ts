@@ -43,7 +43,6 @@ export class N9MongoLock {
 
 	/**
 	 * Function to call at the beginning
-	 * @param lockName : a key to identify the lock
 	 */
 	public async ensureIndexes(): Promise<void> {
 		const db = global.db as mongodb.Db;
@@ -65,14 +64,13 @@ export class N9MongoLock {
 
 	/**
 	 * Once you have a lock, you have a 30 second timeout until the lock is released. You can release it earlier by calling release
-	 * @param lockName : a key to identify the lock
+	 * @param suffix : a key to identify the specific lock
 	 */
 	public async acquire(suffix?: string): Promise<string | undefined> {
 		const now = Date.now();
 		const db = global.db as mongodb.Db;
 		const lockName = suffix ? `${this.defaultLock}_${suffix}` : this.defaultLock;
 
-		// firstly, expire any locks if they have timed out
 		const query = {
 			name: lockName,
 			expire: { $lt: now },
@@ -98,11 +96,12 @@ export class N9MongoLock {
 				inserted: now,
 			};
 			try {
-				const docs = await db.collection(this.collection).insertOne(doc);
-				return docs.ops ? docs.ops[0].code : docs[0].code;
+				const docs: mongodb.InsertOneWriteOpResult<mongodb.WithId<{ code: string }>> = await db
+					.collection(this.collection)
+					.insertOne(doc);
+				return docs.ops[0].code;
 			} catch (error) {
 				if (error.code === 11000) {
-					// there is currently a valid lock in the datastore
 					return null;
 				}
 				LangUtils.throwN9ErrorFromError(error, { doc });
@@ -115,7 +114,7 @@ export class N9MongoLock {
 	/**
 	 * Acquire a lock after waiting max timeoutMs
 	 * @param timeoutMs timeout in ms
-	 * @param lockName : a key to identify the lock
+	 * @param suffix : a key to identify the specific lock
 	 */
 	public async acquireBlockingUntilAvailable(timeoutMs: number, suffix?: string): Promise<string> {
 		const startTime = Date.now();
@@ -131,7 +130,8 @@ export class N9MongoLock {
 
 	/**
 	 * Release the lock
-	 * @param lockName : a key to identify the lock
+	 * @param code: the code of the lock to be released
+	 * @param suffix : a key to identify the specific lock
 	 */
 	public async release(code: string, suffix?: string): Promise<boolean> {
 		const now = Date.now();
