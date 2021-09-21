@@ -1,3 +1,18 @@
+# [0.24.0](https://github.com/neo9/n9-mongo-client/compare/0.23.4...0.24.0) (2021-09-21)
+
+
+### doc
+
+* Fix readme node required version ([e25caaf](https://github.com/neo9/n9-mongo-client/commit/e25caafc49532d053aa29b49661c05bfb875d40e))
+
+### lock
+
+* Allow to acquire and lock with suffix #47 ([8c016a0](https://github.com/neo9/n9-mongo-client/commit/8c016a049a683cab683f1c8ebbfe671829bcea4e)), closes [#47](https://github.com/neo9/n9-mongo-client/issues/47)
+
+### yarn
+
+* Upgrade path-parse from 1.0.6 to 1.0.7 #46 ([dce2c61](https://github.com/neo9/n9-mongo-client/commit/dce2c612989f78cc4d6a6927c75a3424c699e747)), closes [#46](https://github.com/neo9/n9-mongo-client/issues/46)
+
 ## [0.23.4](https://github.com/neo9/n9-mongo-client/compare/0.23.3...0.23.4) (2021-08-30)
 
 
