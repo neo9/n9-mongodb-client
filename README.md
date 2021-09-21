@@ -8,7 +8,7 @@ A client to use easily MongoDB official driver.
 
 ## To build
 
-Use node 10+ to build and yarn.
+Use node 12+ to build and yarn.
 
 ```
 yarn build
