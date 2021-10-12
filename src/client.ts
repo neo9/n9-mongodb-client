@@ -16,6 +16,7 @@ import {
 	FilterQuery,
 	IndexOptions,
 	IndexSpecification,
+	MapReduceOptions,
 	MatchKeysAndValues,
 	MongoClient as MongodbClient,
 	ObjectId,
@@ -48,6 +49,7 @@ const defaultConfiguration: MongoClientConfiguration = {
 	keepHistoric: false,
 	historicPageSize: 100,
 };
+declare function emit(k: string, v: any): void;
 
 export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 	private readonly collection: Collection<U>;
@@ -992,6 +994,65 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 
 	public newAggregationBuilder(): AggregationBuilder<U> {
 		return new AggregationBuilder<U>(this.collection.collectionName);
+	}
+
+	/**
+	 * Function to get the id of every `rangeSize` entity. The ids are sort asc.
+	 * @param rangeSize Step size between ids
+	 * @param query Filter query to target only some entities
+	 * @param options Object to specify options, to get the index of each id for instance.
+	 * @param mapReduceOptions the mongodb client mapReduce function options
+	 */
+	public async findIdsEveryNthEntities(
+		rangeSize: number,
+		query: FilterQuery<U> = {},
+		options: {
+			returnRangeIndex?: boolean;
+		} = {},
+		mapReduceOptions?: MapReduceOptions,
+	): Promise<{ _id: string; value?: number }[]> {
+		try {
+			if (rangeSize < 1) {
+				throw new N9Error('range-size-should-be-greater-than-1', 500, { rangeSize });
+			}
+			let i; // fake variable declaration for Typescript only
+			let mapFunction: () => void;
+			// map function is run on the server, then the coverage can't evaluate it, nyc break the code
+			if (options.returnRangeIndex) {
+				/* istanbul ignore next */
+				mapFunction = function (): void {
+					if (i % rangeSize === 0) {
+						emit(this._id, i);
+					}
+					i += 1;
+				};
+			} else {
+				/* istanbul ignore next */
+				mapFunction = function (): void {
+					if (i % rangeSize === 0) {
+						emit(this._id, undefined);
+					}
+					i += 1;
+				};
+			}
+			const mapReduceResult = await this.collection.mapReduce(mapFunction, _.noop, {
+				...mapReduceOptions,
+				query,
+				out: { inline: 1 },
+				sort: { _id: 1 },
+				jsMode: true,
+				scope: {
+					rangeSize,
+					i: 0,
+				},
+			});
+			return MongoUtils.mapObjectIdToStringHex(LangUtils.removeEmptyDeep(mapReduceResult));
+		} catch (e) {
+			LangUtils.throwN9ErrorFromError(e, {
+				rangeSize,
+				query,
+			});
+		}
 	}
 
 	public async findHistoricByEntityId(
