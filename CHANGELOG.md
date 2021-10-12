@@ -1,3 +1,20 @@
+# [0.25.0](https://github.com/neo9/n9-mongo-client/compare/0.24.0...0.25.0) (2021-10-12)
+
+
+### doc
+
+* Fix README build link to travis-ci ([4c4d2e8](https://github.com/neo9/n9-mongo-client/commit/4c4d2e86b59cfc6ec4df752a09344be9b4c94cad))
+
+### ranges
+
+* Add function to get all start range ids ([0877a71](https://github.com/neo9/n9-mongo-client/commit/0877a71a993e1ce7cade04d427a0bf3dd739f910))
+
+### yarn
+
+* Upgrade release-it to latest v 14.11.6 ([dda93fc](https://github.com/neo9/n9-mongo-client/commit/dda93fcb3b4c0af1568587f8e467742d9efdc4f2))
+* Upgrade transitive dependencies ([381199e](https://github.com/neo9/n9-mongo-client/commit/381199e388a61914d92d94c6ea3b52ef8cd81506))
+* Upgrade transitive dependencies ([5c96986](https://github.com/neo9/n9-mongo-client/commit/5c969867393a9804991abd07c326d33b01180da1))
+
 # [0.24.0](https://github.com/neo9/n9-mongo-client/compare/0.23.4...0.24.0) (2021-09-21)
 
 
