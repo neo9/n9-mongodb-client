@@ -1,3 +1,10 @@
+## [0.25.1](https://github.com/neo9/n9-mongo-client/compare/0.25.0...0.25.1) (2021-10-15)
+
+
+### ranges
+
+* Fix function to get all start range ids for performances ([5a7ff4d](https://github.com/neo9/n9-mongo-client/commit/5a7ff4db8ce1307b71af46ce6c461667448ee235))
+
 # [0.25.0](https://github.com/neo9/n9-mongo-client/compare/0.24.0...0.25.0) (2021-10-12)
 
 
