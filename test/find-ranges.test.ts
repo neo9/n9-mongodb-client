@@ -123,41 +123,6 @@ ava('[GET-RANGES] Get ranges with query filter', async (t: ExecutionContext<Test
 	await t.context.mongoClient.dropCollection();
 });
 
-ava('[GET-RANGES] Get ranges with limit filter', async (t: ExecutionContext<TestContext>) => {
-	const limit = 25;
-	const allIds = await (await t.context.mongoClient.find({}, 0, 0, {}, { _id: 1 }))
-		.limit(limit)
-		.toArray();
-	const expectedIdsByRange: StringMap<{ _id: string; value: number }[]> = {};
-	for (const range of [1, 2, 3, 4, 5, 10, 20, 80]) {
-		let index = 0;
-		for (const id of allIds) {
-			if (index % range === 0) {
-				if (!expectedIdsByRange[range]) {
-					expectedIdsByRange[range] = [];
-				}
-				expectedIdsByRange[range.toString()].push({ _id: id._id, value: index });
-			}
-			index += 1;
-		}
-
-		const foundIds = await t.context.mongoClient.findIdsEveryNthEntities(
-			range,
-			{},
-			{
-				returnRangeIndex: true,
-			},
-			{ limit },
-		);
-		t.deepEqual(
-			expectedIdsByRange[range],
-			foundIds,
-			'Found ids are the good onces in the same order',
-		);
-	}
-	await t.context.mongoClient.dropCollection();
-});
-
 ava('[GET-RANGES] Get ranges throw error', async (t: ExecutionContext<TestContext>) => {
 	await t.throwsAsync(
 		async () => {
@@ -172,8 +137,7 @@ ava('[GET-RANGES] Get ranges throw error', async (t: ExecutionContext<TestContex
 			await t.context.mongoClient.findIdsEveryNthEntities(5, { $and: [] });
 		},
 		{
-			message:
-				"Can't canonicalize query { $and: [] } :: caused by :: $and/$or/$nor must be a nonempty array",
+			message: '$and/$or/$nor must be a nonempty array',
 		},
 	);
 	await t.context.mongoClient.dropCollection();
