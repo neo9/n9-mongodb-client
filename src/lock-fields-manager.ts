@@ -112,7 +112,7 @@ export class LockFieldsManager<U extends BaseMongoObject> {
 				// console.log(`--  key --`, basePath, lockFields.find((lockField) => lockField.path.startsWith(basePath)));
 				// console.log('--  ', JSON.stringify(existingEntity, null, 1), ` <<-- existingEntity`);
 				// console.log('--  ', JSON.stringify(newEntity, null, 1), ` <<-- newEntity`);
-				const fieldCodeName = this.conf.arrayWithReferences[basePath];
+				const fieldCodeName = this.conf.arrayWithReferences?.[basePath];
 				const mergedArray = [];
 				// add existing locked elements
 				for (const existingEntityElement of existingEntity) {
