@@ -1,3 +1,10 @@
+## [0.25.2](https://github.com/neo9/n9-mongo-client/compare/0.25.1...0.25.2) (2022-01-06)
+
+
+### locks
+
+* Fix lock field management error on update with simple arrays ([0d31e22](https://github.com/neo9/n9-mongo-client/commit/0d31e22642141445fa2ee02539c3bb5296ed628d))
+
 ## [0.25.1](https://github.com/neo9/n9-mongo-client/compare/0.25.0...0.25.1) (2021-10-15)
 
 
