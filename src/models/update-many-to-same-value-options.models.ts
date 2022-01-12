@@ -1,4 +1,4 @@
-export interface UpdateManyToSameValueOptions<U> {
+export interface UpdateManyToSameValueOptions {
 	/**
 	 * This options need to be set to true when trying to update many document to same value
 	 * when the updateOnlyOnChange is setted for this collection.

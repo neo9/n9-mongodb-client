@@ -1,5 +1,4 @@
 import { FilterQuery, UpdateQuery } from 'mongodb';
-import { StringMap } from './';
 
 /**
  * Queries to run bulk of update one

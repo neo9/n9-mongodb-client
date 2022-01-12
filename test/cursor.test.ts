@@ -1,8 +1,8 @@
 import { N9Log } from '@neo9/n9-node-log';
-import ava, { Assertions } from 'ava';
-
 import { waitFor } from '@neo9/n9-node-utils';
+import ava, { Assertions } from 'ava';
 import { Transform } from 'stream';
+
 import { MongoClient } from '../src';
 import { BaseMongoObject } from '../src/models';
 import { init } from './fixtures/utils';
@@ -24,7 +24,7 @@ ava('[Cursor] call hasNext before using in a for async', async (t: Assertions) =
 	await mongoClient.insertOne({ field1String: 'string4' }, 'userId1');
 	await mongoClient.insertOne({ field1String: 'string5' }, 'userId1');
 
-	const cursor = await mongoClient.find({}, 0, 0);
+	const cursor = mongoClient.find({}, 0, 0);
 	const items: SampleType[] = [];
 	await cursor.hasNext();
 	for await (const item of cursor as any) {
@@ -44,7 +44,7 @@ ava('[Cursor] sort and call hasNext before using in a for async', async (t: Asse
 	await mongoClient.insertOne({ field1String: 'string4' }, 'userId1');
 	await mongoClient.insertOne({ field1String: 'string5' }, 'userId1');
 
-	const cursor = await mongoClient.find({}, 0, 0, { field1String: 1 });
+	const cursor = mongoClient.find({}, 0, 0, { field1String: 1 });
 	const items: SampleType[] = [];
 	await cursor.hasNext();
 	for await (const item of cursor as any) {
@@ -70,7 +70,7 @@ ava('[Cursor] hasNext before piping into a stream ', async (t: Assertions) => {
 	await mongoClient.insertOne({ field1String: 'string4' }, 'userId1');
 	await mongoClient.insertOne({ field1String: 'string5' }, 'userId1');
 
-	const cursor = await mongoClient.find({}, 0, 0);
+	const cursor = mongoClient.find({}, 0, 0);
 
 	await cursor.hasNext();
 	const items: SampleType[] = [];
@@ -104,7 +104,7 @@ ava('[Cursor] sort and hasNext before piping into a stream ', async (t: Assertio
 	await mongoClient.insertOne({ field1String: 'string4' }, 'userId1');
 	await mongoClient.insertOne({ field1String: 'string5' }, 'userId1');
 
-	const cursor = await mongoClient.find({}, 0, 0, { field1String: 1 });
+	const cursor = mongoClient.find({}, 0, 0, { field1String: 1 });
 
 	await cursor.hasNext();
 	const items: SampleType[] = [];

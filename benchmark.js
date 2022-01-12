@@ -397,10 +397,10 @@ async function runFindBench(defaultCaseRunOptions, version) {
 		add(
 			'Read N9MongoClient',
 			async () => {
-				const cursor = await mongoClient.find({}, 0, 0);
-				// read all cursor one by one
-				while (await cursor.hasNext()) {
-					await cursor.next();
+				const cursor2 = mongoClient.find({}, 0, 0);
+				// read all cursor2 one by one
+				while (await cursor2.hasNext()) {
+					await cursor2.next();
 				}
 			},
 			defaultCaseRunOptions,

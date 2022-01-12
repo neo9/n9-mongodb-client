@@ -1,7 +1,7 @@
 import { N9Log } from '@neo9/n9-node-log';
 import ava, { Assertions } from 'ava';
-
 import { Exclude, Expose } from 'class-transformer';
+
 import { MongoClient } from '../src';
 import { BaseMongoObject } from '../src/models';
 import { init } from './fixtures/utils';
@@ -44,12 +44,12 @@ ava('[Listing] List elements', async (t: Assertions) => {
 	t.truthy(insertedValue.fieldEntity, 'inserted entity field');
 	t.truthy(insertedValue.fieldListing, 'inserted listing field');
 
-	const listing = await (await mongoClient.find({})).toArray();
+	const listing = await mongoClient.find({}).toArray();
 
 	t.truthy(listing[0].fieldEntity, 'entity field is present');
 	t.falsy((listing[0] as any).fieldListing, 'listing field is missing');
 
-	const listingWithDetails = await (await mongoClient.findWithType({}, SampleTypeEntity)).toArray();
+	const listingWithDetails = await mongoClient.findWithType({}, SampleTypeEntity).toArray();
 
 	t.truthy(listingWithDetails[0].fieldEntity, 'entity field in details list is present');
 	t.truthy(listingWithDetails[0].fieldListing, 'listing field in details list is present');
@@ -74,13 +74,13 @@ ava('[Listing] List entities without class-transformer', async (t: Assertions) =
 	t.truthy(insertedValue.fieldEntity, 'inserted entity field');
 	t.truthy(insertedValue.fieldListing, 'inserted listing field');
 
-	const listing = await (await mongoClient.findWithType({}, SampleTypeEntity2)).toArray();
+	const listing = await mongoClient.findWithType({}, SampleTypeEntity2).toArray();
 
 	t.truthy(listing[0].fieldEntity, 'entity field is present');
 	t.falsy((listing[0] as any).fieldListing, 'listing field is missing');
 
-	const listingWithDetails = await (
-		await mongoClient.findWithType<SampleTypeEntity2>(
+	const listingWithDetails = await mongoClient
+		.findWithType<SampleTypeEntity2>(
 			{},
 			undefined,
 			0,
@@ -91,7 +91,7 @@ ava('[Listing] List entities without class-transformer', async (t: Assertions) =
 				fieldListing: 1,
 			},
 		)
-	).toArray();
+		.toArray();
 
 	t.truthy(listingWithDetails[0].fieldEntity, 'entity field in details list is present');
 	t.truthy(
@@ -99,8 +99,8 @@ ava('[Listing] List entities without class-transformer', async (t: Assertions) =
 		'listing field in details list is present because class-transformer decoration is avoided',
 	);
 
-	await t.throwsAsync(
-		mongoClient.findWithType<SampleTypeEntity2>({}, undefined, 0, 0, {}, {}),
+	t.throws(
+		() => mongoClient.findWithType<SampleTypeEntity2>({}, undefined, 0, 0, {}, {}),
 		{
 			message: 'type or projection is required',
 		},

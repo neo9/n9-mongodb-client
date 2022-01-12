@@ -1,6 +1,7 @@
 import { N9Log } from '@neo9/n9-node-log';
 import ava, { Assertions } from 'ava';
 import * as _ from 'lodash';
+
 import { MongoClient } from '../src';
 import { BaseMongoObject } from '../src/models';
 import { init } from './fixtures/utils';
@@ -13,8 +14,11 @@ export class AttributeValueListItemEntity extends BaseMongoObject {
 	public position?: number;
 }
 
-const getLockFieldsMongoClient = () => {
-	return new MongoClient<AttributeValueListItemEntity, AttributeValueListItemEntity>(
+const getLockFieldsMongoClient = (): MongoClient<
+	AttributeValueListItemEntity,
+	AttributeValueListItemEntity
+> =>
+	new MongoClient<AttributeValueListItemEntity, AttributeValueListItemEntity>(
 		`test-${Date.now()}`,
 		AttributeValueListItemEntity,
 		AttributeValueListItemEntity,
@@ -25,7 +29,6 @@ const getLockFieldsMongoClient = () => {
 			},
 		},
 	);
-};
 
 global.log = new N9Log('tests').module('lock-fields-regression');
 
@@ -105,7 +108,7 @@ ava(
 				lockNewFields: true,
 				forceEditLockFields: true,
 				unsetUndefined: false,
-				mapFunction: async (entityEdited) => ({ position: entityEdited.position }),
+				mapFunction: (entityEdited) => ({ position: entityEdited.position }),
 				query: (entityEdited) => ({
 					code: entityEdited.code,
 				}),

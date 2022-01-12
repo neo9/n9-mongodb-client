@@ -4,6 +4,7 @@ import * as _ from 'lodash';
 import { ObjectID } from 'mongodb';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import * as stdMocks from 'std-mocks';
+
 import { BaseMongoObject, MongoClient, MongoUtils } from '../src';
 
 class SampleType extends BaseMongoObject {
@@ -18,7 +19,7 @@ ava('[MONGO-UTILS] disconnect without connect', async (t: Assertions) => {
 	t.deepEqual(await MongoUtils.disconnect(), undefined, 'should not block disconnect');
 });
 
-ava('[MONGO-UTILS] oid & oids', async (t: Assertions) => {
+ava('[MONGO-UTILS] oid & oids', (t: Assertions) => {
 	const id = '01234567890123456789abcd';
 	const objectID = new ObjectID(id);
 	t.deepEqual(MongoUtils.oid(id), objectID, 'oid equals from string');
@@ -29,8 +30,8 @@ ava('[MONGO-UTILS] oid & oids', async (t: Assertions) => {
 	t.is(MongoUtils.oids(undefined), undefined, 'oids of null is undefined');
 });
 
-ava('[MONGO-UTILS] mapObjectToClass null', async (t: Assertions) => {
-	t.deepEqual(MongoUtils.mapObjectToClass(null, null), null, 'should return null');
+ava('[MONGO-UTILS] mapObjectToClass null', (t: Assertions) => {
+	t.deepEqual(MongoUtils.mapObjectToClass<null, null>(null, null), null, 'should return null');
 	t.deepEqual(MongoUtils.mapObjectToClass(null, undefined), undefined, 'should return undefined');
 	t.deepEqual(MongoUtils.mapObjectToClass(null, 0), 0 as any, 'should return 0');
 	t.deepEqual(MongoUtils.mapObjectToClass(null, ''), '' as any, 'should return ""');
@@ -98,10 +99,7 @@ ava('[MONGO-UTILS] List collection names', async (t: Assertions) => {
 	names = await MongoUtils.listCollectionsNames({ name: { $regex: /test2.*/g } });
 	t.deepEqual(names, [collectionName2], 'collection 2 is found');
 
-	const cursor = await MongoUtils.listCollections(
-		{ name: { $regex: /test1.*/g } },
-		{ nameOnly: false },
-	);
+	const cursor = MongoUtils.listCollections({ name: { $regex: /test1.*/g } }, { nameOnly: false });
 	while (await cursor.hasNext()) {
 		const item: any = await cursor.next();
 		t.false(item.info.readOnly, 'Additional infos can be found on collections');

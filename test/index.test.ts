@@ -1,7 +1,7 @@
 import { N9Log } from '@neo9/n9-node-log';
 import ava, { Assertions } from 'ava';
-
 import { Db } from 'mongodb';
+
 import { MongoClient } from '../src';
 import { BaseMongoObject } from '../src/models';
 import { init } from './fixtures/utils';
@@ -188,7 +188,7 @@ ava('[CRUD] Find one and update with filter', async (t: Assertions) => {
 
 	t.is(sizeAfterUpdate, sizeAfterInsert, 'No new element added');
 
-	const notFound = await mongoClient.find({
+	const notFound = mongoClient.find({
 		'array.sub-array.filedNumber': intValue, // the value is now intValue2
 	});
 	sizeAfterUpdate = await mongoClient.count();

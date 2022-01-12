@@ -1,4 +1,5 @@
 import { Expose } from 'class-transformer';
+
 import { BaseMongoObjectInfos } from './base-mongo-object-infos.models';
 
 export class BaseMongoObject {

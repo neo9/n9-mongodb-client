@@ -1,3 +1,6 @@
+// eslint-disable-next-line import/no-extraneous-dependencies
+export { ObjectId } from 'bson';
+
 export * from './client';
 export * from './lang-utils';
 export * from './lock-fields-manager';

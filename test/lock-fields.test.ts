@@ -2,6 +2,7 @@ import { N9Log } from '@neo9/n9-node-log';
 import ava, { Assertions } from 'ava';
 import * as _ from 'lodash';
 import { ObjectID } from 'mongodb';
+
 import { MongoClient, MongoClientConfiguration } from '../src';
 import { BaseMongoObject, EntityHistoric, StringMap } from '../src/models';
 import { init } from './fixtures/utils';
@@ -85,7 +86,7 @@ const locksDataSample: SampleComplexType = {
 const getLockFieldsMongoClient = (
 	keepHistoric: boolean = false,
 	withArrayReferences: boolean = true,
-) => {
+): MongoClient<SampleComplexType, SampleComplexType> => {
 	const conf: MongoClientConfiguration = {
 		keepHistoric,
 		lockFields: {
@@ -591,7 +592,7 @@ ava('[LOCK-FIELDS] Update many with locks', async (t: Assertions) => {
 	];
 
 	await mongoClient.updateManyAtOnce(newValues, 'userId', { query: 'text' });
-	const listing: Partial<SampleComplexType>[] = await (await mongoClient.find({}, 0, 0)).toArray();
+	const listing: Partial<SampleComplexType>[] = await mongoClient.find({}, 0, 0).toArray();
 
 	t.is(listing.length, 2, 'found 2 elements');
 	for (const i of listing) {
@@ -657,9 +658,7 @@ ava(
 		];
 
 		await mongoClient.updateManyAtOnce(newValues, 'userId', { query: 'text' });
-		const listing: Partial<SampleComplexType>[] = await (
-			await mongoClient.find({}, 0, 0)
-		).toArray();
+		const listing: Partial<SampleComplexType>[] = await mongoClient.find({}, 0, 0).toArray();
 
 		t.is(listing.length, 2, 'found 2 elements');
 		for (const i of listing) {

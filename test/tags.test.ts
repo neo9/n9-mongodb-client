@@ -1,7 +1,7 @@
 import { N9Log } from '@neo9/n9-node-log';
+import { waitFor } from '@neo9/n9-node-utils';
 import ava, { Assertions } from 'ava';
 
-import { waitFor } from '@neo9/n9-node-utils';
 import { MongoClient } from '../src';
 import { BaseMongoObject } from '../src/models';
 import { init } from './fixtures/utils';
@@ -29,7 +29,7 @@ ava('[Tags] Add tag to entities then remove them', async (t: Assertions) => {
 		{ field1String: { $in: ['string1', 'string2'] } },
 		'userId',
 	);
-	let cursor = await mongoClient.find({ 'objectInfos.tags': tag });
+	let cursor = mongoClient.find({ 'objectInfos.tags': tag });
 	let items = await cursor.toArray();
 	t.is(items.length, 2, '2 items are tagged');
 
@@ -38,7 +38,7 @@ ava('[Tags] Add tag to entities then remove them', async (t: Assertions) => {
 		tag,
 		'userId',
 	);
-	cursor = await mongoClient.find({ 'objectInfos.tags': tag });
+	cursor = mongoClient.find({ 'objectInfos.tags': tag });
 	items = await cursor.toArray();
 	t.is(items.length, 0, '0 items are tagged');
 
@@ -61,7 +61,7 @@ ava('[Tags] Add tag to entities then delete them', async (t: Assertions) => {
 		'userId',
 	);
 	await mongoClient.deleteManyWithTag(tag);
-	const cursor = await mongoClient.find({});
+	const cursor = mongoClient.find({});
 	const items = await cursor.toArray();
 	t.is(items.length, 3, 'collection contains now 3 items (string3, string4, string5)');
 

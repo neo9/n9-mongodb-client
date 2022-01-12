@@ -1,4 +1,5 @@
 import { FilterQuery } from 'mongodb';
+
 import {
 	AggregationPipeline,
 	AggregationPipelineStage,
@@ -151,6 +152,9 @@ export class AggregationBuilder<U> {
 
 	/**
 	 * Add a stage. Use only when none of the specialized methods work.
+	 *
+	 * @param stage
+	 * @returns The aggregation builder
 	 */
 	public addStage(stage: object): AggregationBuilder<U> {
 		return this.doAddStage(stage as AggregationPipelineStage);
@@ -168,6 +172,8 @@ export class AggregationBuilder<U> {
 
 	/**
 	 * Return the built aggregation
+	 *
+	 * @returns Array of stages
 	 */
 	public build(): AggregationPipeline {
 		return this.stages;

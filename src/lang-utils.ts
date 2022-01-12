@@ -1,7 +1,8 @@
-/* tslint:disable:function-name */
+/* eslint-disable @typescript-eslint/naming-convention */
 import { N9Error } from '@neo9/n9-node-utils';
 import * as _ from 'lodash';
 import { MongoError, ObjectID } from 'mongodb';
+
 import { LodashReplacerUtils } from './lodash-replacer.utils';
 
 export class LangUtils {
@@ -40,12 +41,9 @@ export class LangUtils {
 			) {
 				delete obj[key];
 			}
-			// @ts-ignore
 			if (objElement && typeof objElement === 'object') {
 				LangUtils.removeEmptyDeep(objElement, compactArrays, removeEmptyObjects, keepNullValues);
-			}
-			// @ts-ignore
-			else if (
+			} else if (
 				(keepNullValues && objElement === undefined) ||
 				(!keepNullValues && LodashReplacerUtils.IS_NIL(objElement))
 			) {

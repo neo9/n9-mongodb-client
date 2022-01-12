@@ -19,8 +19,10 @@ import {
 	MatchKeysAndValues,
 	MongoClient as MongodbClient,
 	ObjectId,
+	OptionalId,
 	UpdateQuery,
 } from 'mongodb';
+
 import { AggregationBuilder } from './aggregation-utils';
 import { HistoricManager } from './historic-manager';
 import { IndexManager } from './index-manager';
@@ -227,7 +229,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				undefined,
 				!!this.conf.lockFields,
 			);
-			await this.collection.insertOne(newEntityWithoutForbiddenCharacters);
+			await this.collection.insertOne(newEntityWithoutForbiddenCharacters as OptionalId<U>);
 			if (returnNewValue) {
 				return MongoUtils.mapObjectToClass(
 					this.type,
@@ -296,7 +298,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		}
 	}
 
-	public async findWithType<T extends Partial<U | L>>(
+	public findWithType<T extends Partial<U | L>>(
 		query: object,
 		type: ClassType<T>,
 		page: number = 0,
@@ -304,7 +306,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		sort: object = {},
 		projection: object = {},
 		collation?: CollationDocument,
-	): Promise<Cursor<T>> {
+	): Cursor<T> {
 		let findCursor: Cursor<U> = this.collection.find(query);
 
 		if (collation) {
@@ -334,10 +336,10 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			.skip(page * size)
 			.limit(size)
 			.project(projection)
-			.map(transformFunction);
+			.map<T>(transformFunction);
 	}
 
-	public stream<T extends Partial<U | L>>(
+	public stream(
 		query: object,
 		pageSize: number,
 		projection: object = {},
@@ -354,15 +356,15 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		return new MongoReadStream<U, L>(this, query, pageSize, projection, type);
 	}
 
-	public async find(
+	public find(
 		query: object,
 		page: number = 0,
 		size: number = 10,
 		sort: object = {},
 		projection: object = {},
 		collation?: CollationDocument,
-	): Promise<Cursor<L>> {
-		return this.findWithType<any>(query, this.typeList, page, size, sort, projection, collation);
+	): Cursor<L> {
+		return this.findWithType<L>(query, this.typeList, page, size, sort, projection, collation);
 	}
 
 	public async findOneById(id: string, projection?: object): Promise<U> {
@@ -493,27 +495,22 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 	 * To upsert you should use findOneAndUpsert
 	 *
 	 * @param query The selection criteria for the update. The same query selectors as in the find() method are available.
-	 *
 	 * @param updateQuery The update document
-	 *
 	 * @param userId user identifier
-	 *
 	 * @param internalCall activate the lock field management.
-	 *
 	 * @param upsert Optional. When true, findOneAndUpdate() either:<ul><li>Creates a new document
 	 * if no documents match the filter. For more details see upsert behavior. Returns null after
 	 * inserting the new document, unless returnNewDocument is true.</li><li>Updates a single
 	 * document that matches the filter.</li></ul><br/>To avoid multiple upserts, ensure that the
 	 * filter fields are uniquely indexed.<br/> Defaults to false.
-	 *
 	 * @param returnNewValue Optional. When true, returns the updated document instead of the
 	 * original document.<br/> Defaults to true.
-	 *
 	 * @param arrayFilters Optional. An array of filter documents that determine which array
 	 * elements to modify for an update operation on an array field. <br/> In the update document,
 	 * use the $[<identifier>] filtered positional operator to define an identifier, which you then
 	 * reference in the array filter documents. You cannot have an array filter document for an
 	 * identifier if the identifier is not included in the update document.
+	 * @returns U
 	 */
 	public async findOneAndUpdate(
 		query: FilterQuery<U>,
@@ -587,7 +584,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 					arrayFilters,
 					returnOriginal: !returnNewValue,
 				})
-			).value as U;
+			).value;
 			if (returnNewValue || this.conf.keepHistoric || this.conf.updateOnlyOnChange) {
 				newEntity = MongoUtils.mapObjectToClass(
 					this.type,
@@ -875,6 +872,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 	 * @param entities list of entities to update
 	 * @param userId id of the user that is performing the operation. Will be stored in objectInfos.
 	 * @param options see UpdateManyAtOnceOptions for more details
+	 * @returns Cursor<U>
 	 */
 	public async updateManyAtOnce(
 		entities: Partial<U>[],
@@ -897,12 +895,12 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				: true;
 			const updateQueries = await this.buildUpdatesQueries(entities, userId, options);
 			// console.log(`-- client.ts>updateManyAtOnce updateQueries --`, JSON.stringify(updateQueries, null, 2));
-			return (await this.updateMany(
+			return await this.updateMany(
 				updateQueries,
 				userId,
 				options.upsert,
 				options.returnNewEntities,
-			)) as Cursor<U>;
+			);
 		} catch (e) {
 			LangUtils.throwN9ErrorFromError(e, { userId, options });
 		}
@@ -912,7 +910,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		query: FilterQuery<U>,
 		updateQuery: UpdateQuery<U>,
 		userId: string,
-		options: UpdateManyToSameValueOptions<U> = {},
+		options: UpdateManyToSameValueOptions = {},
 	): Promise<{ matchedCount: number; modifiedCount: number }> {
 		try {
 			if (!options.ignoreLockFields) {
@@ -967,27 +965,29 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 
 	/**
 	 * Do an aggregation on mongodb, use it carefully
+	 *
 	 * @param aggregateSteps steps of the aggregation
 	 * @param options options to send to the client
 	 * @param readInOutputCollection to read in the main mongoClient collection
+	 * @returns AggregationCursor<T>
 	 */
-	public async aggregate<T = void>(
+	public aggregate<T = void>(
 		aggregateSteps: object[],
 		options?: CollectionAggregationOptions,
 		readInOutputCollection: boolean = false,
-	): Promise<AggregationCursor<T>> {
+	): AggregationCursor<T> {
 		if (readInOutputCollection) {
-			return await this.collection.aggregate<T>(aggregateSteps, options);
+			return this.collection.aggregate<T>(aggregateSteps, options);
 		}
-		return await this.collectionSourceForAggregation.aggregate<T>(aggregateSteps, options);
+		return this.collectionSourceForAggregation.aggregate<T>(aggregateSteps, options);
 	}
 
-	public async aggregateWithBuilder<T = void>(
+	public aggregateWithBuilder<T = void>(
 		aggregationBuilder: AggregationBuilder<U>,
 		options?: CollectionAggregationOptions,
 		readInOutputCollection: boolean = false,
-	): Promise<AggregationCursor<T>> {
-		return await this.aggregate<T>(aggregationBuilder.build(), options, readInOutputCollection);
+	): AggregationCursor<T> {
+		return this.aggregate<T>(aggregationBuilder.build(), options, readInOutputCollection);
 	}
 
 	public newAggregationBuilder(): AggregationBuilder<U> {
@@ -996,9 +996,11 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 
 	/**
 	 * Function to get the id of every `rangeSize` entity. The ids are sort asc.
+	 *
 	 * @param rangeSize Step size between ids
 	 * @param query Filter query to target only some entities
 	 * @param options Object to specify options, to get the index of each id for instance.
+	 * @returns Array of _id and value
 	 */
 	public async findIdsEveryNthEntities(
 		rangeSize: number,
@@ -1011,16 +1013,16 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			if (rangeSize < 1) {
 				throw new N9Error('range-size-should-be-greater-than-1', 500, { rangeSize });
 			}
-			let lastId;
+			let lastId: ObjectId;
 			let pageNb = 0;
 			const results: { _id: string; value?: number }[] = [];
 
 			do {
 				let cursor: Cursor<BaseMongoObject>;
 				if (!lastId) {
-					cursor = await this.collection.find(query).project({ _id: 1 }).sort({ _id: 1 }).limit(1);
+					cursor = this.collection.find(query).project({ _id: 1 }).sort({ _id: 1 }).limit(1);
 				} else {
-					cursor = await this.collection
+					cursor = this.collection
 						.find({
 							...query,
 							_id: { $gt: MongoUtils.oid(lastId) },
@@ -1031,7 +1033,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 						.limit(1);
 				}
 				if (await cursor.hasNext()) {
-					lastId = (await cursor.next())._id;
+					lastId = (await cursor.next())._id as unknown as ObjectId;
 					const range: { _id: string; value?: number } = {
 						_id: lastId.toHexString(),
 					};
@@ -1058,7 +1060,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		size: number = 10,
 	): Promise<Cursor<EntityHistoric<U>>> {
 		const latestEntityVersion: U = await this.findOneById(entityId);
-		return await this.historicManager.findByEntityId(entityId, latestEntityVersion, page, size);
+		return this.historicManager.findByEntityId(entityId, latestEntityVersion, page, size);
 	}
 
 	public async findOneHistoricByUserIdMostRecent(
@@ -1082,7 +1084,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 	}
 
 	public async collectionExists(): Promise<boolean> {
-		const collectionName = this.collection.collectionName;
+		const { collectionName }: { collectionName: string } = this.collection;
 		const collections = await this.db.listCollections({ name: collectionName }).toArray();
 		return collections.length === 1;
 	}
@@ -1121,6 +1123,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 	 * @param query the query to select the entity to tag
 	 * @param userId id of the user performing the operation
 	 * @param options options to customize the tag
+	 * @returns New tag
 	 */
 	public async addTagToOne(
 		query: object,
@@ -1132,6 +1135,11 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 
 	/**
 	 * Same as addTagToOne, except the query is made by id.
+	 *
+	 * @param id
+	 * @param userId
+	 * @param options
+	 * @returns New tag
 	 */
 	public async addTagToOneById(
 		id: string,
@@ -1143,6 +1151,11 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 
 	/**
 	 * Same as addTagToOne, but for many entities
+	 *
+	 * @param query
+	 * @param userId
+	 * @param options
+	 * @returns New tag
 	 */
 	public async addTagToMany(
 		query: object,
@@ -1172,6 +1185,11 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 
 	/**
 	 * Same as removeTagFromOne, except the query is made by id.
+	 *
+	 *  @param id
+	 * @param tag
+	 * @param userId
+	 * @param options
 	 */
 	public async removeTagFromOneById(
 		id: string,
@@ -1179,11 +1197,16 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		userId: string,
 		options: RemoveTagOptions = {},
 	): Promise<void> {
-		return await this.tagManager.removeTagFromOneById(id, tag, userId, options);
+		await this.tagManager.removeTagFromOneById(id, tag, userId, options);
 	}
 
-	/**vs
+	/**
 	 * Same as removeTagFromOne, but for many entities
+	 *
+	 * @param query
+	 * @param tag
+	 * @param userId
+	 * @param options
 	 */
 	public async removeTagFromMany(
 		query: object,
@@ -1191,24 +1214,28 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		userId: string,
 		options: RemoveTagOptions = {},
 	): Promise<void> {
-		return await this.tagManager.removeTagFromMany(query, tag, userId, options);
+		await this.tagManager.removeTagFromMany(query, tag, userId, options);
 	}
 
 	/**
 	 * Delete all entities with the given tag
+	 *
+	 *  @param tag
 	 */
 	public async deleteManyWithTag(tag: string): Promise<void> {
-		return await this.tagManager.deleteManyWithTag(tag);
+		await this.tagManager.deleteManyWithTag(tag);
 	}
 
 	/**
 	 * Function to run multiple updateOne queries as bulk.
 	 * Prefer usage of {@link updateManyAtOnce} that build queries for you.
+	 *
 	 * @param newEntities information to run queries
 	 * @param userId userId that do the change
 	 * @param upsert upsert values or not
 	 * @param returnNewEntities return new values or not
 	 * @param options options to use
+	 * @returns Cursor<U>
 	 */
 	public async updateMany(
 		newEntities: UpdateManyQuery<U>[],
@@ -1219,7 +1246,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 	): Promise<Cursor<U>> {
 		try {
 			if (LodashReplacerUtils.IS_ARRAY_EMPTY(newEntities)) {
-				return await this.getEmptyCursor<U>(this.type);
+				return this.getEmptyCursor<U>(this.type);
 			}
 
 			const bulkOperations: BulkWriteOperation<U>[] = [];
@@ -1292,19 +1319,17 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			}
 			let oldValuesSaved: StringMap<U>;
 			if (this.conf.keepHistoric || this.conf.updateOnlyOnChange) {
-				const oldValues = await (
-					await this.findWithType(
-						{
-							_id: {
-								$in: MongoUtils.oids(newEntities.map((newEntity) => newEntity.id)),
-							},
+				const oldValues = await this.findWithType(
+					{
+						_id: {
+							$in: MongoUtils.oids(newEntities.map((newEntity) => newEntity.id)),
 						},
-						this.type,
-						0,
-						newEntities.length,
-					)
+					},
+					this.type,
+					0,
+					newEntities.length,
 				).toArray();
-				oldValuesSaved = _.keyBy(oldValues, '_id');
+				oldValuesSaved = _.keyBy<U>(oldValues, '_id');
 			}
 
 			// for (const bulkOperation of bulkOperations) {
@@ -1327,7 +1352,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				};
 
 				if (this.conf.keepHistoric || this.conf.updateOnlyOnChange) {
-					const newValuesStream = await this.streamWithType(
+					const newValuesStream = this.streamWithType(
 						newValuesQuery,
 						this.type,
 						this.conf.historicPageSize,
@@ -1361,7 +1386,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 						}
 					});
 				}
-				return await this.findWithType(newValuesQuery, this.type, 0, newEntities?.length);
+				return this.findWithType(newValuesQuery, this.type, 0, newEntities?.length);
 			}
 		} catch (e) {
 			LangUtils.throwN9ErrorFromError(e, {
@@ -1374,7 +1399,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		}
 	}
 
-	// tslint:disable-next-line:cyclomatic-complexity
+	// eslint-disable-next-line complexity
 	private async buildUpdatesQueries(
 		entities: MatchKeysAndValues<U>[],
 		userId: string,
@@ -1400,13 +1425,13 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 						throw new N9Error('entity-value-missing', 404, { entity, index, query: options.query });
 					}
 				}
-				const allEntities: U[] = (await (
-					await this.collection.find({
+				const allEntities: U[] = (await this.collection
+					.find({
 						[options.query]: {
 							$in: values,
 						},
 					} as any)
-				).toArray()) as any;
+					.toArray()) as any;
 				for (const entity of allEntities) {
 					currentValues[queries[entity[options.query]]] = entity;
 				}
@@ -1418,15 +1443,13 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				for (const entity of entities) {
 					queries.push(options.query.call(null, entity));
 				}
-				const allEntities = await (
-					await this.findWithType(
-						{
-							$or: queries,
-						},
-						this.type,
-						0,
-						0,
-					)
+				const allEntities = await this.findWithType(
+					{
+						$or: queries,
+					},
+					this.type,
+					0,
+					0,
 				).toArray();
 				for (const [index, query] of Object.entries(queries)) {
 					// mingo all use to find in the array like mongo search in collection
@@ -1442,10 +1465,11 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			}
 		}
 
+		// eslint-disable-next-line prefer-const
 		for (let [index, entity] of entities.entries()) {
 			if (currentValues[index]) {
 				const currentValue = currentValues[index];
-				if (!!options.mapFunction) {
+				if (options.mapFunction) {
 					entity = await options.mapFunction(entity, currentValue);
 				}
 				LangUtils.removeEmptyDeep(entity, false, false, true);
@@ -1549,7 +1573,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				});
 			} else {
 				// on insert for upsert
-				if (!!options.mapFunction) {
+				if (options.mapFunction) {
 					entity = await options.mapFunction(entity);
 				}
 				LangUtils.removeEmptyDeep(entity, undefined, undefined, !!this.conf.lockFields); // keep null values for lockfields
@@ -1600,8 +1624,8 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		}
 	}
 
-	private async getEmptyCursor<X extends U>(type: ClassType<X>): Promise<Cursor<X>> {
-		return await this.findWithType<X>({ $and: [{ _id: false }, { _id: true }] }, type, -1, 0);
+	private getEmptyCursor<X extends U>(type: ClassType<X>): Cursor<X> {
+		return this.findWithType<X>({ $and: [{ _id: false }, { _id: true }] }, type, -1, 0);
 	}
 
 	private async updateLastModificationDate(
@@ -1704,6 +1728,8 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		return fastDeepEqual(snapshotFiltered, newEntityFiltered);
 	}
 
+	// Method is not static to use U and L
+	// eslint-disable-next-line class-methods-use-this
 	private mapEntityFromMongoWithoutClassTransformer(entity: Partial<U | L>): U {
 		return MongoUtils.unRemoveSpecialCharactersInKeys(entity);
 	}

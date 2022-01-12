@@ -1,6 +1,7 @@
 import { N9Log } from '@neo9/n9-node-log';
 import ava, { Assertions } from 'ava';
 import * as _ from 'lodash';
+
 import { generateMongoClient, init, SampleEntityWithArray } from './fixtures/utils';
 
 global.log = new N9Log('tests').module('lock-fields-arrays');

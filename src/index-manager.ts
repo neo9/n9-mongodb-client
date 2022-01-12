@@ -1,4 +1,5 @@
-import { Collection, CommandCursor, IndexOptions, IndexSpecification } from 'mongodb';
+import { Collection, IndexOptions, IndexSpecification } from 'mongodb';
+
 import { LangUtils } from './lang-utils';
 
 /**
@@ -15,7 +16,7 @@ export class IndexManager {
 	 */
 	public async findAllIndexes(): Promise<IndexSpecification[]> {
 		try {
-			return await (await this.collection.listIndexes()).toArray();
+			return await this.collection.listIndexes().toArray();
 		} catch (e) {
 			LangUtils.throwN9ErrorFromError(e);
 		}
@@ -71,8 +72,8 @@ export class IndexManager {
 				try {
 					await this.collection.dropIndex(options.name);
 					await this.collection.createIndex(fieldOrSpec, options);
-				} catch (e) {
-					LangUtils.throwN9ErrorFromError(e, {
+				} catch (e2) {
+					LangUtils.throwN9ErrorFromError(e2, {
 						fieldOrSpec,
 						ttlInDays,
 						options,
@@ -91,6 +92,7 @@ export class IndexManager {
 	/**
 	 * Drop the given index.
 	 * Ensure that it does exists before dropping it, so no exception will be thrown
+	 *
 	 * @param indexName name of the index to drop
 	 */
 	public async dropIndex(indexName: string): Promise<void> {

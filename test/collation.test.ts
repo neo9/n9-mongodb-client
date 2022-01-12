@@ -62,9 +62,9 @@ ava('[CRUD] Insert multiples and find with collation', async (t: Assertions) => 
 	const collationStrength2: CollationDocument = { locale: 'fr', strength: 2 };
 
 	const sizeWithElementIn = await mongoClient.count();
-	const findWithoutCollation = await mongoClient.find({ field1String: 'test' });
-	const findAllWithoutCollation = await mongoClient.find({});
-	const findWithCollationStrengthOne = await mongoClient.find(
+	const findWithoutCollation = mongoClient.find({ field1String: 'test' });
+	const findAllWithoutCollation = mongoClient.find({});
+	const findWithCollationStrengthOne = mongoClient.find(
 		{ field1String: 'test' },
 		undefined,
 		undefined,
@@ -73,7 +73,7 @@ ava('[CRUD] Insert multiples and find with collation', async (t: Assertions) => 
 		collationStrength1,
 	);
 
-	const findWithCollationStrengthTwo = await mongoClient.find(
+	const findWithCollationStrengthTwo = mongoClient.find(
 		{ field1String: 'test' },
 		undefined,
 		undefined,

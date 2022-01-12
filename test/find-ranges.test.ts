@@ -38,7 +38,7 @@ ava.beforeEach(async (t: ExecutionContext<TestContext>) => {
 ava(
 	'[GET-RANGES] Get ranges with multiple sizes without indexes',
 	async (t: ExecutionContext<TestContext>) => {
-		const allIds = await (await t.context.mongoClient.find({}, 0, 0, {}, { _id: 1 })).toArray();
+		const allIds = await t.context.mongoClient.find({}, 0, 0, {}, { _id: 1 }).toArray();
 		const expectedIdsByRange: StringMap<{ _id: string }[]> = {};
 		for (const range of [1, 2, 3, 4, 5, 10, 20, 80]) {
 			let index = 0;
@@ -66,7 +66,7 @@ ava(
 ava(
 	'[GET-RANGES] Get ranges with multiple sizes with ranges index',
 	async (t: ExecutionContext<TestContext>) => {
-		const allIds = await (await t.context.mongoClient.find({}, 0, 0, {}, { _id: 1 })).toArray();
+		const allIds = await t.context.mongoClient.find({}, 0, 0, {}, { _id: 1 }).toArray();
 		const expectedIdsByRange: StringMap<{ _id: string; value: number }[]> = {};
 		for (const range of [1, 2, 3, 4, 5, 10, 20, 80]) {
 			let index = 0;
@@ -97,7 +97,7 @@ ava(
 
 ava('[GET-RANGES] Get ranges with query filter', async (t: ExecutionContext<TestContext>) => {
 	const query: FilterQuery<SampleType> = { index: { $in: [2, 10, 30, 25, 41, 33] } };
-	const allIds = await (await t.context.mongoClient.find(query, 0, 0, {}, { _id: 1 })).toArray();
+	const allIds = await t.context.mongoClient.find(query, 0, 0, {}, { _id: 1 }).toArray();
 	const expectedIdsByRange: StringMap<{ _id: string; value: number }[]> = {};
 	for (const range of [1, 2, 3, 4, 5, 10, 20, 80]) {
 		let index = 0;

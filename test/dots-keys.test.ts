@@ -56,7 +56,7 @@ ava('[DOTS-KEYS] Insert one with dots and find it', async (t: Assertions) => {
 		'key is converted back to commons characters on read',
 	);
 
-	const foundAll = await (await mongoClient.find({})).toArray();
+	const foundAll = await mongoClient.find({}).toArray();
 	t.truthy(foundAll, 'found by key');
 	t.is(foundAll.length, 1, 'found by key');
 	t.is(

@@ -14,5 +14,4 @@ export interface AddTagOptions extends TagOptions {
 	tag?: string;
 }
 
-// tslint:disable-next-line:no-empty-interface
-export interface RemoveTagOptions extends TagOptions {}
+export type RemoveTagOptions = TagOptions;

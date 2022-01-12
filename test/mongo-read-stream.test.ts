@@ -1,8 +1,8 @@
 import { N9Log } from '@neo9/n9-node-log';
 import { waitFor } from '@neo9/n9-node-utils';
 import ava, { Assertions } from 'ava';
-
 import { FilterQuery } from 'mongodb';
+
 import { MongoClient, MongoUtils } from '../src';
 import { BaseMongoObject } from '../src/models';
 import { init } from './fixtures/utils';
@@ -27,8 +27,8 @@ ava('[MONGO-READ-STREAM] Read page by page', async (t: Assertions) => {
 
 	let length = 0;
 	let pages = 0;
-	const stream = await mongoClient.stream({}, pageSize);
-	await stream.forEachPage(async (page: TestItem[]) => {
+	const stream = mongoClient.stream({}, pageSize);
+	await stream.forEachPage((page: TestItem[]) => {
 		length += page.length;
 
 		if (pages > 0) {
@@ -50,8 +50,8 @@ ava('[MONGO-READ-STREAM] Read page by page', async (t: Assertions) => {
 
 	length = 0;
 	pages = 0;
-	const stream2 = await mongoClient.streamWithType({}, TestItem, pageSize);
-	await stream2.forEachPage(async (page: TestItem[]) => {
+	const stream2 = mongoClient.streamWithType({}, TestItem, pageSize);
+	await stream2.forEachPage((page: TestItem[]) => {
 		length += page.length;
 
 		if (pages > 0) {
@@ -77,14 +77,14 @@ ava('[MONGO-READ-STREAM] Create stream with no _id in projection', async (t: Ass
 	const mongoClient = new MongoClient(`test-${Date.now()}`, TestItem, TestItem);
 	await mongoClient.insertOne({ key: `value-${Math.random()}` }, 'userId1', false);
 
-	await t.throwsAsync(async () => await mongoClient.stream({}, 1, { _id: 0 }));
+	t.throws(() => mongoClient.stream({}, 1, { _id: 0 }));
 	await mongoClient.dropCollection();
 });
 
 ava('[MONGO-READ-STREAM] Read page by page on empty collection', async (t: Assertions) => {
 	const mongoClient = new MongoClient(`test-${Date.now()}`, TestItem, TestItem);
 
-	await mongoClient.stream({}, 10).forEachPage(async () => {
+	await mongoClient.stream({}, 10).forEachPage(() => {
 		t.fail('should never be called');
 	});
 
@@ -129,7 +129,7 @@ ava('[MONGO-READ-STREAM] Read item by item', async (t: Assertions) => {
 ava('[MONGO-READ-STREAM] Read item by item on empty collection', async (t: Assertions) => {
 	const mongoClient = new MongoClient(`test-${Date.now()}`, TestItem, TestItem);
 
-	await mongoClient.stream({}, 10).forEach(async () => {
+	await mongoClient.stream({}, 10).forEach(() => {
 		t.fail('should never be called');
 	});
 
@@ -156,8 +156,8 @@ ava('[MONGO-READ-STREAM] Does not override conditions on _id', async (t: Asserti
 		_id: { $in: ids },
 		$and: [{ i: { $lt: 21 } }],
 	};
-	const stream = await mongoClient.stream(query, pageSize);
-	await stream.forEachAsync(async (item: TestItem) => {
+	const stream = mongoClient.stream(query, pageSize);
+	await stream.forEachAsync((item: TestItem) => {
 		if (item) {
 			length += 1;
 		} else {
@@ -181,7 +181,7 @@ ava('[MONGO-READ-STREAM] Handle errors during query', async (t: Assertions) => {
 
 	await t.throwsAsync(async () => {
 		// bad request: $and only accepts array values
-		await mongoClient.stream({ $and: {} }, pageSize).forEachAsync(async () => {
+		await mongoClient.stream({ $and: {} }, pageSize).forEachAsync(() => {
 			t.fail('Should never happen');
 		});
 	});

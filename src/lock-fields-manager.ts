@@ -1,6 +1,7 @@
 import { N9Error } from '@neo9/n9-node-utils';
 import * as _ from 'lodash';
 import { ObjectID } from 'mongodb';
+
 import { LangUtils } from './lang-utils';
 import { LodashReplacerUtils } from './lodash-replacer.utils';
 import { BaseMongoObject, LockField, LockFieldConfiguration } from './models';
@@ -54,6 +55,7 @@ export class LockFieldsManager<U extends BaseMongoObject> {
 
 	/**
 	 * Remove all locked fields from the given entity.
+	 *
 	 * @param entity entity to clean
 	 * @param lockFields list of lock fields to remove
 	 */
@@ -137,12 +139,11 @@ export class LockFieldsManager<U extends BaseMongoObject> {
 					if (fieldCodeName) {
 						// array of objects
 						const elementPath = `${basePath}[${fieldCodeName}=${newEntityElement[fieldCodeName]}]`;
-						const alreadyAddedElementIndex = mergedArray.findIndex((mergedArrayElement) => {
-							return (
+						const alreadyAddedElementIndex = mergedArray.findIndex(
+							(mergedArrayElement) =>
 								!LodashReplacerUtils.IS_NIL(mergedArrayElement[fieldCodeName]) &&
-								mergedArrayElement[fieldCodeName] === newEntityElement[fieldCodeName]
-							);
-						});
+								mergedArrayElement[fieldCodeName] === newEntityElement[fieldCodeName],
+						);
 						if (alreadyAddedElementIndex !== -1) {
 							mergedArray[alreadyAddedElementIndex] = this.mergeOldEntityWithNewOne(
 								mergedArray[alreadyAddedElementIndex],
@@ -186,6 +187,7 @@ export class LockFieldsManager<U extends BaseMongoObject> {
 
 	/**
 	 * Clean lock fields
+	 *
 	 * @param lockFields
 	 * @param entity
 	 */
@@ -206,6 +208,7 @@ export class LockFieldsManager<U extends BaseMongoObject> {
 	/**
 	 * Convert :
 	 * a[b=2]value to a[1].value
+	 *
 	 * @param path
 	 * @param entity
 	 */

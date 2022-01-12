@@ -1,6 +1,7 @@
 import { N9Log } from '@neo9/n9-node-log';
 import { waitFor } from '@neo9/n9-node-utils';
 import ava, { Assertions } from 'ava';
+
 import { BaseMongoObject, MongoClient } from '../src';
 import { init } from './fixtures/utils';
 
@@ -8,14 +9,14 @@ class SampleTypeListing extends BaseMongoObject {
 	public field1StringThatDoesNotAffectChange: string;
 }
 
-class SampleType extends SampleTypeListing {
-	public field2Number: number;
-	public subItem: SubItem;
-}
-
 class SubItem {
 	property1ThatDoesNotAffectChange: string;
 	property2: string;
+}
+
+class SampleType extends SampleTypeListing {
+	public field2Number: number;
+	public subItem: SubItem;
 }
 global.log = new N9Log('tests').module('update-only-on-change-deep');
 

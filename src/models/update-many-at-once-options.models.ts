@@ -25,7 +25,9 @@ export interface UpdateManyAtOnceOptions<U> {
 	 * The function will be called with the given entity and the existing entity if there is one.
 	 * Defaults to undefined (no mapping).
 	 */
-	mapFunction?: (entity: Partial<U>, existingEntity?: U) => Promise<Partial<U>>;
+	mapFunction?:
+		| ((entity: Partial<U>, existingEntity?: U) => Promise<Partial<U>>)
+		| ((entity: Partial<U>, existingEntity?: U) => Partial<U>);
 	/**
 	 * List of field keys in the entities that will only be added upon insertion.
 	 * Defaults to undefined.

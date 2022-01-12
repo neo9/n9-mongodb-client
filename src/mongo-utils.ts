@@ -1,12 +1,15 @@
-/* tslint:disable:function-name */
+/* eslint-disable @typescript-eslint/naming-convention */
 import { N9Error } from '@neo9/n9-node-utils';
 import { ClassTransformOptions, plainToClass } from 'class-transformer';
 import * as _ from 'lodash';
 import * as mongodb from 'mongodb';
+
 import { LodashReplacerUtils } from './lodash-replacer.utils';
 import { ClassType } from './models/class-type.models';
 
 export class MongoUtils {
+	private static readonly MONGO_ID_REGEXP: RegExp = /^[0-9a-f]{24}$/;
+
 	public static async connect(
 		url: string,
 		options: mongodb.MongoClientOptions = { useNewUrlParser: true },
@@ -52,10 +55,10 @@ export class MongoUtils {
 		return undefined;
 	}
 
-	public static mapObjectIdToStringHex<T>(obj: any): any {
+	public static mapObjectIdToStringHex(obj: any): any {
 		for (const [key, value] of Object.entries(obj)) {
 			if (value instanceof mongodb.ObjectID) {
-				obj[key] = (value as mongodb.ObjectID).toHexString();
+				obj[key] = value.toHexString();
 			} else if (value && typeof value === 'object') {
 				MongoUtils.mapObjectIdToStringHex(value);
 			}
@@ -71,6 +74,7 @@ export class MongoUtils {
 		if (!plain) return plain as any;
 
 		const newPlain = MongoUtils.mapObjectIdToStringHex(plain);
+		// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
 		return plainToClass(cls, newPlain, options) as T;
 	}
 
@@ -95,10 +99,8 @@ export class MongoUtils {
 			}
 		}
 
-		// tslint:disable-next-line:no-parameter-reassignment
-		obj = _.mapKeys(obj, (val, key: string) => {
-			return MongoUtils.escapeSpecialCharacters(key);
-		}) as any;
+		// eslint-disable-next-line no-param-reassign
+		obj = _.mapKeys(obj, (val, key: string) => MongoUtils.escapeSpecialCharacters(key)) as any;
 		return obj;
 	}
 
@@ -123,10 +125,8 @@ export class MongoUtils {
 			}
 		}
 
-		// tslint:disable-next-line:no-parameter-reassignment
-		obj = _.mapKeys(obj, (val, key: string) => {
-			return MongoUtils.unescapeSpecialCharacters(key);
-		}) as any;
+		// eslint-disable-next-line no-param-reassign
+		obj = _.mapKeys(obj, (val, key: string) => MongoUtils.unescapeSpecialCharacters(key)) as any;
 		return obj;
 	}
 
@@ -169,6 +169,4 @@ export class MongoUtils {
 		}
 		return ret;
 	}
-
-	private static readonly MONGO_ID_REGEXP: RegExp = /^[0-9a-f]{24}$/;
 }

@@ -1,6 +1,7 @@
 import { N9Log } from '@neo9/n9-node-log';
 import { waitFor } from '@neo9/n9-node-utils';
 import ava, { Assertions } from 'ava';
+
 import { BaseMongoObject, MongoClient } from '../src';
 import { N9MongoLock } from '../src/lock';
 import { init } from './fixtures/utils';
@@ -10,7 +11,7 @@ export class TestItem extends BaseMongoObject {
 	public i?: number;
 }
 
-const codeRegexp = new RegExp(/^[0-9a-f]{32}$/);
+const codeRegexp = /^[0-9a-f]{32}$/;
 const col = 'locks';
 const threeSecsInMs = 3_000;
 global.log = new N9Log('tests').module('mongodb-lock');

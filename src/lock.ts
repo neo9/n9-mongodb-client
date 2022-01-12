@@ -2,6 +2,7 @@ import { N9Error, waitFor } from '@neo9/n9-node-utils';
 import * as crypto from 'crypto';
 import * as _ from 'lodash';
 import * as mongodb from 'mongodb';
+
 import { LangUtils } from './lang-utils';
 import { LockOptions } from './models/lock-options.models';
 
@@ -64,6 +65,7 @@ export class N9MongoLock {
 
 	/**
 	 * Once you have a lock, you have a 30 second timeout until the lock is released. You can release it earlier by calling release
+	 *
 	 * @param suffix : a key to identify the specific lock
 	 */
 	public async acquire(suffix?: string): Promise<string | undefined> {
@@ -113,6 +115,7 @@ export class N9MongoLock {
 
 	/**
 	 * Acquire a lock after waiting max timeoutMs
+	 *
 	 * @param timeoutMs timeout in ms
 	 * @param suffix : a key to identify the specific lock
 	 */
@@ -130,8 +133,9 @@ export class N9MongoLock {
 
 	/**
 	 * Release the lock
-	 * @param code: the code of the lock to be released
-	 * @param suffix : a key to identify the specific lock
+	 *
+	 * @param code the code of the lock to be released
+	 * @param suffix a key to identify the specific lock
 	 */
 	public async release(code: string, suffix?: string): Promise<boolean> {
 		const lockName = suffix ? `${this.defaultLock}_${suffix}` : this.defaultLock;
@@ -159,7 +163,10 @@ export class N9MongoLock {
 			const oldLock = this.options.removeExpired
 				? await db.collection(this.collection).findOneAndDelete(query)
 				: await db.collection(this.collection).findOneAndUpdate(query, update);
-			if ((oldLock && oldLock.hasOwnProperty('value') && !oldLock.value) || !oldLock) {
+			if (
+				(oldLock && Object.prototype.hasOwnProperty.call(oldLock, 'value') && !oldLock.value) ||
+				!oldLock
+			) {
 				return false;
 			}
 			return true;

@@ -1,6 +1,7 @@
 import { N9Log } from '@neo9/n9-node-log';
 import { waitFor } from '@neo9/n9-node-utils';
 import ava, { Assertions } from 'ava';
+
 import { MongoClient, MongoUtils } from '../src';
 import { BaseMongoObject, UpdateOnlyOnChangeConfiguration } from '../src/models';
 import { init } from './fixtures/utils';
@@ -22,9 +23,9 @@ export interface FindOneAndUpdateTestCaseAssertions {
 /**
  * Macro that will insert an entity then update it with findOneAndUpdate, changing one field
  *
- * @param t: ava assertions object
- * @param inputParams: input parameters to set
- * @param assertions: assertions to perform
+ * @param t ava assertions object
+ * @param inputParams input parameters to set
+ * @param assertions assertions to perform
  */
 async function insertThenUpdateOneFieldToNewValue(
 	t: Assertions,
@@ -46,11 +47,9 @@ async function insertThenUpdateOneFieldToNewValue(
 	// check returned entity
 	const returnedEntityCursor = await mongoClient.updateManyAtOnce([insertedEntity], 'TEST', {
 		query: 'property1',
-		mapFunction: async () => {
-			return {
-				property1: 'new-value1',
-			};
-		},
+		mapFunction: () => ({
+			property1: 'new-value1',
+		}),
 	});
 	t.true(await returnedEntityCursor.hasNext(), 'has match a least one element');
 	const returnedEntity = await returnedEntityCursor.next();
@@ -98,14 +97,14 @@ async function insertThenUpdateOneFieldToNewValue(
 }
 
 insertThenUpdateOneFieldToNewValue.title = (
-	providedTitle = '',
+	providedTitle: string,
 	inputParams: FindOneAndUpdateTestCaseInputParams,
 	assertions: FindOneAndUpdateTestCaseAssertions,
-) => {
+): string => {
 	const pick = inputParams.updateOnlyOnChange?.changeFilters?.pick ?? [];
 	const omit = inputParams.updateOnlyOnChange?.changeFilters?.omit ?? [];
 	const updateOnlyOnChange = inputParams.updateOnlyOnChange
-		? `enabled (pick: [${pick}], omit: [${omit}])`
+		? `enabled (pick: [${pick?.join()}], omit: [${omit?.join()}])`
 		: 'disabled';
 	const lastModificationDateShouldChange = assertions.lastModificationDateShouldChange
 		? 'last modification date did change'
@@ -116,9 +115,9 @@ insertThenUpdateOneFieldToNewValue.title = (
 /**
  * Macro that will insert an entity then update it with findOneAndUpdate, updating one field to same value
  *
- * @param t: ava assertions object
- * @param inputParams: input parameters to set
- * @param assertions: assertions to perform
+ * @param t ava assertions object
+ * @param inputParams input parameters to set
+ * @param assertions assertions to perform
  */
 async function insertThenUpdateOneFieldToSameValue(
 	t: Assertions,
@@ -140,11 +139,9 @@ async function insertThenUpdateOneFieldToSameValue(
 	// check returned entity
 	const returnedEntityCursor = await mongoClient.updateManyAtOnce([insertedEntity], 'TEST', {
 		query: 'property1',
-		mapFunction: async () => {
-			return {
-				property1: 'value1',
-			};
-		},
+		mapFunction: () => ({
+			property1: 'value1',
+		}),
 	});
 	t.true(await returnedEntityCursor.hasNext(), 'has match a least one element');
 	const returnedEntity = await returnedEntityCursor.next();
@@ -193,14 +190,14 @@ async function insertThenUpdateOneFieldToSameValue(
 }
 
 insertThenUpdateOneFieldToSameValue.title = (
-	providedTitle = '',
+	providedTitle: string,
 	inputParams: FindOneAndUpdateTestCaseInputParams,
 	assertions: FindOneAndUpdateTestCaseAssertions,
-) => {
+): string => {
 	const pick = inputParams.updateOnlyOnChange?.changeFilters?.pick ?? [];
 	const omit = inputParams.updateOnlyOnChange?.changeFilters?.omit ?? [];
 	const updateOnlyOnChange = inputParams.updateOnlyOnChange
-		? `enabled (pick: [${pick}], omit: [${omit}])`
+		? `enabled (pick: [${pick?.join()}], omit: [${omit?.join()}])`
 		: 'disabled';
 	const lastModificationDateShouldChange = assertions.lastModificationDateShouldChange
 		? 'last modification date changed'

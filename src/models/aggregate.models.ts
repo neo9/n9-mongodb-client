@@ -1,5 +1,8 @@
 import { FilterQuery } from 'mongodb';
+
 import { StringMap } from './maps.models';
+
+/* eslint-disable no-use-before-define */
 
 export enum AggregationPipelineStageOperator {
 	ADD_FIELDS = '$addFields',
@@ -381,7 +384,7 @@ export interface GroupPipelineStage {
 	[AggregationPipelineStageOperator.GROUP]: GroupPipelineStageValue;
 }
 
-/* INDEX STATS*/
+/* INDEX STATS */
 export interface IndexStatsPipelineStage {
 	[AggregationPipelineStageOperator.INDEX_STATS]: object;
 }

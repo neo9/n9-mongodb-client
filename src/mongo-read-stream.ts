@@ -1,6 +1,7 @@
 import { N9Error } from '@neo9/n9-node-utils';
 import { Cursor, FilterQuery } from 'mongodb';
 import { Readable, Writable } from 'stream';
+
 import { MongoClient } from './client';
 import { LangUtils } from './lang-utils';
 import { LodashReplacerUtils } from './lodash-replacer.utils';
@@ -8,8 +9,8 @@ import { BaseMongoObject } from './models';
 import { ClassType } from './models/class-type.models';
 import { MongoUtils } from './mongo-utils';
 
-export type PageConsumer<T> = (data: T[]) => Promise<void>;
-export type ItemConsumer<T> = (data: T) => Promise<void>;
+export type PageConsumer<T> = ((data: T[]) => Promise<void>) | ((data: T[]) => void);
+export type ItemConsumer<T> = ((data: T) => Promise<void>) | ((data: T) => void);
 
 export class PageConsumerWritable<T> extends Writable {
 	private buffer: T[] = [];
@@ -96,6 +97,8 @@ export class MongoReadStream<
 	/**
 	 * Call the given callback for each page in series
 	 * Return a promise that is resolved when all the items have been consumed
+	 *
+	 * @param consumerFn
 	 */
 	public async forEachPage(consumerFn: PageConsumer<Partial<U | L>>): Promise<void> {
 		return new Promise<void>((resolve, reject) => {
@@ -126,7 +129,7 @@ export class MongoReadStream<
 		return await this.forEach(consumerFn);
 	}
 
-	public async _read(size: number): Promise<void> {
+	public async _read(): Promise<void> {
 		try {
 			if (!(this.cursor && (await this.cursor.hasNext()))) {
 				if (this.lastId) {
@@ -141,7 +144,7 @@ export class MongoReadStream<
 					}
 				}
 				if (this.customType) {
-					this.cursor = await this.mongoClient.findWithType(
+					this.cursor = this.mongoClient.findWithType(
 						this._query,
 						this.customType,
 						0,
@@ -150,7 +153,7 @@ export class MongoReadStream<
 						this.projection,
 					);
 				} else {
-					this.cursor = await this.mongoClient.find(
+					this.cursor = this.mongoClient.find(
 						this._query,
 						0,
 						this.pageSize,

@@ -23,6 +23,7 @@ export class LodashReplacerUtils {
 	}
 
 	public static IS_OBJECT(value: any): value is object {
+		// eslint-disable-next-line no-eq-null
 		return value != null && typeof value === 'object';
 	}
 

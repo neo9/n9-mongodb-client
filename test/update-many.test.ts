@@ -1,6 +1,7 @@
 import { N9Log } from '@neo9/n9-node-log';
 import { waitFor } from '@neo9/n9-node-utils';
 import ava, { Assertions } from 'ava';
+
 import { MongoClient } from '../src';
 import { BaseMongoObject } from '../src/models';
 import { init } from './fixtures/utils';
@@ -71,9 +72,9 @@ ava(
 				},
 			)
 		).toArray();
-		const currentValuesInCollection = await (
-			await mongoClient.find({}, 0, 0, { 'objectInfos.creation.date': 1 })
-		).toArray();
+		const currentValuesInCollection = await mongoClient
+			.find({}, 0, 0, { 'objectInfos.creation.date': 1 })
+			.toArray();
 		t.is(updateResult.length, 1, '1 entity upserted');
 		t.is(currentValuesInCollection.length, 2, '2 entities in collection');
 		t.is(

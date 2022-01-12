@@ -1,6 +1,7 @@
 import { N9Log } from '@neo9/n9-node-log';
 import ava, { Assertions } from 'ava';
 import * as _ from 'lodash';
+
 import { MongoClient } from '../src';
 import { BaseMongoObject } from '../src/models';
 import { init } from './fixtures/utils';
@@ -45,11 +46,10 @@ const locksDataSample: SampleComplexType = {
 	],
 };
 
-const getMongoClient = () => {
-	return new MongoClient(`test-${Date.now()}`, SampleComplexType, SampleComplexType, {
+const getMongoClient = (): MongoClient<SampleComplexType, SampleComplexType> =>
+	new MongoClient(`test-${Date.now()}`, SampleComplexType, SampleComplexType, {
 		keepHistoric: true,
 	});
-};
 
 global.log = new N9Log('tests').module('lock-fields');
 

@@ -2,6 +2,7 @@ import { N9Log } from '@neo9/n9-node-log';
 import ava, { Assertions } from 'ava';
 import * as _ from 'lodash';
 import { Db } from 'mongodb';
+
 import { MongoClient, MongoUtils } from '../src';
 import { BaseMongoObject } from '../src/models';
 import { init } from './fixtures/utils';
@@ -33,10 +34,10 @@ global.log = new N9Log('tests');
 
 init();
 
-async function mapSampleTypeCreateToSampleType(
+function mapSampleTypeCreateToSampleType(
 	sampleType: SampleType,
 	existingSampleTypeEntity?: SampleType,
-): Promise<SampleType> {
+): SampleType {
 	const reusedData: Partial<SampleType> = {};
 	if (existingSampleTypeEntity) {
 		const existingReferences = (existingSampleTypeEntity.externalReferences || [])
@@ -270,11 +271,11 @@ ava('[UPDATE MANY AT ONCE] Update with mingo hash collision ', async (t: Asserti
 						};
 						return q;
 					},
-					mapFunction: async (entity: DataSampleWithCodes, existingEntity) => {
+					mapFunction: (entity: DataSampleWithCodes, existingEntity) => {
 						t.is(entity.id, existingEntity.id, `Existing entity and new one have the same id`);
 						return {
 							...entity,
-							codes: [...entity.codes, ...existingEntity?.codes],
+							codes: [...entity.codes, ...existingEntity.codes],
 						};
 					},
 				},

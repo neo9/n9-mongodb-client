@@ -34,7 +34,7 @@ ava('[AGG] Insert some and aggregate it 2', async (t: Assertions) => {
 	const sizeWithElementIn = await mongoClient.count();
 	t.is(sizeWithElementIn, 5, 'nb element in collection');
 
-	const aggResult = await mongoClient.aggregateWithBuilder<AggregationResult>(
+	const aggResult = mongoClient.aggregateWithBuilder<AggregationResult>(
 		mongoClient
 			.newAggregationBuilder()
 			.group({
@@ -94,29 +94,29 @@ ava('[AGG] Insert some and aggregate with output', async (t: Assertions) => {
 		.out()
 		.build();
 
-	const aggResult = await mongoClientOut.aggregate<AggregationResult>(query);
+	const aggResult = mongoClientOut.aggregate<AggregationResult>(query);
 
 	t.truthy(aggResult instanceof AggregationCursor, 'return  AggregationCursor');
 	const aggResultAsArray = await aggResult.toArray();
 
 	t.is(aggResultAsArray.length, 0, 'no output');
 
-	const outputContent = await (
-		await mongoClientOut.find({}, 0, 0, undefined, { _id: 0, field1String: 1 })
-	).toArray();
+	const outputContent = await mongoClientOut
+		.find({}, 0, 0, undefined, { _id: 0, field1String: 1 })
+		.toArray();
 	t.deepEqual(
 		outputContent,
 		[{ field1String: 'string3' }, { field1String: 'string4' }] as any,
 		'All is exactly right',
 	);
 
-	const outputContentWithAggregationReading = await (
-		await mongoClientOut.aggregateWithBuilder<{ field1String: string }>(
+	const outputContentWithAggregationReading = await mongoClientOut
+		.aggregateWithBuilder<{ field1String: string }>(
 			mongoClientOut.newAggregationBuilder().project({ _id: 0, field1String: 1 }),
 			{},
 			true,
 		)
-	).toArray();
+		.toArray();
 	t.deepEqual(
 		outputContentWithAggregationReading,
 		[{ field1String: 'string3' }, { field1String: 'string4' }],

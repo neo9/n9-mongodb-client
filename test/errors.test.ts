@@ -1,9 +1,9 @@
 import { N9Log } from '@neo9/n9-node-log';
-import ava, { Assertions } from 'ava';
-
 import { N9Error, waitFor } from '@neo9/n9-node-utils';
+import ava, { Assertions } from 'ava';
 import { MongoClient as MongodbClient } from 'mongodb';
 import { MongoMemoryServer } from 'mongodb-memory-server';
+
 import { BaseMongoObject, MongoClient, MongoUtils } from '../src';
 
 global.log = new N9Log('tests');
@@ -88,8 +88,8 @@ ava('[Errors] Check error thrown on every client function', async (t: Assertions
 	} catch (e) {
 		error = e;
 	}
-	await t.is(error.status, 500, 'error status is translate to an HTTP status');
-	await t.is(error.context.srcError.code, 2, 'error original status is still accessible');
+	t.is(error.status, 500, 'error status is translate to an HTTP status');
+	t.is(error.context.srcError.code, 2, 'error original status is still accessible');
 
 	// STOP MONGO
 	await client.dropCollection();

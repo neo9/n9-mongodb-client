@@ -1,6 +1,6 @@
 import { N9Log } from '@neo9/n9-node-log';
 import ava, { Assertions } from 'ava';
-import { cpus } from 'os';
+
 import { MongoClient } from '../src';
 import { BaseMongoObject } from '../src/models';
 import { init } from './fixtures/utils';
@@ -61,7 +61,7 @@ ava('[UPDATE MANY TO SAME VALUE] Should update many documents', async (t: Assert
 	const sizeUpdated = await mongoClient.count({ field1String: 'updated' });
 	t.true(sizeUpdated === 2, 'collection should have 2 documents updated');
 
-	t.is(await updateResult.modifiedCount, 2, 'should return a count of modified documents');
+	t.is(updateResult.modifiedCount, 2, 'should return a count of modified documents');
 
 	const sizeWithNumber3 = await mongoClient.count({ field2Number: 3 });
 	const sizeWithNumber2 = await mongoClient.count({ field2Number: 2 });
@@ -72,14 +72,13 @@ ava('[UPDATE MANY TO SAME VALUE] Should update many documents', async (t: Assert
 		'other properties should remain inchanged',
 	);
 
-	const cursor = await mongoClient.find({});
-	const dateCheck = (await cursor.toArray()).every((doc) => {
-		return (
+	const cursor = mongoClient.find({});
+	const dateCheck = (await cursor.toArray()).every(
+		(doc) =>
 			doc.objectInfos.lastUpdate.date.getTime() ===
 				doc.objectInfos.lastModification.date.getTime() &&
-			doc.objectInfos.creation.date <= doc.objectInfos.lastUpdate.date
-		);
-	});
+			doc.objectInfos.creation.date <= doc.objectInfos.lastUpdate.date,
+	);
 
 	t.true(dateCheck, 'all dates should have been updated correclty');
 });
@@ -293,7 +292,7 @@ ava(
 
 		const sizeUpdated = await mongoClient.count({ field1String: 'updated' });
 		t.true(sizeUpdated === 2, 'collection should have 2 documents updated');
-		t.is(await updateResult.modifiedCount, 2, 'should return a count of modified documents');
+		t.is(updateResult.modifiedCount, 2, 'should return a count of modified documents');
 
 		const sizeWithNumber3 = await mongoClient.count({ field2Number: 3 });
 		const sizeWithNumber2 = await mongoClient.count({ field2Number: 2 });

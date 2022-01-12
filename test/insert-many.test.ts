@@ -1,7 +1,7 @@
 import { N9Log } from '@neo9/n9-node-log';
 import ava, { Assertions } from 'ava';
-
 import { Db, FilterQuery } from 'mongodb';
+
 import { MongoClient } from '../src';
 import { BaseMongoObject } from '../src/models';
 import { init } from './fixtures/utils';
@@ -31,7 +31,7 @@ ava('[INSERT-MANY] Insert many', async (t: Assertions) => {
 		true,
 	);
 
-	t.is(await insertedValues.length, 50, '50 elements inserted');
+	t.is(insertedValues.length, 50, '50 elements inserted');
 	t.is(typeof insertedValues[0]._id, 'string', '_id inserted is a string throw n9-mongo-client');
 	const insertedValueFoundWithNativeClient = await (global.db as Db)
 		.collection(collectionName)

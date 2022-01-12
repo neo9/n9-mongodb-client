@@ -1,5 +1,6 @@
 import { N9Log } from '@neo9/n9-node-log';
 import ava, { Assertions } from 'ava';
+
 import { BaseMongoObject, MongoClient, MongoUtils } from '../src';
 import { init } from './fixtures/utils';
 
@@ -79,11 +80,9 @@ ava('[CRUD] Find one and update with pick', async (t: Assertions) => {
 		'TEST',
 		{
 			query: 'property1',
-			mapFunction: async () => {
-				return {
-					field1Number: 3,
-				};
-			},
+			mapFunction: () => ({
+				field1Number: 3,
+			}),
 			upsert: true,
 		},
 	);

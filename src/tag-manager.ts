@@ -1,4 +1,5 @@
 import { Collection, ObjectId, UpdateQuery } from 'mongodb';
+
 import { LangUtils } from './lang-utils';
 import { LodashReplacerUtils } from './lodash-replacer.utils';
 import { AddTagOptions, RemoveTagOptions } from './models';
@@ -52,6 +53,7 @@ export class TagManager {
 	 * @param query the query to select the entity to tag
 	 * @param userId id of the user performing the operation
 	 * @param options options to customize the tag
+	 * @returns New tag
 	 */
 	public async addTagToOne(
 		query: object,
@@ -74,6 +76,11 @@ export class TagManager {
 
 	/**
 	 * Same as addTagToOne, except the query is made by id.
+	 *
+	 * @param id
+	 * @param userId
+	 * @param options
+	 * @returns New tag
 	 */
 	public async addTagToOneById(
 		id: string,
@@ -135,6 +142,11 @@ export class TagManager {
 
 	/**
 	 * Same as removeTagFromOne, except the query is made by id.
+	 *
+	 * @param id
+	 * @param tag
+	 * @param userId
+	 * @param options
 	 */
 	public async removeTagFromOneById(
 		id: string,
@@ -145,8 +157,13 @@ export class TagManager {
 		await this.removeTagFromOne({ _id: MongoUtils.oid(id) }, tag, userId, options);
 	}
 
-	/**vs
+	/**
 	 * Same as removeTagFromOne, but for many entities
+	 *
+	 *  @param query
+	 * @param tag
+	 * @param userId
+	 * @param options
 	 */
 	public async removeTagFromMany(
 		query: object,

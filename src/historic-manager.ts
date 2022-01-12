@@ -2,6 +2,7 @@ import { N9Log } from '@neo9/n9-node-log';
 import { diff as deepDiff } from 'deep-diff';
 import * as fastDeepEqual from 'fast-deep-equal/es6';
 import { Collection, Cursor, Db, IndexOptions, ObjectId } from 'mongodb';
+
 import { IndexManager } from './index-manager';
 import { LangUtils } from './lang-utils';
 import { LodashReplacerUtils } from './lodash-replacer.utils';
@@ -109,15 +110,15 @@ export class HistoricManager<U extends BaseMongoObject> {
 		}
 	}
 
-	public async findByEntityId(
+	public findByEntityId(
 		entityId: string,
 		latestEntityVersion: U,
 		page: number = 0,
 		size: number = 10,
-	): Promise<Cursor<EntityHistoric<U>>> {
+	): Cursor<EntityHistoric<U>> {
 		try {
 			let previousEntityHistoricSnapshot: U = latestEntityVersion;
-			return await this.collection
+			return this.collection
 				.find({ entityId: MongoUtils.oid(entityId) as any })
 				.sort('_id', -1)
 				.skip(page * size)
@@ -128,7 +129,7 @@ export class HistoricManager<U extends BaseMongoObject> {
 						MongoUtils.unRemoveSpecialCharactersInKeys(a),
 					);
 					// old vs new
-					const { oldValue, newValue } = this.cleanObjectInfos(
+					const { oldValue, newValue }: { oldValue: U; newValue: U } = this.cleanObjectInfos(
 						entityHistoric.snapshot,
 						previousEntityHistoricSnapshot,
 					);
@@ -151,7 +152,7 @@ export class HistoricManager<U extends BaseMongoObject> {
 		lastestValue: U,
 	): Promise<EntityHistoric<U>> {
 		try {
-			const cursor = await this.collection
+			const cursor = this.collection
 				.find({
 					entityId: MongoUtils.oid(entityId) as any,
 					userId: ObjectId.isValid(userId) ? (MongoUtils.oid(userId) as any) : userId,
@@ -160,7 +161,7 @@ export class HistoricManager<U extends BaseMongoObject> {
 				.limit(1);
 			if (await cursor.hasNext()) {
 				const entityHistoricRaw = await cursor.next();
-				const oneMoreRecentValueCursor = await this.collection
+				const oneMoreRecentValueCursor = this.collection
 					.find({
 						entityId: MongoUtils.oid(entityId) as any,
 						_id: {
@@ -181,7 +182,7 @@ export class HistoricManager<U extends BaseMongoObject> {
 				);
 
 				// old vs new
-				const { oldValue, newValue } = this.cleanObjectInfos(
+				const { oldValue, newValue }: { oldValue: U; newValue: U } = this.cleanObjectInfos(
 					entityHistoric.snapshot,
 					oneMoreRecentValue,
 				);
@@ -230,10 +231,14 @@ export class HistoricManager<U extends BaseMongoObject> {
 	}
 
 	public areValuesEquals(snapshot: U, newEntity: U): boolean {
-		const { oldValue, newValue } = this.cleanObjectInfos(snapshot, newEntity);
+		const { oldValue, newValue }: { oldValue: U; newValue: U } = this.cleanObjectInfos(
+			snapshot,
+			newEntity,
+		);
 		return fastDeepEqual(oldValue, newValue);
 	}
 
+	// eslint-disable-next-line class-methods-use-this
 	private cleanObjectInfos(snapshot: U, newEntity: U): { oldValue: U; newValue: U } {
 		const oldValue: U = { ...snapshot };
 		if (oldValue.objectInfos) {

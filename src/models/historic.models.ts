@@ -1,5 +1,6 @@
 import { Diff } from 'deep-diff';
-import { BaseMongoObject } from './';
+
+import { BaseMongoObject } from '.';
 
 export class EntityHistoricStored<T> extends BaseMongoObject {
 	public entityId: string;
