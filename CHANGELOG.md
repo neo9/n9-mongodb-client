@@ -1,3 +1,15 @@
+# [0.26.0](https://github.com/neo9/n9-mongo-client/compare/0.25.2...0.26.0) (2022-01-12)
+
+
+### build
+
+* Fix github-actions branch ([c53a6e2](https://github.com/neo9/n9-mongo-client/commit/c53a6e243fd6fc7c6f6171588781bacb8e9ddd74))
+* Use github-actions for build ([f54a2cb](https://github.com/neo9/n9-mongo-client/commit/f54a2cbba305f5f1e71fb1690d729ffc74bb6b50))
+
+### yarn
+
+* Upgrade n9-coding-style to v 3.0.0 ([877d2ff](https://github.com/neo9/n9-mongo-client/commit/877d2ffb0f0f946fa6f94cf2f4abc985a310fdbe))
+
 ## [0.25.2](https://github.com/neo9/n9-mongo-client/compare/0.25.1...0.25.2) (2022-01-06)
 
 
