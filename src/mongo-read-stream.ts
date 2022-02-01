@@ -162,10 +162,12 @@ export class MongoReadStream<
 						this.projection,
 					);
 				}
+
+				if (this.hint) {
+					this.cursor = this.cursor.hint(this.hint);
+				}
 			}
-			if (this.hint) {
-				this.cursor.hint(this.hint);
-			}
+
 			let item = null;
 			if (await this.cursor.hasNext()) {
 				item = await this.cursor.next();

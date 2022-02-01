@@ -101,9 +101,16 @@ ava('[MONGO-READ-STREAM] Create stream with wrong hint', async (t: Assertions) =
 			//   planner returned error :: caused by :: hint provided does not correspond to an existing index`,
 		},
 	);
+});
+
+ava('[MONGO-READ-STREAM] Create stream with hint OK', async (t: Assertions) => {
+	const mongoClient = new MongoClient(`test-${Date.now()}`, TestItem, TestItem);
+	for (let i = 0; i < 50; i += 1) {
+		await mongoClient.insertOne({ key: `value-${Math.random()}` }, 'userId1', false);
+	}
 
 	// hint OK
-	const s2 = mongoClient.stream({}, 1, undefined, { _id: 1 });
+	const s2 = mongoClient.stream({}, 5, undefined, { _id: 1 });
 	await t.notThrowsAsync(
 		async () =>
 			await s2.forEachPage(() => {
