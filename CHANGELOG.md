@@ -1,3 +1,10 @@
+# [0.27.0](https://github.com/neo9/n9-mongo-client/compare/0.26.0...0.27.0) (2022-02-01)
+
+
+### stream
+
+* Add hint parameter to stream ([04997c3](https://github.com/neo9/n9-mongo-client/commit/04997c3f6e36b96f6aa79c1ea357b72200d4c3ad))
+
 # [0.26.0](https://github.com/neo9/n9-mongo-client/compare/0.25.2...0.26.0) (2022-01-12)
 
 
