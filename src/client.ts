@@ -343,8 +343,9 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		query: object,
 		pageSize: number,
 		projection: object = {},
+		hint?: string | object,
 	): MongoReadStream<Partial<U>, Partial<L>> | MongoReadStream<U, L> {
-		return new MongoReadStream<U, L>(this, query, pageSize, projection);
+		return new MongoReadStream<U, L>(this, query, pageSize, projection, undefined, hint);
 	}
 
 	public streamWithType<T extends Partial<U | L>>(
@@ -352,8 +353,9 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		type: ClassType<T>,
 		pageSize: number,
 		projection: object = {},
+		hint?: string | object,
 	): MongoReadStream<Partial<U>, Partial<L>> | MongoReadStream<U, L> {
-		return new MongoReadStream<U, L>(this, query, pageSize, projection, type);
+		return new MongoReadStream<U, L>(this, query, pageSize, projection, type, hint);
 	}
 
 	public find(

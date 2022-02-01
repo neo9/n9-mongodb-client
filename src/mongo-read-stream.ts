@@ -78,6 +78,7 @@ export class MongoReadStream<
 		private readonly pageSize: number,
 		private readonly projection: object = {},
 		private readonly customType?: ClassType<Partial<U | L>>,
+		private readonly hint?: string | object,
 	) {
 		super({ objectMode: true });
 		try {
@@ -161,6 +162,9 @@ export class MongoReadStream<
 						this.projection,
 					);
 				}
+			}
+			if (this.hint) {
+				this.cursor.hint(this.hint);
 			}
 			let item = null;
 			if (await this.cursor.hasNext()) {

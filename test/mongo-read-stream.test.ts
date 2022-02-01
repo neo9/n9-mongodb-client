@@ -81,6 +81,38 @@ ava('[MONGO-READ-STREAM] Create stream with no _id in projection', async (t: Ass
 	await mongoClient.dropCollection();
 });
 
+ava('[MONGO-READ-STREAM] Create stream with wrong hint', async (t: Assertions) => {
+	const mongoClient = new MongoClient(`test-${Date.now()}`, TestItem, TestItem);
+	await mongoClient.insertOne({ key: `value-${Math.random()}` }, 'userId1', false);
+
+	// hint KO
+	const s = mongoClient.stream({}, 1, undefined, { test: 1 });
+	await t.throwsAsync(
+		async () =>
+			await s.forEachPage(() => {
+				t.fail('Should not be called');
+			}),
+		{
+			// codeName: 'BadValue',
+			code: 2,
+			// message: `error processing query: ns=b02f1973-e33c-4164-a198-86c673d6e6ab.test-1643735376480 limit=1Tree: $and␊
+			//   Sort: { _id: 1 }␊
+			//   Proj: {}␊
+			//   planner returned error :: caused by :: hint provided does not correspond to an existing index`,
+		},
+	);
+
+	// hint OK
+	const s2 = mongoClient.stream({}, 1, undefined, { _id: 1 });
+	await t.notThrowsAsync(
+		async () =>
+			await s2.forEachPage(() => {
+				t.pass('Should be called');
+			}),
+	);
+	await mongoClient.dropCollection();
+});
+
 ava('[MONGO-READ-STREAM] Read page by page on empty collection', async (t: Assertions) => {
 	const mongoClient = new MongoClient(`test-${Date.now()}`, TestItem, TestItem);
 
