@@ -734,7 +734,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		try {
 			LangUtils.removeEmptyDeep(newEntity, true, false, true);
 			if (this.conf.lockFields) {
-				const existingEntity = await this.findOneById(id);
+				const existingEntity = await this.collection.findOne<U>({ _id: MongoUtils.oid(id) as any }); // avoid mapping ObjectId to string
 				if (!existingEntity) {
 					this.logger.warn(`Entity not found with id ${id} (${this.type.name})`, {
 						userId,
