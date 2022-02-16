@@ -1,3 +1,10 @@
+## [0.27.2](https://github.com/neo9/n9-mongo-client/compare/0.27.1...0.27.2) (2022-02-16)
+
+
+### locks
+
+* Fix update entity without touching ObjectId value ([8390031](https://github.com/neo9/n9-mongo-client/commit/839003100b69f47b08258a2223a4572a55793784))
+
 ## [0.27.1](https://github.com/neo9/n9-mongo-client/compare/0.27.0...0.27.1) (2022-02-01)
 
 
