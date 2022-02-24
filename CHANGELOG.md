@@ -1,3 +1,10 @@
+# [0.28.0](https://github.com/neo9/n9-mongo-client/compare/0.27.2...0.28.0) (2022-02-24)
+
+
+### historic
+
+* Enable updateOnlyOnChange by default if historic is enabled ([11f499e](https://github.com/neo9/n9-mongo-client/commit/11f499e69dfa42bb6fee3bbad41e98705c8b231d))
+
 ## [0.27.2](https://github.com/neo9/n9-mongo-client/compare/0.27.1...0.27.2) (2022-02-16)
 
 
