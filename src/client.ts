@@ -72,6 +72,9 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		conf: MongoClientConfiguration = {},
 	) {
 		this.conf = _.merge({}, defaultConfiguration, conf);
+		if (this.conf.keepHistoric) {
+			this.conf.updateOnlyOnChange = { ...this.conf.updateOnlyOnChange };
+		}
 		if (this.conf.lockFields) {
 			this.lockFieldsManager = new LockFieldsManager(this.conf.lockFields);
 		}

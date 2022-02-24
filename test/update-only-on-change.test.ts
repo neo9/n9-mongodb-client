@@ -2,17 +2,12 @@ import { N9Log } from '@neo9/n9-node-log';
 import { waitFor } from '@neo9/n9-node-utils';
 import ava, { Assertions } from 'ava';
 
-import { MongoClient, MongoUtils } from '../src';
-import { BaseMongoObject, UpdateOnlyOnChangeConfiguration } from '../src/models';
+import { MongoClient, MongoClientConfiguration, MongoUtils } from '../src';
+import { BaseMongoObject } from '../src/models';
 import { init } from './fixtures/utils';
 
 class SampleType extends BaseMongoObject {
 	public property1?: string;
-}
-
-export interface FindOneAndUpdateTestCaseInputParams {
-	// enable / disable the updateOnlyOnChange option on mongo client
-	updateOnlyOnChange?: UpdateOnlyOnChangeConfiguration;
 }
 
 export interface FindOneAndUpdateTestCaseAssertions {
@@ -29,11 +24,11 @@ export interface FindOneAndUpdateTestCaseAssertions {
  */
 async function insertThenUpdateOneFieldToNewValue(
 	t: Assertions,
-	inputParams: FindOneAndUpdateTestCaseInputParams,
+	inputParams: Partial<MongoClientConfiguration>,
 	assertions: FindOneAndUpdateTestCaseAssertions,
 ): Promise<void> {
 	const mongoClient = new MongoClient(`test-${Date.now()}`, SampleType, SampleType, {
-		updateOnlyOnChange: inputParams.updateOnlyOnChange,
+		...inputParams,
 	});
 
 	const insertedEntity = await mongoClient.insertOne({ property1: 'value1' }, 'TEST');
@@ -97,7 +92,7 @@ async function insertThenUpdateOneFieldToNewValue(
 
 insertThenUpdateOneFieldToNewValue.title = (
 	providedTitle: string,
-	inputParams: FindOneAndUpdateTestCaseInputParams,
+	inputParams: Partial<MongoClientConfiguration>,
 	assertions: FindOneAndUpdateTestCaseAssertions,
 ): string => {
 	const pick = inputParams.updateOnlyOnChange?.changeFilters?.pick ?? [];
@@ -108,7 +103,19 @@ insertThenUpdateOneFieldToNewValue.title = (
 	const lastModificationDateShouldChange = assertions.lastModificationDateShouldChange
 		? 'last modification date did change'
 		: 'last modification date did not change';
-	return `${providedTitle} findOneAndUpdate when updating a field with updateOnlyOnChange ${updateOnlyOnChange} should result in ${lastModificationDateShouldChange}`;
+	let keepHistoric: string;
+	switch (inputParams.keepHistoric) {
+		case undefined:
+			keepHistoric = 'not-set';
+			break;
+		case true:
+			keepHistoric = `enabled`;
+			break;
+		case false:
+		default:
+			keepHistoric = `disabled`;
+	}
+	return `${providedTitle} findOneAndUpdate when updating a field with updateOnlyOnChange ${updateOnlyOnChange} and keepHistoric ${keepHistoric} should result in ${lastModificationDateShouldChange}`;
 };
 
 /**
@@ -120,11 +127,11 @@ insertThenUpdateOneFieldToNewValue.title = (
  */
 async function insertThenUpdateOneFieldToSameValue(
 	t: Assertions,
-	inputParams: FindOneAndUpdateTestCaseInputParams,
+	inputParams: Partial<MongoClientConfiguration>,
 	assertions: FindOneAndUpdateTestCaseAssertions,
 ): Promise<void> {
 	const mongoClient = new MongoClient(`test-${Date.now()}`, SampleType, SampleType, {
-		updateOnlyOnChange: inputParams.updateOnlyOnChange,
+		...inputParams,
 	});
 
 	const insertedEntity = await mongoClient.insertOne({ property1: 'value1' }, 'TEST');
@@ -188,7 +195,7 @@ async function insertThenUpdateOneFieldToSameValue(
 
 insertThenUpdateOneFieldToSameValue.title = (
 	providedTitle: string,
-	inputParams: FindOneAndUpdateTestCaseInputParams,
+	inputParams: Partial<MongoClientConfiguration>,
 	assertions: FindOneAndUpdateTestCaseAssertions,
 ): string => {
 	const pick = inputParams.updateOnlyOnChange?.changeFilters?.pick ?? [];
@@ -199,7 +206,19 @@ insertThenUpdateOneFieldToSameValue.title = (
 	const lastModificationDateShouldChange = assertions.lastModificationDateShouldChange
 		? 'last modification date changed'
 		: 'last modification date did not change';
-	return `${providedTitle} findOneAndUpdate when updating a field to same value with updateOnlyOnChange ${updateOnlyOnChange} should result in ${lastModificationDateShouldChange}`;
+	let keepHistoric: string;
+	switch (inputParams.keepHistoric) {
+		case undefined:
+			keepHistoric = 'not-set';
+			break;
+		case true:
+			keepHistoric = `enabled`;
+			break;
+		case false:
+		default:
+			keepHistoric = `disabled`;
+	}
+	return `${providedTitle} findOneAndUpdate when updating a field to same value with updateOnlyOnChange ${updateOnlyOnChange} and keepHistoric ${keepHistoric} should result in ${lastModificationDateShouldChange}`;
 };
 
 global.log = new N9Log('tests').module('update-only-on-change');
@@ -231,70 +250,99 @@ ava.serial(
 	},
 );
 
-// updateOnlyOnChange enabled and field not picked
+// updateOnlyOnChange enabled by historic
 ava.serial(
 	testPrefix,
 	insertThenUpdateOneFieldToNewValue,
 	{
-		updateOnlyOnChange: {
-			changeFilters: {
-				pick: ['non-existant-property'],
-			},
-		},
-	},
-	{
-		lastModificationDateShouldChange: false,
-	},
-);
-
-// updateOnlyOnChange enabled and field picked
-ava.serial(
-	testPrefix,
-	insertThenUpdateOneFieldToNewValue,
-	{
-		updateOnlyOnChange: {
-			changeFilters: {
-				pick: ['property1'],
-			},
-		},
+		keepHistoric: true,
 	},
 	{
 		lastModificationDateShouldChange: true,
 	},
 );
 
-// updateOnlyOnChange enabled and field omitted
 ava.serial(
 	testPrefix,
-	insertThenUpdateOneFieldToNewValue,
+	insertThenUpdateOneFieldToSameValue,
 	{
-		updateOnlyOnChange: {
-			changeFilters: {
-				omit: ['property1'],
-			},
-		},
+		keepHistoric: true,
 	},
 	{
 		lastModificationDateShouldChange: false,
 	},
 );
 
-// updateOnlyOnChange enabled and field picked and omitted
-ava.serial(
-	testPrefix,
-	insertThenUpdateOneFieldToNewValue,
-	{
-		updateOnlyOnChange: {
-			changeFilters: {
-				pick: ['property1'],
-				omit: ['property1'],
+for (const keepHistoric of [undefined, true, false]) {
+	// updateOnlyOnChange enabled and field not picked
+	ava.serial(
+		testPrefix,
+		insertThenUpdateOneFieldToNewValue,
+		{
+			keepHistoric,
+			updateOnlyOnChange: {
+				changeFilters: {
+					pick: ['non-existant-property'],
+				},
 			},
 		},
-	},
-	{
-		lastModificationDateShouldChange: true, // omit is ignored
-	},
-);
+		{
+			lastModificationDateShouldChange: false,
+		},
+	);
+
+	// updateOnlyOnChange enabled and field picked
+	ava.serial(
+		testPrefix,
+		insertThenUpdateOneFieldToNewValue,
+		{
+			keepHistoric,
+			updateOnlyOnChange: {
+				changeFilters: {
+					pick: ['property1'],
+				},
+			},
+		},
+		{
+			lastModificationDateShouldChange: true,
+		},
+	);
+
+	// updateOnlyOnChange enabled and field omitted
+	ava.serial(
+		testPrefix,
+		insertThenUpdateOneFieldToNewValue,
+		{
+			keepHistoric,
+			updateOnlyOnChange: {
+				changeFilters: {
+					omit: ['property1'],
+				},
+			},
+		},
+		{
+			lastModificationDateShouldChange: false,
+		},
+	);
+
+	// updateOnlyOnChange enabled and field picked and omitted
+	ava.serial(
+		testPrefix,
+		insertThenUpdateOneFieldToNewValue,
+		{
+			keepHistoric,
+			updateOnlyOnChange: {
+				changeFilters: {
+					pick: ['property1'],
+					omit: ['property1'],
+				},
+			},
+		},
+		{
+			lastModificationDateShouldChange: true, // omit is ignored
+		},
+	);
+}
 
 // updateOnlyOnChange disabled
 ava.serial(

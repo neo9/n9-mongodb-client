@@ -3,7 +3,7 @@ import ava, { Assertions } from 'ava';
 import * as _ from 'lodash';
 import { Db } from 'mongodb';
 
-import { MongoClient } from '../src';
+import { MongoClient, MongoUtils } from '../src';
 import { BaseMongoObject } from '../src/models';
 import { init } from './fixtures/utils';
 
@@ -224,6 +224,62 @@ ava('Check historic indexes', async (t: Assertions) => {
 	await mongoClient.dropHistoryIndex('test-unique-index_1');
 	indexExists = await historicCollection.indexExists('test-unique-index_1');
 	t.false(indexExists, "unique index doesn't exists");
+
+	await mongoClient.dropCollection();
+});
+
+ava('[CRUD] Update many at once check modificationDate and historic', async (t: Assertions) => {
+	const mongoClient = new MongoClient(`test-${Date.now()}`, SampleType, SampleTypeListing, {
+		keepHistoric: true,
+	});
+	await mongoClient.initHistoricIndexes();
+	const size = await mongoClient.count();
+
+	t.true(size === 0, 'collection should be empty');
+
+	const intValue = 41;
+	const initialValue = {
+		field1String: 'string1',
+		field2Number: intValue,
+	};
+	const insertedDocuments = await mongoClient.insertMany(
+		[{ ...initialValue }, { ...initialValue }, { ...initialValue }],
+		'userId1',
+	);
+
+	for (const insertedDocument of insertedDocuments) {
+		const historicLength = await mongoClient.countHistoricByEntityId(insertedDocument._id);
+		t.is(historicLength, 0, 'not historic stored for only one insert');
+	}
+
+	const updatedDocuments = await (
+		await mongoClient.updateManyAtOnce(
+			insertedDocuments.map((insertedDocument) => ({ ...initialValue, _id: insertedDocument._id })),
+			'userId1',
+			{
+				query: (e) => ({ _id: MongoUtils.oid(e._id) as any }),
+			},
+		)
+	).toArray();
+
+	t.is(updatedDocuments.length, 3, '3 documents updated');
+
+	for (const insertedDocument of insertedDocuments) {
+		const historicLength = await mongoClient.countHistoricByEntityId(insertedDocument._id);
+		t.is(historicLength, 0, 'not historic stored for only updates with no change');
+
+		const document = await mongoClient.findOneById(insertedDocument._id);
+		t.notDeepEqual(
+			document.objectInfos.lastUpdate.date,
+			insertedDocument.objectInfos.lastUpdate.date,
+			'lastUpdateDate change',
+		);
+		t.deepEqual(
+			document.objectInfos.lastModification.date,
+			insertedDocument.objectInfos.lastModification.date,
+			"lastModificationDate doesn't change if the value doesn't change",
+		);
+	}
 
 	await mongoClient.dropCollection();
 });

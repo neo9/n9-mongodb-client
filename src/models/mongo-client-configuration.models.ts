@@ -61,7 +61,7 @@ export interface MongoClientConfiguration {
 
 	/**
 	 * If set, entities will not be updated if they didn't change (ie: if the update would not change the document in db).
-	 * Defaults to undefined.
+	 * Defaults to undefined, if keepHistoric is `true` it is enabled with value `{}`.
 	 */
 	updateOnlyOnChange?: UpdateOnlyOnChangeConfiguration;
 
