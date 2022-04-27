@@ -24,7 +24,7 @@ ava('[DELETE-ONE] Delete one by id', async (t: Assertions) => {
 
 	const deletedElement = await mongoClient.deleteOneById(savedObject._id);
 	t.is(await mongoClient.count({}), 0, 'collection contains 0 element');
-	t.is<string>(
+	t.is<string, string>(
 		deletedElement._id,
 		savedObject._id,
 		'deleted element ID is same as the created one',
