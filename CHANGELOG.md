@@ -1,3 +1,17 @@
+
+
+# [0.29.0](https://github.com/neo9/n9-mongo-client/compare/0.28.0...0.29.0) (2022-04-27)
+
+
+### tests
+
+* Fix type ([31ffb9c](https://github.com/neo9/n9-mongo-client/commit/31ffb9cd7d30a5c7b08b29faae8bad1441dd9b8f))
+
+### yarn
+
+* Upgrade dependencies ([dd9c282](https://github.com/neo9/n9-mongo-client/commit/dd9c2829f07fa9488d09e36e0ef1023786531db6))
+* Upgrade n9-node-log to V 4.0.0 and n9-coding-style ([f57c1a8](https://github.com/neo9/n9-mongo-client/commit/f57c1a87a1cde0b1f93b9927333b6b867a0c9c25))
+
 # [0.28.0](https://github.com/neo9/n9-mongo-client/compare/0.27.2...0.28.0) (2022-02-24)
 
 
@@ -1297,6 +1311,3 @@
 
 * Add release library ([47f155e](https://github.com/neo9/n9-mongo-client/commit/47f155e)) (Benjamin Daniel)
 * V 0.0.1 ([5510566](https://github.com/neo9/n9-mongo-client/commit/5510566)) (Benjamin Daniel)
-
-
-
