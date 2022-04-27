@@ -99,6 +99,6 @@ ava('[ISSUE-OBJECT-ID] Object ID should be well compared', async (t: Assertions)
 		true,
 	);
 
-	t.is<number>(updatedObject.objectInfos.lockFields.length, 2, '2 lock fields');
+	t.is<number, number>(updatedObject.objectInfos.lockFields.length, 2, '2 lock fields');
 	await mongoClient.dropCollection();
 });
