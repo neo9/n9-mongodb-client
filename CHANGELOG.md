@@ -1,5 +1,12 @@
 
 
+## [0.29.1](https://github.com/neo9/n9-mongo-client/compare/0.29.0...0.29.1) (2022-05-02)
+
+
+### yarn
+
+* Upgrade n9-node-log to v 4.0.1 to avoid wasm out of memory ([a2ba4ed](https://github.com/neo9/n9-mongo-client/commit/a2ba4edde33581b871d3b8f70296b6a5a569d9f8))
+
 # [0.29.0](https://github.com/neo9/n9-mongo-client/compare/0.28.0...0.29.0) (2022-04-27)
 
 
