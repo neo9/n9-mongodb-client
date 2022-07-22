@@ -27,9 +27,11 @@ export enum AggregationPipelineStageOperator {
 	REDACT = '$redact',
 	REPLACE_ROOT = '$replaceRoot',
 	SAMPLE = '$sample',
+	SET = '$set',
 	SKIP = '$skip',
 	SORT = '$sort',
 	SORT_BY_COUNT = '$sortByCount',
+	UNSET = '$unset',
 	UNWIND = '$unwind',
 }
 
@@ -543,6 +545,10 @@ export interface SamplePipelineStage {
 	[AggregationPipelineStageOperator.SAMPLE]: SamplePipelineValue;
 }
 
+export interface SetPipelineStage {
+	[AggregationPipelineStageOperator.SET]: object;
+}
+
 /* SKIP */
 export interface SkipPipelineStage {
 	[AggregationPipelineStageOperator.SKIP]: number;
@@ -585,6 +591,10 @@ export interface UnwindPipelineStageValue {
 	preserveNullAndEmptyArrays?: boolean;
 }
 
+export interface UnsetPipelineStage {
+	[AggregationPipelineStageOperator.UNSET]: string | string[];
+}
+
 export interface UnwindPipelineStage {
 	[AggregationPipelineStageOperator.UNWIND]: string | UnwindPipelineStageValue;
 }
@@ -612,9 +622,11 @@ export type AggregationPipelineStage =
 	| RedactPipelineStage
 	| ReplaceRootPipelineStage
 	| SamplePipelineStage
+	| SetPipelineStage
 	| SkipPipelineStage
 	| SortPipelineStage
 	| SortByCountPipelineStage
+	| UnsetPipelineStage
 	| UnwindPipelineStage;
 
 export type AggregationPipeline = AggregationPipelineStage[];
