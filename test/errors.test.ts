@@ -186,6 +186,16 @@ ava('[Errors] Check error thrown on every client function', async (t: Assertions
 		'findOneAndRemoveLock error',
 	);
 	await t.throwsAsync(
+		client.findOneByIdAndRemoveLockSubparts('test', 'test', 'test'),
+		{ instanceOf: N9Error, message: 'invalid-mongo-id' },
+		'findOneByIdAndRemoveLock error',
+	);
+	await t.throwsAsync(
+		client.findOneByKeyAndRemoveLockSubparts('test', 'test', 'test'),
+		{ instanceOf: N9Error, message: 'topology was destroyed' },
+		'findOneByKeyAndRemoveLock error',
+	);
+	await t.throwsAsync(
 		client.findOneAndUpdateByIdWithLocks('test', {}, 'test'),
 		{ instanceOf: N9Error, message: 'invalid-mongo-id' },
 		'findOneAndUpdateBy error',

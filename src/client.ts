@@ -690,26 +690,66 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		}
 	}
 
+	public async findOneByIdAndRemoveLockSubparts(
+		id: string,
+		baseLockFieldPath: string,
+		userId: string,
+	): Promise<U> {
+		try {
+			const query: FilterQuery<any> = {
+				_id: MongoUtils.oid(id),
+			};
+			return await this.findOneAndRemoveLock(query, baseLockFieldPath, userId, true);
+		} catch (e) {
+			LangUtils.throwN9ErrorFromError(e, { id, baseLockFieldPath, userId });
+		}
+	}
+
+	public async findOneByKeyAndRemoveLockSubparts(
+		keyValue: any,
+		baseLockFieldPath: string,
+		userId: string,
+		keyName: string = 'code',
+	): Promise<U> {
+		try {
+			const query: FilterQuery<any> = {
+				[keyName]: keyValue,
+			};
+			return await this.findOneAndRemoveLock(query, baseLockFieldPath, userId, true);
+		} catch (e) {
+			LangUtils.throwN9ErrorFromError(e, {
+				keyValue,
+				baseLockFieldPath,
+				userId,
+				keyName,
+			});
+		}
+	}
+
 	public async findOneAndRemoveLock(
 		query: FilterQuery<U>,
 		lockFieldPath: string,
 		userId: string,
+		removeSubParts: boolean = false,
 	): Promise<U> {
 		try {
 			if (!this.conf.lockFields) {
 				throw new N9Error('invalid-function-call', 500, {
 					query,
 					lockFieldPath,
-					name: 'findOneByIdAndRemoveLock',
+					removeSubParts,
+					name: 'findOneAndRemoveLock',
 				});
 			}
+
+			const path = removeSubParts ? { $regex: `^${_.escapeRegExp(lockFieldPath)}` } : lockFieldPath;
 
 			return await this.findOneAndUpdate(
 				query,
 				{
 					$pull: {
 						'objectInfos.lockFields': {
-							path: lockFieldPath,
+							path,
 						},
 					},
 				} as any as UpdateQuery<U>,
@@ -723,6 +763,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				query,
 				lockFieldPath,
 				userId,
+				removeSubParts,
 			});
 		}
 	}
