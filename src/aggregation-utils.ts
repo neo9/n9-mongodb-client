@@ -123,6 +123,10 @@ export class AggregationBuilder<U> {
 		return this.doAddStage({ [AggregationPipelineStageOperator.SAMPLE]: stageValue });
 	}
 
+	public set(stageValue: object): AggregationBuilder<U> {
+		return this.doAddStage({ [AggregationPipelineStageOperator.SET]: stageValue });
+	}
+
 	public skip(stageValue: number): AggregationBuilder<U> {
 		return this.doAddStage({ [AggregationPipelineStageOperator.SKIP]: stageValue });
 	}
@@ -133,6 +137,10 @@ export class AggregationBuilder<U> {
 
 	public sortByCount(stageValue: Expression): AggregationBuilder<U> {
 		return this.doAddStage({ [AggregationPipelineStageOperator.SORT_BY_COUNT]: stageValue });
+	}
+
+	public unset(stageValue: string | string[]): AggregationBuilder<U> {
+		return this.doAddStage({ [AggregationPipelineStageOperator.UNSET]: stageValue });
 	}
 
 	public unwind(stageValue: string | UnwindPipelineStageValue): AggregationBuilder<U> {
