@@ -724,6 +724,67 @@ ava('[LOCK-FIELDS] Remove lock field', async (t: Assertions) => {
 	t.is(allHistoric.length, 2, '2 historic entries');
 });
 
+ava('[LOCK-FIELDS] Remove lock field subparts', async (t: Assertions) => {
+	const mongoClient = getLockFieldsMongoClient(true);
+
+	const dataWithNestedObject = {
+		...locksDataSample,
+		nested: {
+			a: {
+				key: 'test1',
+				value: 'test 2',
+			},
+			b: {
+				key: 'test2',
+				value: {
+					fr: 'TEST-FR',
+					en: 'TEST-EN',
+				},
+			},
+		},
+	};
+
+	const insertedEntity = await mongoClient.insertOne(
+		_.cloneDeep(dataWithNestedObject),
+		'userId',
+		true,
+	);
+
+	t.is(insertedEntity.objectInfos.lockFields.length, 12, 'Nb lock fields after creation');
+	t.true(
+		_.map(insertedEntity.objectInfos.lockFields, 'path').some((p) => p.startsWith('nested.a')),
+		'Contains nested paths',
+	);
+	let newEntity = await mongoClient.findOneByIdAndRemoveLockSubparts(
+		insertedEntity._id,
+		'nested.a',
+		'userId',
+	);
+
+	t.is(newEntity.objectInfos.lockFields.length, 10, 'Nb lock fields after 2 removed');
+	t.false(
+		_.map(newEntity.objectInfos.lockFields, 'path').some((p) => p.startsWith('nested.a')),
+		'Does not contains paths removed',
+	);
+	newEntity = await mongoClient.findOneByKeyAndRemoveLockSubparts(
+		newEntity.text,
+		'nested.b',
+		'userId',
+		'text',
+	);
+
+	t.is(newEntity.objectInfos.lockFields.length, 7, 'Nb lock fields after 5 removed');
+	t.false(
+		_.map(newEntity.objectInfos.lockFields, 'path').some((p) => p.startsWith('nested.b')),
+		'Does not contains paths removed',
+	);
+
+	const allHistoric: EntityHistoric<SampleComplexType>[] = await (
+		await mongoClient.findHistoricByEntityId(insertedEntity._id, 0, 0)
+	).toArray();
+	t.is(allHistoric.length, 2, '2 historic entries');
+});
+
 ava(
 	'[LOCK-FIELDS] Insert&update one without saving locks clear all locks and update only one field',
 	async (t: Assertions) => {
