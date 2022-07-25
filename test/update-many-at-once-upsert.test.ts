@@ -13,6 +13,7 @@ class SampleType extends BaseMongoObject {
 	}[];
 	public sku: string;
 	public value: string;
+	public status?: string;
 }
 
 class DataSample extends BaseMongoObject {
@@ -171,6 +172,112 @@ ava('[UPDATE MANY AT ONCE] Should update one document by _id ObjectID', async (t
 	t.is(dataUpdatedArray.length, 1, '1 value updated');
 	t.deepEqual(dataUpdatedArray[0].value, 'update', 'value is updated');
 });
+
+ava(
+	'[UPDATE MANY AT ONCE] Should call mapAfterLockFieldsApplied with merged entity on update',
+	async (t: Assertions) => {
+		const collectionName = `test-${Date.now()}`;
+		const mongoClient = new MongoClient(collectionName, SampleType, SampleType, {
+			lockFields: {
+				arrayWithReferences: {
+					externalReferences: 'value',
+				},
+				excludedFields: ['sku', 'status'],
+			},
+		});
+
+		const insertedValue = await mongoClient.insertOne(
+			{
+				externalReferences: [
+					{
+						value: 'ext1',
+					},
+				],
+				sku: 'sku-1',
+				value: '0',
+			},
+			'test',
+		);
+		t.is(insertedValue.value, '0', 'value inserted');
+		t.is(insertedValue.status, undefined, 'status is undefined');
+		t.is(insertedValue.objectInfos.lockFields.length, 2, 'should lock new fields');
+
+		const newEntity: SampleType = {
+			sku: 'sku-1',
+			externalReferences: [
+				{
+					value: 'ext1',
+				},
+			],
+			value: '1',
+		};
+
+		const updateResult = await (
+			await mongoClient.updateManyAtOnce([newEntity], 'userId', {
+				query: (e) => ({ sku: e.sku }),
+				upsert: true,
+				lockNewFields: false,
+				forceEditLockFields: false,
+				mapFunction: (entity: SampleType, existingEntity) =>
+					mapSampleTypeCreateToSampleType(entity, existingEntity),
+				hooks: {
+					mapAfterLockFieldsApplied: (entity) => {
+						t.is(entity.value, '0', 'entity merged with existing value should have locked value');
+						return {
+							...entity,
+							status: 'OK',
+						};
+					},
+				},
+			})
+		).toArray();
+
+		t.is(updateResult.length, 1, '1 entity updated');
+		t.is(updateResult[0].value, '0', 'value not updated');
+		t.is(updateResult[0].status, 'OK', 'status updated');
+	},
+);
+
+ava(
+	'[UPDATE MANY AT ONCE] Should call mapAfterLockFieldsApplied with new entity on insert',
+	async (t: Assertions) => {
+		const collectionName = `test-${Date.now()}`;
+		const mongoClient = new MongoClient(collectionName, SampleType, SampleType, {});
+
+		const newEntity: SampleType = {
+			sku: 'sku-1',
+			externalReferences: [
+				{
+					value: 'ext1',
+				},
+			],
+			value: '1',
+		};
+
+		const updateResult = await (
+			await mongoClient.updateManyAtOnce([newEntity], 'userId', {
+				upsert: true,
+				lockNewFields: false,
+				forceEditLockFields: false,
+				mapFunction: (entity: SampleType, existingEntity) =>
+					mapSampleTypeCreateToSampleType(entity, existingEntity),
+				hooks: {
+					mapAfterLockFieldsApplied: (entity) => {
+						t.is(entity.value, '1', 'entity value should be the same');
+						return {
+							...entity,
+							status: 'OK',
+						};
+					},
+				},
+			})
+		).toArray();
+
+		t.is(updateResult.length, 1, '1 entity updated');
+		t.is(updateResult[0].value, '1', 'value not updated');
+		t.is(updateResult[0].status, 'OK', 'status updated');
+	},
+);
 
 ava('[UPDATE MANY AT ONCE] Should update nothing with empty array', async (t: Assertions) => {
 	const collectionName = `test-${Date.now()}`;

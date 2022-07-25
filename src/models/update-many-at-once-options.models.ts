@@ -28,6 +28,16 @@ export interface UpdateManyAtOnceOptions<U> {
 	mapFunction?:
 		| ((entity: Partial<U>, existingEntity?: U) => Promise<Partial<U>>)
 		| ((entity: Partial<U>, existingEntity?: U) => Partial<U>);
+	hooks?: {
+		/**
+		 * Function that will be used to map the entity after it has been merged with it's existing value.
+		 * The function will be called with the given entity merged with the existing entity (and it's locked values) if there is one.
+		 * Defaults to undefined (no mapping).
+		 */
+		mapAfterLockFieldsApplied?:
+			| ((entity: Partial<U>) => Promise<Partial<U>>)
+			| ((entity: Partial<U>) => Partial<U>);
+	};
 	/**
 	 * List of field keys in the entities that will only be added upon insertion.
 	 * Defaults to undefined.
