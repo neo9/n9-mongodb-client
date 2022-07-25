@@ -1,5 +1,26 @@
 
 
+# [0.30.0-rc.0](https://github.com/neo9/n9-mongo-client/compare/0.29.1...0.30.0-rc.0) (2022-07-25)
+
+
+### aggregate
+
+* Add set and unset operators ([9a5b0e7](https://github.com/neo9/n9-mongo-client/commit/9a5b0e7350ef63a0e939b58b82080087df87377d))
+* Add set and unset to the query builder ([61d429c](https://github.com/neo9/n9-mongo-client/commit/61d429ca5e2fd084a6b916ebfb5584a9f19f22d2))
+
+### locks
+
+* Add functions to remove sub locks using base path #55 ([8a8eed0](https://github.com/neo9/n9-mongo-client/commit/8a8eed07df364b8a2016f4a025aa8004536d86d3)), closes [#55](https://github.com/neo9/n9-mongo-client/issues/55)
+
+### update
+
+* Add hooks in UpdateManyAtOnceOptions #57 ([e9f7b38](https://github.com/neo9/n9-mongo-client/commit/e9f7b38b0301d85323fb414054668c248ecf3ae2)), closes [#57](https://github.com/neo9/n9-mongo-client/issues/57)
+
+### yarn
+
+* Upgrade parse-url from 6.0.0 to 6.0.2 #54 ([670a45d](https://github.com/neo9/n9-mongo-client/commit/670a45d902e729d57047a4bf7613306fba0246f0)), closes [#54](https://github.com/neo9/n9-mongo-client/issues/54)
+* Upgrade semver-regex from 3.1.3 to 3.1.4 #53 ([6529693](https://github.com/neo9/n9-mongo-client/commit/6529693cbcdde2fcbd8017901d43d1247585dc3d)), closes [#53](https://github.com/neo9/n9-mongo-client/issues/53)
+
 ## [0.29.1](https://github.com/neo9/n9-mongo-client/compare/0.29.0...0.29.1) (2022-05-02)
 
 
