@@ -1537,7 +1537,6 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 						delete newEntityMerged._id;
 
 						entity = newEntityMerged;
-						// TODO : add function parameter to allow validation here
 					}
 
 					if (options.lockNewFields) {
@@ -1571,6 +1570,10 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 							(entity as any)['objectInfos.lockFields'] = lockFields;
 						}
 					}
+				}
+
+				if (options.hooks?.mapAfterLockFieldsApplied) {
+					entity = await options.hooks.mapAfterLockFieldsApplied(entity);
 				}
 
 				const toSet = LodashReplacerUtils.OMIT_PROPERTIES(entity, options.onlyInsertFieldsKey);
@@ -1622,6 +1625,11 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				if (options.mapFunction) {
 					entity = await options.mapFunction(entity);
 				}
+
+				if (options.hooks?.mapAfterLockFieldsApplied) {
+					entity = await options.hooks.mapAfterLockFieldsApplied(entity);
+				}
+
 				LangUtils.removeEmptyDeep(entity, undefined, undefined, !!this.conf.lockFields); // keep null values for lockfields
 
 				const toSet = LodashReplacerUtils.OMIT_PROPERTIES(entity, options.onlyInsertFieldsKey);
