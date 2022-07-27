@@ -22,6 +22,7 @@ import {
 	OptionalId,
 	UpdateQuery,
 } from 'mongodb';
+import { PromisePoolExecutor } from 'promise-pool-executor';
 
 import { AggregationBuilder } from './aggregation-utils';
 import { HistoricManager } from './historic-manager';
@@ -939,6 +940,10 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			options.returnNewEntities = LodashReplacerUtils.IS_BOOLEAN(options.returnNewEntities)
 				? options.returnNewEntities
 				: true;
+			options.pool = {
+				...options.pool,
+				nbMaxConcurency: options.pool?.nbMaxConcurency ?? 1,
+			};
 			const updateQueries = await this.buildUpdatesQueries(entities, userId, options);
 			// console.log(`-- client.ts>updateManyAtOnce updateQueries --`, JSON.stringify(updateQueries, null, 2));
 			return await this.updateMany(
@@ -1445,7 +1450,6 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		}
 	}
 
-	// eslint-disable-next-line complexity
 	private async buildUpdatesQueries(
 		entities: MatchKeysAndValues<U>[],
 		userId: string,
@@ -1454,7 +1458,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		const updates: UpdateManyQuery<U>[] = [];
 		if (LodashReplacerUtils.IS_ARRAY_EMPTY(entities)) return updates;
 
-		let now;
+		let now: Date;
 		if (options.lockNewFields) now = new Date();
 
 		const currentValues: StringMap<U> = {};
@@ -1511,165 +1515,203 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			}
 		}
 
-		// eslint-disable-next-line prefer-const
-		for (let [index, entity] of entities.entries()) {
-			if (currentValues[index]) {
-				const currentValue = currentValues[index];
-				if (options.mapFunction) {
-					entity = await options.mapFunction(entity, currentValue);
-				}
-				LangUtils.removeEmptyDeep(entity, false, false, true);
+		const pool =
+			options.pool.executor ??
+			new PromisePoolExecutor({
+				concurrencyLimit: options.pool.nbMaxConcurency,
+			});
 
-				if (this.conf.lockFields) {
-					if (!options.forceEditLockFields) {
-						entity = this.lockFieldsManager.pruneEntityWithLockFields(
-							entity,
-							currentValue.objectInfos.lockFields,
-						);
-						const newEntityMerged = this.lockFieldsManager.mergeOldEntityWithNewOne(
-							entity,
-							currentValue,
-							'',
-							currentValue.objectInfos.lockFields,
-						);
-						// console.log(`--  newEntityMerged --`, JSON.stringify(newEntityMerged, null, 2));
-						delete newEntityMerged.objectInfos;
-						delete newEntityMerged._id;
-
-						entity = newEntityMerged;
+		await pool
+			.addEachTask({
+				data: entities,
+				generator: async (entity: MatchKeysAndValues<U>, index: number): Promise<void> => {
+					const update = await this.buildUpdateQuery(
+						entity,
+						currentValues[index],
+						options,
+						now,
+						userId,
+					);
+					if (update) {
+						updates.push(update);
 					}
+				},
+			})
+			.promise();
 
-					if (options.lockNewFields) {
-						const lockFields = currentValue.objectInfos.lockFields || [];
-						const newLockFields = this.lockFieldsManager.getAllLockFieldsFromEntity(
-							entity,
-							now,
-							userId,
-							currentValue,
+		return updates;
+	}
+
+	private async buildUpdateQuery(
+		entity: MatchKeysAndValues<U>,
+		currentValue: U,
+		options: UpdateManyAtOnceOptions<U>,
+		now: Date,
+		userId: string,
+	): Promise<UpdateManyQuery<U>> {
+		let updateManyQuery: UpdateManyQuery<U>;
+		let updateEntity = entity;
+
+		if (options.mapFunction) {
+			updateEntity = await options.mapFunction(updateEntity, currentValue);
+		}
+
+		if (currentValue) {
+			LangUtils.removeEmptyDeep(updateEntity, false, false, true);
+
+			if (this.conf.lockFields) {
+				if (!options.forceEditLockFields) {
+					updateEntity = this.lockFieldsManager.pruneEntityWithLockFields(
+						updateEntity,
+						currentValue.objectInfos.lockFields,
+					);
+					const newEntityMerged = this.lockFieldsManager.mergeOldEntityWithNewOne(
+						updateEntity,
+						currentValue,
+						'',
+						currentValue.objectInfos.lockFields,
+					);
+					// console.log(`--  newEntityMerged --`, JSON.stringify(newEntityMerged, null, 2));
+					delete newEntityMerged.objectInfos;
+					delete newEntityMerged._id;
+
+					updateEntity = newEntityMerged;
+				}
+
+				if (options.lockNewFields) {
+					const lockFields = currentValue.objectInfos.lockFields || [];
+					const newLockFields = this.lockFieldsManager.getAllLockFieldsFromEntity(
+						updateEntity,
+						now,
+						userId,
+						currentValue,
+					);
+
+					delete (updateEntity as any)?.objectInfos;
+					if (!LodashReplacerUtils.IS_ARRAY_EMPTY(newLockFields)) {
+						lockFields.push(...newLockFields);
+					}
+					if (options.forceEditLockFields && options.unsetUndefined) {
+						// we can delete lock fields only if we change there values
+						const newLockFieldsCleaned = this.lockFieldsManager.cleanObsoleteLockFields(
+							lockFields,
+							updateEntity,
 						);
-
-						delete (entity as any)?.objectInfos;
-						if (!LodashReplacerUtils.IS_ARRAY_EMPTY(newLockFields)) {
-							lockFields.push(...newLockFields);
+						if (
+							!(
+								LodashReplacerUtils.IS_ARRAY_EMPTY(newLockFieldsCleaned) &&
+								LodashReplacerUtils.IS_ARRAY_EMPTY(currentValue.objectInfos.lockFields)
+							)
+						) {
+							(updateEntity as any)['objectInfos.lockFields'] = newLockFieldsCleaned;
 						}
-						if (options.forceEditLockFields && options.unsetUndefined) {
-							// we can delete lock fields only if we change there values
-							const newLockFieldsCleaned = this.lockFieldsManager.cleanObsoleteLockFields(
-								lockFields,
-								entity,
-							);
-							if (
-								!(
-									LodashReplacerUtils.IS_ARRAY_EMPTY(newLockFieldsCleaned) &&
-									LodashReplacerUtils.IS_ARRAY_EMPTY(currentValue.objectInfos.lockFields)
-								)
-							) {
-								(entity as any)['objectInfos.lockFields'] = newLockFieldsCleaned;
-							}
-						} else if (!LodashReplacerUtils.IS_ARRAY_EMPTY(newLockFields)) {
-							(entity as any)['objectInfos.lockFields'] = lockFields;
-						}
+					} else if (!LodashReplacerUtils.IS_ARRAY_EMPTY(newLockFields)) {
+						(updateEntity as any)['objectInfos.lockFields'] = lockFields;
 					}
 				}
+			}
 
-				if (options.hooks?.mapAfterLockFieldsApplied) {
-					entity = await options.hooks.mapAfterLockFieldsApplied(entity);
-				}
+			if (options.hooks?.mapAfterLockFieldsApplied) {
+				const mappedEntity = await options.hooks.mapAfterLockFieldsApplied({
+					...updateEntity,
+					_id: currentValue._id,
+				});
+				if (!mappedEntity) return;
 
-				const toSet = LodashReplacerUtils.OMIT_PROPERTIES(entity, options.onlyInsertFieldsKey);
-				const toSetOnInsert = LodashReplacerUtils.PICK_PROPERTIES(
-					entity,
-					options.onlyInsertFieldsKey,
-				);
+				delete mappedEntity._id;
 
-				let setOnInsert;
-				if (!LodashReplacerUtils.IS_OBJECT_EMPTY(toSetOnInsert)) {
-					setOnInsert = {
-						$setOnInsert: {
-							...toSetOnInsert,
+				updateEntity = mappedEntity;
+			}
+
+			const toSet = LodashReplacerUtils.OMIT_PROPERTIES(updateEntity, options.onlyInsertFieldsKey);
+			const toSetOnInsert = LodashReplacerUtils.PICK_PROPERTIES(
+				updateEntity,
+				options.onlyInsertFieldsKey,
+			);
+
+			let setOnInsert;
+			if (!LodashReplacerUtils.IS_OBJECT_EMPTY(toSetOnInsert)) {
+				setOnInsert = {
+					$setOnInsert: {
+						...toSetOnInsert,
+					},
+				};
+			}
+
+			// Unset only level 1, other are override by $set on objects
+			let unsetQuery;
+			if (options.unsetUndefined) {
+				const toUnset: object = LodashReplacerUtils.OMIT_PROPERTIES(currentValue, [
+					..._.keys(updateEntity),
+					'_id',
+					'objectInfos',
+				]);
+				if (!LodashReplacerUtils.IS_OBJECT_EMPTY(toUnset)) {
+					unsetQuery = {
+						$unset: {
+							..._.mapValues(toUnset, () => false),
 						},
 					};
 				}
+			}
 
-				// Unset only level 1, other are override by $set on objects
-				let unsetQuery;
-				if (options.unsetUndefined) {
-					const toUnset: object = LodashReplacerUtils.OMIT_PROPERTIES(currentValue, [
-						..._.keys(entity),
-						'_id',
-						'objectInfos',
-					]);
-					if (!LodashReplacerUtils.IS_OBJECT_EMPTY(toUnset)) {
-						unsetQuery = {
-							$unset: {
-								..._.mapValues(toUnset, () => false),
-							},
-						};
-					}
-				}
+			const update = {
+				$set: {
+					...toSet,
+				},
+				...unsetQuery,
+				...setOnInsert,
+			};
 
-				const update = {
+			updateManyQuery = {
+				id: currentValue._id,
+				updateQuery: update,
+			};
+		} else {
+			if (options.hooks?.mapAfterLockFieldsApplied) {
+				updateEntity = await options.hooks.mapAfterLockFieldsApplied(updateEntity);
+				if (!updateEntity) return;
+			}
+
+			LangUtils.removeEmptyDeep(updateEntity, undefined, undefined, !!this.conf.lockFields); // keep null values for lockfields
+
+			const toSet = LodashReplacerUtils.OMIT_PROPERTIES(updateEntity, options.onlyInsertFieldsKey);
+			const toSetOnInsert = LodashReplacerUtils.PICK_PROPERTIES(
+				updateEntity,
+				options.onlyInsertFieldsKey,
+			);
+
+			let setOnInsert;
+			if (!LodashReplacerUtils.IS_OBJECT_EMPTY(toSetOnInsert)) {
+				setOnInsert = {
+					$setOnInsert: {
+						...toSetOnInsert,
+					},
+				};
+			}
+
+			updateManyQuery = {
+				updateQuery: {
 					$set: {
 						...toSet,
 					},
-					...unsetQuery,
 					...setOnInsert,
-				};
+				},
+			};
 
-				updates.push({
-					id: currentValue._id,
-					updateQuery: update,
-				});
-			} else {
-				// on insert for upsert
-				if (options.mapFunction) {
-					entity = await options.mapFunction(entity);
-				}
-
-				if (options.hooks?.mapAfterLockFieldsApplied) {
-					entity = await options.hooks.mapAfterLockFieldsApplied(entity);
-				}
-
-				LangUtils.removeEmptyDeep(entity, undefined, undefined, !!this.conf.lockFields); // keep null values for lockfields
-
-				const toSet = LodashReplacerUtils.OMIT_PROPERTIES(entity, options.onlyInsertFieldsKey);
-				const toSetOnInsert = LodashReplacerUtils.PICK_PROPERTIES(
-					entity,
-					options.onlyInsertFieldsKey,
-				);
-
-				let setOnInsert;
-				if (!LodashReplacerUtils.IS_OBJECT_EMPTY(toSetOnInsert)) {
-					setOnInsert = {
-						$setOnInsert: {
-							...toSetOnInsert,
-						},
+			if (options.query) {
+				if (LodashReplacerUtils.IS_STRING(options.query)) {
+					updateManyQuery.key = {
+						name: options.query,
+						value: updateEntity[options.query],
 					};
+				} else {
+					updateManyQuery.query = options.query.call(null, updateEntity);
 				}
-
-				const update: UpdateManyQuery<U> = {
-					updateQuery: {
-						$set: {
-							...toSet,
-						},
-						...setOnInsert,
-					},
-				};
-
-				if (options.query) {
-					if (LodashReplacerUtils.IS_STRING(options.query)) {
-						update.key = {
-							name: options.query,
-							value: entity[options.query],
-						};
-					} else {
-						update.query = options.query.call(null, entity);
-					}
-				}
-				updates.push(update);
 			}
 		}
-		return updates;
+
+		return updateManyQuery;
 	}
 
 	private ifHasLockFieldsThrow(): void {

@@ -1,4 +1,5 @@
 import { FilterQuery } from 'mongodb';
+import { PromisePoolExecutor } from 'promise-pool-executor';
 
 export interface UpdateManyAtOnceOptions<U> {
 	/**
@@ -54,10 +55,22 @@ export interface UpdateManyAtOnceOptions<U> {
 	 * Defaults to true.
 	 */
 	unsetUndefined?: boolean;
-
 	/**
 	 * Return cursor on new entities.
 	 * Default: true
 	 */
 	returnNewEntities?: boolean;
+	pool?: {
+		/**
+		 * Max number of task running concurently in promise pool.
+		 * Will only be used if no executor is provided.
+		 * Default: 1
+		 */
+		nbMaxConcurency?: number;
+		/**
+		 * Promise pool executor to use.
+		 * Defaults to in-built pool executor.
+		 */
+		executor?: PromisePoolExecutor;
+	};
 }
