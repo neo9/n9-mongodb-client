@@ -3,10 +3,11 @@ import { StringMap } from './maps.models';
 export interface LockFieldConfiguration {
 	/**
 	 * List of fields that will never be locked.
+	 * Can be defined either as a string or a regex.
 	 * _id and objectInfos are always excluded.
 	 * Set to empty array to disable this feature.
 	 */
-	excludedFields?: string[];
+	excludedFields?: (string | RegExp)[];
 
 	/**
 	 * Array fields whose item unicity is determined by a key of the field,

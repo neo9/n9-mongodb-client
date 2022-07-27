@@ -27,7 +27,7 @@ export class AttributeEntity extends BaseMongoObject {
 	public defaultLanguageCode?: string;
 }
 
-class ArrayElement {
+class ObjectElement {
 	public code: string;
 	public value: string;
 }
@@ -39,8 +39,9 @@ class SampleComplexType extends BaseMongoObject {
 	public property?: {
 		value: string;
 	};
-	public objects?: ArrayElement[];
+	public objects?: ObjectElement[];
 	public strings?: string[];
+	public stringMap?: StringMap<ObjectElement>;
 }
 
 class ObjectWithArray extends BaseMongoObject {
@@ -86,6 +87,7 @@ const locksDataSample: SampleComplexType = {
 const getLockFieldsMongoClient = (
 	keepHistoric: boolean = false,
 	withArrayReferences: boolean = true,
+	excludedFieldsRegex?: RegExp[],
 ): MongoClient<SampleComplexType, SampleComplexType> => {
 	const conf: MongoClientConfiguration = {
 		keepHistoric,
@@ -98,6 +100,9 @@ const getLockFieldsMongoClient = (
 			objects: 'code',
 		};
 	}
+	if (excludedFieldsRegex) {
+		conf.lockFields.excludedFields = conf.lockFields.excludedFields.concat(excludedFieldsRegex);
+	}
 	return new MongoClient(`test-${Date.now()}`, SampleComplexType, SampleComplexType, conf);
 };
 
@@ -108,7 +113,17 @@ init();
 ava('[LOCK-FIELDS] Insert one and check locks', async (t: Assertions) => {
 	const mongoClient = getLockFieldsMongoClient();
 
-	const insertedEntity = await mongoClient.insertOne(_.cloneDeep(locksDataSample), '');
+	const lockDataEntity: SampleComplexType = {
+		...locksDataSample,
+		stringMap: {
+			abcd0f: {
+				code: 'val-1',
+				value: 'value1',
+			},
+		},
+	};
+
+	const insertedEntity = await mongoClient.insertOne(_.cloneDeep(lockDataEntity), '');
 
 	const entity = await mongoClient.findOneById(insertedEntity._id);
 
@@ -123,6 +138,54 @@ ava('[LOCK-FIELDS] Insert one and check locks', async (t: Assertions) => {
 			'objects[code=k1].value',
 			'objects[code=k2].value',
 			'objects[code=k3].value',
+			'stringMap.abcd0f.code',
+			'stringMap.abcd0f.value',
+		],
+		'all lock fields are present',
+	);
+	t.deepEqual(
+		insertedEntity.objectInfos.lockFields,
+		entity.objectInfos.lockFields,
+		'inserted value is same as saved one',
+	);
+});
+
+ava('[LOCK-FIELDS] Insert one and check locks with regex excluded field', async (t: Assertions) => {
+	const mongoClient = getLockFieldsMongoClient(false, true, [
+		/^objects\[code=k2\]/,
+		/^stringMap\.[0-9a-f]{6}\.((?!value))/,
+	]);
+
+	const lockDataEntity: SampleComplexType = {
+		...locksDataSample,
+		stringMap: {
+			abcd0f: {
+				code: 'val-1',
+				value: 'value1',
+			},
+			bdc31e: {
+				code: 'val-2',
+				value: 'value2',
+			},
+		},
+	};
+
+	const insertedEntity = await mongoClient.insertOne(_.cloneDeep(lockDataEntity), '');
+
+	const entity = await mongoClient.findOneById(insertedEntity._id);
+
+	t.true(!_.isEmpty(entity.objectInfos.lockFields), 'is there some lock fields');
+	t.deepEqual(
+		_.map(entity.objectInfos.lockFields, 'path'),
+		[
+			'text',
+			'property.value',
+			'strings["a"]',
+			'strings["b"]',
+			'objects[code=k1].value',
+			'objects[code=k3].value',
+			'stringMap.abcd0f.value',
+			'stringMap.bdc31e.value',
 		],
 		'all lock fields are present',
 	);

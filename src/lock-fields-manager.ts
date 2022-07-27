@@ -273,7 +273,7 @@ export class LockFieldsManager<U extends BaseMongoObject> {
 			const newEntityElement = newEntity[key];
 			if (
 				key === ignoreOnePath ||
-				this.conf.excludedFields?.includes(joinedPath) ||
+				this.isExcludedField(joinedPath) ||
 				LodashReplacerUtils.IS_NIL(newEntityElement)
 			) {
 				continue;
@@ -345,7 +345,7 @@ export class LockFieldsManager<U extends BaseMongoObject> {
 			const existingEntityElement = existingEntity[key];
 			const currentPath = LangUtils.getJoinPaths(basePath, key);
 
-			if (this.conf.excludedFields?.includes(currentPath)) {
+			if (this.isExcludedField(currentPath)) {
 				continue;
 			}
 
@@ -448,5 +448,14 @@ export class LockFieldsManager<U extends BaseMongoObject> {
 			}
 		}
 		return ret;
+	}
+
+	private isExcludedField(path: string): boolean {
+		return _.some(this.conf.excludedFields, (excludedField) => {
+			if (excludedField instanceof RegExp) {
+				return path.match(excludedField);
+			}
+			return excludedField === path;
+		});
 	}
 }
