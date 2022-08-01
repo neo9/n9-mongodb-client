@@ -1,5 +1,16 @@
 
 
+# [0.30.0-rc.1](https://github.com/neo9/n9-mongo-client/compare/0.30.0-rc.0...0.30.0-rc.1) (2022-08-01)
+
+
+### locks
+
+* Add regex support for excluded fields ([3de7068](https://github.com/neo9/n9-mongo-client/commit/3de7068d480f7fe1eb638df20e613408ada8e19d))
+
+### update
+
+* Add promise pool in updateManyAtOnce #59 ([3b1c0c9](https://github.com/neo9/n9-mongo-client/commit/3b1c0c95cd99dc69e5618fa4ff2daf988cfcfc5e)), closes [#59](https://github.com/neo9/n9-mongo-client/issues/59)
+
 # [0.30.0-rc.0](https://github.com/neo9/n9-mongo-client/compare/0.29.1...0.30.0-rc.0) (2022-07-25)
 
 
