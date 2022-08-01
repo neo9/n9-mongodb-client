@@ -2010,7 +2010,7 @@ debug@^2.6.9:
   dependencies:
     ms "2.0.0"
 
-debug@^3.2.7:
+debug@^3.1.0, debug@^3.2.7:
   version "3.2.7"
   resolved "https://registry.npmjs.org/debug/-/debug-3.2.7.tgz#72580b7e9145fb39b6676f9c5e5fb100b934179a"
   integrity sha512-CFjzYYAi4ThfiQvizrFQevTTXHtnCqWfe7x1AhgEscTz6ZbLbfoLRLPugTQyBth6f8ZERVUSyWHFD/7Wu4t1XQ==
@@ -4244,6 +4244,11 @@ new-github-release-url@1.0.0:
   dependencies:
     type-fest "^0.4.1"
 
+next-tick@^1.0.0:
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/next-tick/-/next-tick-1.1.0.tgz#1836ee30ad56d67ef281b22bd199f709449b35eb"
+  integrity sha512-CXdUiJembsNjuToQvxayPZF9Vqht7hewsvy2sOWafLvi2awflj9mOC6bHIg50orX8IJvWKY9wYQ/zB2kogPslQ==
+
 node-fetch@^2.6.1, node-fetch@^2.6.7:
   version "2.6.7"
   resolved "https://registry.npmjs.org/node-fetch/-/node-fetch-2.6.7.tgz#24de9fba827e3b4ae44dc8b20256a379160052ad"
@@ -4467,6 +4472,11 @@ p-defer@^1.0.0:
   version "1.0.0"
   resolved "https://registry.npmjs.org/p-defer/-/p-defer-1.0.0.tgz#9f6eb182f6c9aa8cd743004a7d4f96b196b0fb0c"
   integrity sha1-n26xgvbJqozXQwBKfU+WsZaw+ww=
+
+p-defer@^3.0.0:
+  version "3.0.0"
+  resolved "https://registry.yarnpkg.com/p-defer/-/p-defer-3.0.0.tgz#d1dceb4ee9b2b604b1d94ffec83760175d4e6f83"
+  integrity sha512-ugZxsxmtTln604yeYd29EGrNhazN2lywetzpKhfmQjW/VJmhpDmWbiX+h0zL8V91R0UXkhb3KtPmyq9PZw3aYw==
 
 p-event@^5.0.1:
   version "5.0.1"
@@ -4844,6 +4854,23 @@ progress@^2.0.0:
   version "2.0.3"
   resolved "https://registry.npmjs.org/progress/-/progress-2.0.3.tgz#7e8cf8d8f5b8f239c1bc68beb4eb78567d572ef8"
   integrity sha512-7PiHtLll5LdnKIMw100I+8xJXR5gW2QwWYkT6iJva0bXitZKa/XMrSbdmg3r2Xnaidz9Qumd0VPaMrZlF9V9sA==
+
+promise-batcher@^1.0.1:
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/promise-batcher/-/promise-batcher-1.1.0.tgz#99f74d8d8c58f925b2cfb169f1e774eaaa9f4d19"
+  integrity sha512-Q/+G7i1ZqRCx56s9W1RRjhK6xveb2UkZz4Lt6xksO3SjcglDrRrQ4YRQ4WtalOFCzUNiAhstLLOX31QJRmr/BA==
+  dependencies:
+    p-defer "^3.0.0"
+
+promise-pool-executor@^1.1.1:
+  version "1.1.1"
+  resolved "https://registry.yarnpkg.com/promise-pool-executor/-/promise-pool-executor-1.1.1.tgz#dd75137b253026599430c899faf98a96b46b99a8"
+  integrity sha512-WZTGr7E8tiW93QoSRe0+arBIrJ13m7yKov/vyWqP8nkME/OjfzZgmSJjLtcDHd6VVz2LdSoAHZLmDfis8hJd1w==
+  dependencies:
+    debug "^3.1.0"
+    next-tick "^1.0.0"
+    p-defer "^1.0.0"
+    promise-batcher "^1.0.1"
 
 promise.allsettled@1.0.5:
   version "1.0.5"

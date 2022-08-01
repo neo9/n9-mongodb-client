@@ -2,6 +2,7 @@ import { N9Log } from '@neo9/n9-node-log';
 import ava, { Assertions } from 'ava';
 import * as _ from 'lodash';
 import { Db } from 'mongodb';
+import { PromisePoolExecutor } from 'promise-pool-executor';
 
 import { MongoClient, MongoUtils } from '../src';
 import { BaseMongoObject } from '../src/models';
@@ -235,6 +236,155 @@ ava(
 		t.is(updateResult.length, 1, '1 entity updated');
 		t.is(updateResult[0].value, '0', 'value not updated');
 		t.is(updateResult[0].status, 'OK', 'status updated');
+	},
+);
+
+ava(
+	'[UPDATE MANY AT ONCE] Should not update entity if mapAfterLockFieldsApplied returns undefined',
+	async (t: Assertions) => {
+		const collectionName = `test-${Date.now()}`;
+		const mongoClient = new MongoClient(collectionName, SampleType, SampleType, {
+			lockFields: {
+				arrayWithReferences: {
+					externalReferences: 'value',
+				},
+				excludedFields: ['sku', 'status'],
+			},
+		});
+
+		const insertedValue = await mongoClient.insertOne(
+			{
+				sku: 'sku-1',
+				externalReferences: [
+					{
+						value: 'ext1',
+					},
+				],
+				value: '0',
+			},
+			'test',
+		);
+		t.is(insertedValue.value, '0', 'value inserted');
+		t.is(insertedValue.status, undefined, 'status is undefined');
+		t.is(insertedValue.objectInfos.lockFields.length, 2, 'should lock new fields');
+
+		const newEntity1: SampleType = {
+			sku: 'sku-1',
+			externalReferences: [
+				{
+					value: 'ext1',
+				},
+			],
+			value: '1',
+		};
+		const newEntity2: SampleType = {
+			sku: 'sku-2',
+			externalReferences: [
+				{
+					value: 'ext2',
+				},
+			],
+			value: '2',
+		};
+		const newEntity3: SampleType = {
+			sku: 'ABCD',
+			externalReferences: [
+				{
+					value: 'ext3',
+				},
+			],
+			value: '3',
+		};
+
+		const updateResult = await (
+			await mongoClient.updateManyAtOnce([newEntity1, newEntity2, newEntity3], 'userId', {
+				query: (e) => ({ sku: e.sku }),
+				upsert: true,
+				lockNewFields: false,
+				forceEditLockFields: false,
+				mapFunction: (entity: SampleType, existingEntity) =>
+					mapSampleTypeCreateToSampleType(entity, existingEntity),
+				hooks: {
+					mapAfterLockFieldsApplied: (entity) => {
+						if (entity.sku.includes('sku')) {
+							return;
+						}
+						return entity;
+					},
+				},
+				pool: {
+					nbMaxConcurency: 3,
+				},
+			})
+		).toArray();
+
+		t.is(updateResult.length, 1, '1 entity updated');
+		t.is(updateResult[0].sku, 'ABCD', 'Correct entity should be updated');
+	},
+);
+
+ava(
+	'[UPDATE MANY AT ONCE] Should use options pool promise exectuor if defined',
+	async (t: Assertions) => {
+		const collectionName = `test-${Date.now()}`;
+		const mongoClient = new MongoClient(collectionName, SampleType, SampleType);
+
+		const newEntity1: SampleType = {
+			sku: 'sku-1',
+			externalReferences: [
+				{
+					value: 'ext1',
+				},
+			],
+			value: '1',
+		};
+		const newEntity2: SampleType = {
+			sku: 'sku-2',
+			externalReferences: [
+				{
+					value: 'ext2',
+				},
+			],
+			value: '2',
+		};
+		const newEntity3: SampleType = {
+			sku: 'sku-3',
+			externalReferences: [
+				{
+					value: 'ext3',
+				},
+			],
+			value: '3',
+		};
+
+		const customPoolExecutor = new PromisePoolExecutor({
+			concurrencyLimit: 1,
+		});
+		t.is(customPoolExecutor.activePromiseCount, 0, 'no active promises yet in custom executor');
+		t.is(customPoolExecutor.freeSlots, 1, '1 remaining slot for promise concurrency');
+
+		const updateResult = await (
+			await mongoClient.updateManyAtOnce([newEntity1, newEntity2, newEntity3], 'userId', {
+				query: (e) => ({ sku: e.sku }),
+				upsert: true,
+				mapFunction: (entity: SampleType, existingEntity) =>
+					mapSampleTypeCreateToSampleType(entity, existingEntity),
+				hooks: {
+					mapAfterLockFieldsApplied: (entity) => {
+						t.is(customPoolExecutor.activePromiseCount, 1, 'hook called from custom executor');
+						t.is(customPoolExecutor.freeSlots, 0, 'max concurrency reached');
+						return entity;
+					},
+				},
+				pool: {
+					nbMaxConcurency: 3,
+					executor: customPoolExecutor,
+				},
+			})
+		).toArray();
+
+		t.is(customPoolExecutor.activePromiseCount, 0, 'no more active promises in custom executor');
+		t.is(updateResult.length, 3, '3 entity updated');
 	},
 );
 

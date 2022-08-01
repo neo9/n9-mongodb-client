@@ -9,6 +9,10 @@ class TestEntity {
 	i;
 }
 
+async function timeout(ms) {
+	return new Promise((resolve) => setTimeout(() => resolve(), ms));
+}
+
 async function runInsertBench(defaultCaseRunOptions, version) {
 	const nbElement = 100;
 	const suiteName = `Insert Case ${nbElement}`;
@@ -160,6 +164,37 @@ async function runUpdateManyAtOnceBench(defaultCaseRunOptions, version) {
 					await mongoClient.updateManyAtOnce(dataToInsert, 'userId', {
 						unsetUndefined: false,
 						upsert: true,
+					});
+				};
+			},
+			defaultCaseRunOptions,
+		),
+		add(
+			'Update many at once N9MongoClient with async hooks and query',
+			async () => {
+				const mongoClient = new MongoClient('test-2', TestEntity, TestEntity);
+				return async () => {
+					await mongoClient.updateManyAtOnce(dataToInsert, 'userId', {
+						unsetUndefined: true,
+						forceEditLockFields: true,
+						upsert: true,
+						query: 'i',
+						lockNewFields: false,
+						onlyInsertFieldsKey: ['i'],
+						returnNewEntities: true, // default
+						mapFunction: async (entity) => {
+							await timeout(5);
+							return entity;
+						},
+						hooks: {
+							mapAfterLockFieldsApplied: async (entity) => {
+								await timeout(5);
+								return entity;
+							},
+						},
+						pool: {
+							nbMaxConcurrency: 10,
+						},
 					});
 				};
 			},
