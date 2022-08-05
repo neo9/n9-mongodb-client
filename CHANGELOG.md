@@ -1,5 +1,12 @@
 
 
+# [0.30.0](https://github.com/neo9/n9-mongo-client/compare/0.30.0-rc.1...0.30.0) (2022-08-05)
+
+
+### yarn
+
+* Fix class-transformer peer dependency version ([a984cac](https://github.com/neo9/n9-mongo-client/commit/a984cac36842038507f653343ad7d58376a6b817))
+
 # [0.30.0-rc.1](https://github.com/neo9/n9-mongo-client/compare/0.30.0-rc.0...0.30.0-rc.1) (2022-08-01)
 
 
