@@ -60,7 +60,7 @@
     "promise-pool-executor": "^1.1.1"
   },
   "peerDependencies": {
-    "class-transformer": "^0.3.2"
+    "class-transformer": "^0.4.0"
   },
   "devDependencies": {
     "@ava/typescript": "^3.0.1",
