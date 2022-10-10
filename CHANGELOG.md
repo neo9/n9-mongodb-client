@@ -1,5 +1,17 @@
 
 
+## [0.30.1](https://github.com/neo9/n9-mongo-client/compare/0.30.0...0.30.1) (2022-10-10)
+
+
+### update
+
+* Sometime modification date and history were not updated #60 ([44dc687](https://github.com/neo9/n9-mongo-client/commit/44dc68700a63713cbaba0457bf90e20793775d24)), closes [#60](https://github.com/neo9/n9-mongo-client/issues/60)
+
+### yarn
+
+* Upgrade conventional-changelog to latest version 5.1.1 ([67900cc](https://github.com/neo9/n9-mongo-client/commit/67900ccad0494d6cdc1f6af1b8470799bbbabafe))
+* Upgrade release-it to latest version 15.5.0 ([d2ee4ca](https://github.com/neo9/n9-mongo-client/commit/d2ee4cabbd8edbf9cf1d96995707b0bbbb1e27b6))
+
 # [0.30.0](https://github.com/neo9/n9-mongo-client/compare/0.30.0-rc.1...0.30.0) (2022-08-05)
 
 
