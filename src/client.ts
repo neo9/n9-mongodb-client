@@ -588,7 +588,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				await this.collection.findOneAndUpdate(query, updateQuery, {
 					upsert,
 					arrayFilters,
-					returnOriginal: !returnNewValue,
+					returnOriginal: false,
 				})
 			).value;
 			if (returnNewValue || this.conf.keepHistoric || this.conf.updateOnlyOnChange) {
@@ -599,23 +599,15 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			}
 
 			if (this.conf.keepHistoric || this.conf.updateOnlyOnChange) {
-				if (snapshot && !this.historicManager.areValuesEquals(snapshot, newEntity)) {
+				if (snapshot && !this.areEntitiesEqualToUpdateOnlyOnChange(snapshot, newEntity)) {
 					if (this.conf.keepHistoric) {
 						await this.historicManager.insertOne(newEntity._id, snapshot, now, userId);
 					}
 					if (this.conf.updateOnlyOnChange) {
-						const newUpdate = await this.updateLastModificationDate(
-							snapshot,
-							newEntity,
-							now,
-							userId,
-						);
+						const newUpdate = await this.updateLastModificationDate(newEntity._id, now, userId);
 
-						if (returnNewValue && newUpdate) {
-							newEntity = MongoUtils.mapObjectToClass(
-								this.type,
-								MongoUtils.unRemoveSpecialCharactersInKeys(newUpdate),
-							);
+						if (returnNewValue) {
+							newEntity.objectInfos.lastModification = newUpdate.objectInfos.lastModification;
 						}
 					}
 				}
@@ -1391,7 +1383,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 
 			const bulkResult = await this.collection.bulkWrite(bulkOperations);
 
-			if (returnNewEntities) {
+			if (returnNewEntities || this.conf.keepHistoric || this.conf.updateOnlyOnChange) {
 				const newValuesQuery = {
 					_id: {
 						$in: MongoUtils.oids([
@@ -1410,34 +1402,33 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 					);
 
 					await newValuesStream.forEachPage(async (newValuesEntities: U[]) => {
-						const modifications: { snapshot: U; newEntity: U }[] = [];
+						const snapshotToHistories: U[] = [];
 
 						for (const newEntity of newValuesEntities) {
 							const snapshot: U = oldValuesSaved[newEntity._id];
 
 							if (snapshot) {
-								if (!this.historicManager.areValuesEquals(snapshot, newEntity)) {
-									modifications.push({
-										snapshot,
-										newEntity,
-									});
+								if (!this.areEntitiesEqualToUpdateOnlyOnChange(snapshot, newEntity)) {
+									snapshotToHistories.push(snapshot);
 								}
 							}
 						}
 						if (this.conf.keepHistoric) {
-							await this.historicManager.insertMany(
-								modifications.map((modification) => modification.snapshot),
+							await this.historicManager.insertMany(snapshotToHistories, now, userId);
+						}
+
+						if (this.conf.updateOnlyOnChange) {
+							await this.updateLastModificationDateBulk(
+								snapshotToHistories.map((value) => value._id),
 								now,
 								userId,
 							);
 						}
-
-						if (this.conf.updateOnlyOnChange) {
-							await this.updateLastModificationDateBulk(modifications, now, userId);
-						}
 					});
 				}
-				return this.findWithType(newValuesQuery, this.type, 0, newEntities?.length);
+				if (returnNewEntities) {
+					return this.findWithType(newValuesQuery, this.type, 0, newEntities.length);
+				}
 			}
 		} catch (e) {
 			LangUtils.throwN9ErrorFromError(e, {
@@ -1725,22 +1716,16 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 	}
 
 	private async updateLastModificationDate(
-		snapshot: U,
-		newEntity: U,
-		updateDate: Date,
+		id: string,
+		modificationDate: Date,
 		userId: string,
 	): Promise<U> {
-		// if no change were detected, don't update lastModification
-		if (this.areEntitiesEqualToUpdateOnlyOnChange(snapshot, newEntity)) {
-			return newEntity;
-		}
-
 		const updateResult = await this.collection.findOneAndUpdate(
-			{ _id: MongoUtils.oid(newEntity._id) as any },
+			{ _id: MongoUtils.oid(id) as any },
 			{
 				$set: {
 					'objectInfos.lastModification': {
-						date: updateDate,
+						date: modificationDate,
 						userId: (ObjectId.isValid(userId) ? MongoUtils.oid(userId) : userId) as string,
 					},
 				} as any,
@@ -1753,20 +1738,10 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 	}
 
 	private async updateLastModificationDateBulk(
-		modifications: { snapshot: U; newEntity: U }[],
+		idsToUpdate: string[],
 		updateDate: Date,
 		userId: string,
 	): Promise<void> {
-		const idsToUpdate: string[] = [];
-
-		for (const modification of modifications) {
-			if (
-				!this.areEntitiesEqualToUpdateOnlyOnChange(modification.snapshot, modification.newEntity)
-			) {
-				idsToUpdate.push(modification.newEntity._id);
-			}
-		}
-
 		if (LodashReplacerUtils.IS_ARRAY_EMPTY(idsToUpdate)) return;
 
 		await this.collection.updateMany(

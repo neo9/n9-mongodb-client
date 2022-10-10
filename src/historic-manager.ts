@@ -1,6 +1,5 @@
 import { N9Log } from '@neo9/n9-node-log';
 import { diff as deepDiff } from 'deep-diff';
-import * as fastDeepEqual from 'fast-deep-equal/es6';
 import { Collection, Cursor, Db, IndexOptions, ObjectId } from 'mongodb';
 
 import { IndexManager } from './index-manager';
@@ -228,14 +227,6 @@ export class HistoricManager<U extends BaseMongoObject> {
 		} catch (e) {
 			LangUtils.throwN9ErrorFromError(e);
 		}
-	}
-
-	public areValuesEquals(snapshot: U, newEntity: U): boolean {
-		const { oldValue, newValue }: { oldValue: U; newValue: U } = this.cleanObjectInfos(
-			snapshot,
-			newEntity,
-		);
-		return fastDeepEqual(oldValue, newValue);
 	}
 
 	// eslint-disable-next-line class-methods-use-this
