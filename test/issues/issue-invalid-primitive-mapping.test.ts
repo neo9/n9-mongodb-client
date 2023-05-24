@@ -18,8 +18,8 @@ class PrimitiveArrayHolder extends BaseMongoObject {
 let mongod: MongoMemoryServer;
 
 ava.before(async () => {
-	mongod = new MongoMemoryServer();
-	const uri = await mongod.getConnectionString();
+	mongod = await MongoMemoryServer.create();
+	const uri = mongod.getUri();
 	await MongoUtils.connect(uri);
 });
 

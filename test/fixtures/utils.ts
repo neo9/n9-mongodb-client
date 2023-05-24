@@ -51,12 +51,12 @@ export function init(): void {
 				global.log.warn(`Using MongoDB in memory`);
 				isInMemory = true;
 				// no classic mongodb available, so use one in memory
-				mongod = new MongoMemoryServer({
+				mongod = await MongoMemoryServer.create({
 					binary: {
 						version: '4.2.12',
 					},
 				});
-				mongoConnectionString = await mongod.getUri();
+				mongoConnectionString = mongod.getUri();
 				await MongoUtils.connect(mongoConnectionString);
 			} else {
 				throw e;

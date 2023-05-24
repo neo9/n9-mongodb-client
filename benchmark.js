@@ -456,9 +456,8 @@ async function start() {
 	let mongod;
 
 	try {
-		mongod = new MongoMemoryServer();
-		const uri = await mongod.getConnectionString();
-		await MongoUtils.connect(uri);
+		mongod = await MongoMemoryServer.create();
+		await MongoUtils.connect(mongod.getUri());
 		const defaultCaseRunOptions = {
 			minSamples: 100,
 		};
@@ -472,8 +471,6 @@ async function start() {
 		await global.db.dropDatabase();
 		await runUpdateManyAtOnceHistoricBench(defaultCaseRunOptions, version);
 		await global.db.dropDatabase();
-	} catch (e) {
-		throw e;
 	} finally {
 		if (global.db) {
 			await global.db.dropDatabase();

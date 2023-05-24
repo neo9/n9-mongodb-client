@@ -10,8 +10,7 @@ global.log = new N9Log('tests');
 
 ava('[Errors] Check error thrown on every client function', async (t: Assertions) => {
 	const mongoMemoryServer = await MongoMemoryServer.create();
-	await mongoMemoryServer.start();
-	const uri = await mongoMemoryServer.getUri();
+	const uri = mongoMemoryServer.getUri();
 
 	await t.notThrowsAsync(mongoMemoryServer.ensureInstance(), 'ensure mongo is up');
 
