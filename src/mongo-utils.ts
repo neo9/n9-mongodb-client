@@ -6,6 +6,11 @@ import * as mongodb from 'mongodb';
 
 import { LodashReplacerUtils } from './lodash-replacer.utils';
 import { ClassType } from './models/class-type.models';
+import { MongoUtilsOptions } from './models/mongo-utils-options.models';
+
+const defaultConnectOptions: MongoUtilsOptions = {
+	killProcessOnReconnectFailed: true,
+};
 
 export class MongoUtils {
 	private static readonly MONGO_ID_REGEXP: RegExp = /^[0-9a-f]{24}$/;
@@ -13,13 +18,47 @@ export class MongoUtils {
 	public static async connect(
 		url: string,
 		options: mongodb.MongoClientOptions = { useNewUrlParser: true },
+		connectOptions: MongoUtilsOptions = {},
 	): Promise<mongodb.Db> {
+		const baseConnectOptions: MongoUtilsOptions = {
+			...defaultConnectOptions,
+			...connectOptions,
+		};
 		const log = global.log.module('mongo');
 		log.info(`Connecting to ${MongoUtils.hidePasswordFromURI(url)}...`);
-		global.dbClient = await mongodb.MongoClient.connect(url, options);
-		const db = (global.dbClient as mongodb.MongoClient).db();
+
+		const mongoClient = new mongodb.MongoClient(url, options);
+		const safeUrl = MongoUtils.hidePasswordFromURI(url);
+
+		mongoClient.on('serverOpening', () => {
+			log.info(`Connection to the mongodb server is being established...`);
+		});
+		mongoClient.on('open', () => {
+			log.info(`Client connected to ${safeUrl}.`);
+		});
+		mongoClient.on('close', () => {
+			log.info(`Client disconnected from ${safeUrl}.`);
+		});
+		mongoClient.on('reconnect', () => {
+			log.info(`Client reconnected to ${safeUrl}.`);
+		});
+		mongoClient.on('timeout', () => {
+			log.warn(`Client connection or operation timed out`);
+		});
+
+		const dbClient = await mongoClient.connect();
+		global.dbClient = dbClient;
+		const db = dbClient.db();
 		global.db = db;
-		log.info(`Connected`);
+
+		(db as any).s.topology.on('reconnectFailed', () => {
+			log.warn(`Client reconnection failed.`);
+			if (baseConnectOptions.killProcessOnReconnectFailed) {
+				log.warn(`Sending SIGTERM to stop process.`);
+				process.kill(process.pid, 'SIGTERM');
+			}
+		});
+
 		return db;
 	}
 
@@ -27,7 +66,7 @@ export class MongoUtils {
 		if (!global.dbClient) return;
 
 		const log = global.log.module('mongo');
-		log.info(`Disconnect from MongoDB.`);
+		log.info(`Disconnecting from MongoDB...`);
 		await new Promise((resolve) => {
 			(global.dbClient as mongodb.MongoClient).logout(resolve);
 		});
