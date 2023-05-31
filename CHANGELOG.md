@@ -1,5 +1,20 @@
 
 
+# [0.31.0](https://github.com/neo9/n9-mongo-client/compare/0.30.1...0.31.0) (2023-05-31)
+
+
+### events
+
+* Add logs and sigterm on mongo events #65 ([43d3a68](https://github.com/neo9/n9-mongo-client/commit/43d3a68e9306d9359dac00c9c8fa8dcc06a8263f)), closes [#65](https://github.com/neo9/n9-mongo-client/issues/65)
+
+### release
+
+* Remove ci release to allow otp prompt ([dcab7d5](https://github.com/neo9/n9-mongo-client/commit/dcab7d57e073e94ce50c39a19faabdf802aead35))
+
+### yarn
+
+* Upgrade n9-node-log version ([8a2d103](https://github.com/neo9/n9-mongo-client/commit/8a2d103d13dce610da12e7372edf9e85f71275fd))
+
 ## [0.30.1](https://github.com/neo9/n9-mongo-client/compare/0.30.0...0.30.1) (2022-10-10)
 
 
