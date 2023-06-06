@@ -1,6 +1,6 @@
 import { N9Log } from '@neo9/n9-node-log';
 import ava, { ExecutionContext } from 'ava';
-import { FilterQuery } from 'mongodb';
+import { Filter } from 'mongodb';
 
 import { MongoClient, StringMap } from '../src';
 import { BaseMongoObject } from '../src/models';
@@ -96,7 +96,7 @@ ava(
 );
 
 ava('[GET-RANGES] Get ranges with query filter', async (t: ExecutionContext<TestContext>) => {
-	const query: FilterQuery<SampleType> = { index: { $in: [2, 10, 30, 25, 41, 33] } };
+	const query: Filter<SampleType> = { index: { $in: [2, 10, 30, 25, 41, 33] } };
 	const allIds = await t.context.mongoClient.find(query, 0, 0, {}, { _id: 1 }).toArray();
 	const expectedIdsByRange: StringMap<{ _id: string; value: number }[]> = {};
 	for (const range of [1, 2, 3, 4, 5, 10, 20, 80]) {

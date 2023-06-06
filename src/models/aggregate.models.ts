@@ -1,4 +1,4 @@
-import { FilterQuery } from 'mongodb';
+import { Filter } from 'mongodb';
 
 import { StringMap } from './maps.models';
 
@@ -276,7 +276,7 @@ export interface GeoNearPipelineStageValue<T = any> {
 	 * Limits the results to the documents that match the query. The query syntax is the usual MongoDB read operation query syntax.
 	 * You cannot specify a $near predicate in the query field of the $geoNear stage.
 	 */
-	query?: FilterQuery<T>;
+	query?: Filter<T>;
 	/**
 	 * Optional.
 	 * The factor to multiply all distances returned by the query.
@@ -370,7 +370,7 @@ export interface GraphLookupPipelineStageValue<T = any> {
 	 * Optional. A document specifying additional conditions for the recursive search. The syntax is identical to query filter syntax.
 	 * You cannot use any aggregation expression in this filter.
 	 */
-	restrictSearchWithMatch: FilterQuery<T>;
+	restrictSearchWithMatch: Filter<T>;
 }
 
 export interface GraphLookupPipelineStage {
@@ -476,7 +476,7 @@ export interface LookupPipelineStage {
 
 /* MATCH */
 export interface MatchPipelineStage<T = any> {
-	[AggregationPipelineStageOperator.MATCH]: FilterQuery<T>;
+	[AggregationPipelineStageOperator.MATCH]: Filter<T>;
 }
 
 export interface MergePipelineStage {

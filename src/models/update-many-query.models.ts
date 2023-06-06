@@ -1,4 +1,4 @@
-import { FilterQuery, UpdateQuery } from 'mongodb';
+import { Filter, UpdateFilter } from 'mongodb';
 
 /**
  * Queries to run bulk of update one
@@ -22,10 +22,10 @@ export class UpdateManyQuery<T> {
 	/**
 	 * If provided the target of the entity to update
 	 */
-	public query?: FilterQuery<T>;
+	public query?: Filter<T>;
 
 	/**
 	 * The update to run, will be filled with objectInfos update
 	 */
-	public updateQuery: UpdateQuery<T>;
+	public updateQuery: UpdateFilter<T>;
 }

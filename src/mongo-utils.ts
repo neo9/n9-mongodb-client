@@ -2,96 +2,97 @@
 import { N9Error } from '@neo9/n9-node-utils';
 import { ClassTransformOptions, plainToClass } from 'class-transformer';
 import * as _ from 'lodash';
-import * as mongodb from 'mongodb';
+import {
+	ClientSession,
+	Db,
+	Document,
+	ListCollectionsCursor,
+	ListCollectionsOptions,
+	MongoClient,
+	MongoClientOptions,
+	ObjectId,
+	ReadPreferenceMode,
+} from 'mongodb';
 
 import { LodashReplacerUtils } from './lodash-replacer.utils';
 import { ClassType } from './models/class-type.models';
-import { MongoUtilsOptions } from './models/mongo-utils-options.models';
-
-const defaultConnectOptions: MongoUtilsOptions = {
-	killProcessOnReconnectFailed: true,
-};
 
 export class MongoUtils {
 	private static readonly MONGO_ID_REGEXP: RegExp = /^[0-9a-f]{24}$/;
 
-	public static async connect(
-		url: string,
-		options: mongodb.MongoClientOptions = { useNewUrlParser: true },
-		connectOptions: MongoUtilsOptions = {},
-	): Promise<mongodb.Db> {
-		const baseConnectOptions: MongoUtilsOptions = {
-			...defaultConnectOptions,
-			...connectOptions,
-		};
+	public static async connect(url: string, options: MongoClientOptions = {}): Promise<Db> {
 		const log = global.log.module('mongo');
-		log.info(`Connecting to ${MongoUtils.hidePasswordFromURI(url)}...`);
+		const mongoClient: MongoClient = new MongoClient(url, options);
+		const safeUrl: string = MongoUtils.hidePasswordFromURI(url);
 
-		const mongoClient = new mongodb.MongoClient(url, options);
-		const safeUrl = MongoUtils.hidePasswordFromURI(url);
+		// See https://www.mongodb.com/community/forums/t/what-is-the-minimum-and-maximum-values-of-reconnecttries-and-reconnectinterval-of-mongodb-node-js-driver/155949
+		// NOW we have to use serverSelectionTimeoutMS, socketTimeoutMS instead of reconnectTries and reconnectInterval
 
-		mongoClient.on('serverOpening', () => {
-			log.info(`Connection to the mongodb server is being established...`);
-		});
 		mongoClient.on('open', () => {
 			log.info(`Client connected to ${safeUrl}.`);
 		});
+
 		mongoClient.on('close', () => {
 			log.info(`Client disconnected from ${safeUrl}.`);
 		});
-		mongoClient.on('reconnect', () => {
-			log.info(`Client reconnected to ${safeUrl}.`);
-		});
+
 		mongoClient.on('timeout', () => {
 			log.warn(`Client connection or operation timed out`);
 		});
 
-		const dbClient = await mongoClient.connect();
-		global.dbClient = dbClient;
-		const db = dbClient.db();
-		global.db = db;
-
-		(db as any).s.topology.on('reconnectFailed', () => {
-			log.warn(`Client reconnection failed.`);
-			if (baseConnectOptions.killProcessOnReconnectFailed) {
-				log.warn(`Sending SIGTERM to stop process.`);
-				process.kill(process.pid, 'SIGTERM');
-			}
+		mongoClient.on('connectionCreated', () => {
+			log.warn(`Client connection created`);
 		});
+
+		mongoClient.on('serverClosed', () => {
+			log.warn(`mongo server Closed`);
+		});
+
+		try {
+			log.info(`Connecting to ${MongoUtils.hidePasswordFromURI(url)}...`);
+			await mongoClient.connect();
+			await mongoClient.db('admin').command({ ping: 1 });
+			log.info(`Client connected to ${safeUrl}.`);
+		} catch (err) {
+			log.error(`Client failed to connect to ${safeUrl}.`);
+			throw err;
+		}
+
+		global.dbClient = mongoClient;
+		const db = mongoClient.db();
+		global.db = db;
 
 		return db;
 	}
 
 	public static async disconnect(): Promise<void> {
 		if (!global.dbClient) return;
-
 		const log = global.log.module('mongo');
+
 		log.info(`Disconnecting from MongoDB...`);
-		await new Promise((resolve) => {
-			(global.dbClient as mongodb.MongoClient).logout(resolve);
-		});
+
+		return await (global.dbClient as MongoClient).close();
 	}
 
 	public static isMongoId(id: string): boolean {
 		return this.MONGO_ID_REGEXP.test(id);
 	}
 
-	public static oid(id: string | mongodb.ObjectID): mongodb.ObjectID | null {
+	public static oid(id: string | ObjectId): ObjectId | null {
 		if (!id) return id as null;
+
 		try {
-			return new mongodb.ObjectID(id);
-		} catch (e) {
+			return new ObjectId(id);
+		} catch (err) {
 			if (typeof id === 'string' && !this.isMongoId(id)) {
 				throw new N9Error('invalid-mongo-id', 400, { id });
 			} else {
-				throw e;
+				throw err;
 			}
 		}
 	}
 
-	public static oids(
-		ids: string[] | mongodb.ObjectID[] | (string | mongodb.ObjectID)[],
-	): mongodb.ObjectID[] | undefined {
+	public static oids(ids: string[] | ObjectId[] | (string | ObjectId)[]): ObjectId[] | undefined {
 		if (ids) {
 			return (ids as any[]).map((id) => MongoUtils.oid(id));
 		}
@@ -100,7 +101,7 @@ export class MongoUtils {
 
 	public static mapObjectIdToStringHex(obj: any): any {
 		for (const [key, value] of Object.entries(obj)) {
-			if (value instanceof mongodb.ObjectID) {
+			if (value instanceof ObjectId) {
 				obj[key] = value.toHexString();
 			} else if (value && typeof value === 'object') {
 				MongoUtils.mapObjectIdToStringHex(value);
@@ -127,7 +128,7 @@ export class MongoUtils {
 			LodashReplacerUtils.IS_STRING(obj) ||
 			LodashReplacerUtils.IS_BOOLEAN(obj) ||
 			LodashReplacerUtils.IS_NUMBER(obj) ||
-			obj instanceof mongodb.ObjectID ||
+			obj instanceof ObjectId ||
 			LodashReplacerUtils.IS_DATE(obj)
 		) {
 			return obj;
@@ -153,7 +154,7 @@ export class MongoUtils {
 			LodashReplacerUtils.IS_STRING(obj) ||
 			LodashReplacerUtils.IS_BOOLEAN(obj) ||
 			LodashReplacerUtils.IS_NUMBER(obj) ||
-			obj instanceof mongodb.ObjectID ||
+			obj instanceof ObjectId ||
 			LodashReplacerUtils.IS_DATE(obj)
 		) {
 			return obj;
@@ -192,24 +193,32 @@ export class MongoUtils {
 	}
 
 	public static listCollections(
-		filter?: object,
+		filter?: Document,
 		options?: {
 			nameOnly?: boolean;
 			batchSize?: number;
-			readPreference?: mongodb.ReadPreferenceOrMode;
-			session?: mongodb.ClientSession;
+			readPreference?: ReadPreferenceMode;
+			session?: ClientSession;
 		},
-	): mongodb.CommandCursor {
-		return (global.db as mongodb.Db).listCollections(filter, options);
+	): ListCollectionsCursor {
+		const opt: ListCollectionsOptions = {
+			nameOnly: options?.nameOnly,
+			batchSize: options?.batchSize,
+			session: options?.session,
+			readPreference: options.readPreference,
+		};
+
+		return (global.db as Db).listCollections(filter, opt);
 	}
 
-	public static async listCollectionsNames(filter?: object): Promise<string[]> {
-		const cursor = MongoUtils.listCollections(filter, { nameOnly: true });
+	public static async listCollectionsNames(filter?: Document): Promise<string[]> {
+		const cursor: ListCollectionsCursor = MongoUtils.listCollections(filter, { nameOnly: true });
 		const ret: string[] = [];
-		while (await cursor.hasNext()) {
-			const item: any = await cursor.next();
+
+		for await (const item of cursor) {
 			ret.push(item.name);
 		}
+
 		return ret;
 	}
 }

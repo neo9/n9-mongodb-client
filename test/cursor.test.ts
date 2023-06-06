@@ -1,6 +1,7 @@
 import { N9Log } from '@neo9/n9-node-log';
 import { waitFor } from '@neo9/n9-node-utils';
 import ava, { Assertions } from 'ava';
+import { FindCursor } from 'mongodb';
 import { Transform } from 'stream';
 
 import { MongoClient } from '../src';
@@ -70,11 +71,13 @@ ava('[Cursor] hasNext before piping into a stream ', async (t: Assertions) => {
 	await mongoClient.insertOne({ field1String: 'string4' }, 'userId1');
 	await mongoClient.insertOne({ field1String: 'string5' }, 'userId1');
 
-	const cursor = mongoClient.find({}, 0, 0);
+	const items: SampleType[] = [];
+	const cursor: FindCursor<SampleType> = mongoClient.find({}, 0, 0);
+	const readStream = cursor.stream();
 
 	await cursor.hasNext();
-	const items: SampleType[] = [];
-	cursor
+
+	readStream
 		.pipe(
 			new Transform({
 				readableObjectMode: false,
@@ -104,11 +107,13 @@ ava('[Cursor] sort and hasNext before piping into a stream ', async (t: Assertio
 	await mongoClient.insertOne({ field1String: 'string4' }, 'userId1');
 	await mongoClient.insertOne({ field1String: 'string5' }, 'userId1');
 
+	const items: SampleType[] = [];
 	const cursor = mongoClient.find({}, 0, 0, { field1String: 1 });
+	const readStream = cursor.stream();
 
 	await cursor.hasNext();
-	const items: SampleType[] = [];
-	cursor
+
+	readStream
 		.pipe(
 			new Transform({
 				readableObjectMode: false,

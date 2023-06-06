@@ -1,7 +1,7 @@
 import { N9Error, waitFor } from '@neo9/n9-node-utils';
 import * as crypto from 'crypto';
 import * as _ from 'lodash';
-import * as mongodb from 'mongodb';
+import { Db, Document, InsertOneResult } from 'mongodb';
 
 import { LangUtils } from './lang-utils';
 import { LockOptions } from './models/lock-options.models';
@@ -33,7 +33,7 @@ export class N9MongoLock {
 				waitDurationMsMin: 5,
 			},
 		});
-		const db = global.db as mongodb.Db;
+		const db = global.db as Db;
 		if (!db) {
 			throw new N9Error('missing-db', 500);
 		}
@@ -45,8 +45,8 @@ export class N9MongoLock {
 	/**
 	 * Function to call at the beginning
 	 */
-	public async ensureIndexes(): Promise<void> {
-		const db = global.db as mongodb.Db;
+	public async ensureIndexes(): Promise<string[]> {
+		const db = global.db as Db;
 		const indexes = [
 			{
 				name: 'name',
@@ -58,8 +58,8 @@ export class N9MongoLock {
 		];
 		try {
 			return await db.collection(this.collection).createIndexes(indexes);
-		} catch (error) {
-			LangUtils.throwN9ErrorFromError(error, { indexes });
+		} catch (err) {
+			LangUtils.throwN9ErrorFromError(err, { indexes });
 		}
 	}
 
@@ -70,13 +70,14 @@ export class N9MongoLock {
 	 */
 	public async acquire(suffix?: string): Promise<string | undefined> {
 		const now = Date.now();
-		const db = global.db as mongodb.Db;
+		const db = global.db as Db;
 		const lockName = suffix ? `${this.defaultLock}_${suffix}` : this.defaultLock;
 
 		const query = {
 			name: lockName,
 			expire: { $lt: now },
 		};
+
 		const update = {
 			$set: {
 				name: `${lockName}:${now}`,
@@ -90,6 +91,7 @@ export class N9MongoLock {
 			} else {
 				await db.collection(this.collection).findOneAndUpdate(query, update);
 			}
+
 			const code = crypto.randomBytes(16).toString('hex');
 			const doc = {
 				code,
@@ -97,19 +99,22 @@ export class N9MongoLock {
 				expire: now + this.options.timeout,
 				inserted: now,
 			};
+
 			try {
-				const docs: mongodb.InsertOneWriteOpResult<mongodb.WithId<{ code: string }>> = await db
-					.collection(this.collection)
-					.insertOne(doc);
-				return docs.ops[0].code;
-			} catch (error) {
-				if (error.code === 11000) {
+				const res: InsertOneResult<Document> = await db.collection(this.collection).insertOne(doc);
+
+				if (res.insertedId) {
+					return doc.code;
+				}
+			} catch (err) {
+				if (err.code === 11000) {
 					return null;
 				}
-				LangUtils.throwN9ErrorFromError(error, { doc });
+
+				LangUtils.throwN9ErrorFromError(err, { doc });
 			}
-		} catch (error) {
-			LangUtils.throwN9ErrorFromError(error, { query, update });
+		} catch (err) {
+			LangUtils.throwN9ErrorFromError(err, { query, update });
 		}
 	}
 
@@ -146,7 +151,7 @@ export class N9MongoLock {
 
 	private async releaseLock(code: string, lockName: string): Promise<boolean> {
 		const now = Date.now();
-		const db = global.db as mongodb.Db;
+		const db = global.db as Db;
 		const query = {
 			code,
 			expire: { $gt: now },

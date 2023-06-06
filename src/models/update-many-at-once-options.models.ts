@@ -1,4 +1,4 @@
-import { FilterQuery } from 'mongodb';
+import { Filter } from 'mongodb';
 import { PromisePoolExecutor } from 'promise-pool-executor';
 
 export interface UpdateManyAtOnceOptions<U> {
@@ -20,7 +20,7 @@ export interface UpdateManyAtOnceOptions<U> {
 	 * - If it's null or undefined, the existing version of the entity will not be retrieved from database.
 	 * Defaults to undefined.
 	 */
-	query?: string | ((entity: Partial<U>) => FilterQuery<Partial<U>>);
+	query?: string | ((entity: Partial<U>) => Filter<Partial<U>>);
 	/**
 	 * Function that will be used to map the entity with its existing value.
 	 * The function will be called with the given entity and the existing entity if there is one.

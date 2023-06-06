@@ -1,6 +1,6 @@
 import { N9Log } from '@neo9/n9-node-log';
 import ava, { Assertions } from 'ava';
-import { Db, FilterQuery } from 'mongodb';
+import { Db, Filter } from 'mongodb';
 
 import { MongoClient } from '../src';
 import { BaseMongoObject } from '../src/models';
@@ -18,11 +18,13 @@ ava('[INSERT-MANY] Insert many', async (t: Assertions) => {
 		_id: 'test',
 		key: 'value',
 	};
+
 	const value2: any = {
 		_id: 'test',
 		key: 'value2',
 	};
-	const query: FilterQuery<{ key: string }> = { $or: [{ key: 'value' }, { key: 'value2' }] };
+
+	const query: Filter<{ key: string }> = { $or: [{ key: 'value' }, { key: 'value2' }] };
 
 	const insertedValues = await mongoClient.insertMany(
 		[...Array(20).fill(value), value2, ...Array(29).fill(value)],
@@ -33,6 +35,7 @@ ava('[INSERT-MANY] Insert many', async (t: Assertions) => {
 
 	t.is(insertedValues.length, 50, '50 elements inserted');
 	t.is(typeof insertedValues[0]._id, 'string', '_id inserted is a string throw n9-mongo-client');
+
 	const insertedValueFoundWithNativeClient = await (global.db as Db)
 		.collection(collectionName)
 		.findOne<any>({ key: 'value2' });

@@ -1,24 +1,25 @@
-import { Collection, IndexOptions, IndexSpecification } from 'mongodb';
+import { Collection, CreateIndexesOptions, IndexSpecification } from 'mongodb';
 
 import { LangUtils } from './lang-utils';
 
 /**
  * Class that handlez the creation, update and deletion of mongodb indexes
  */
-export class IndexManager {
+export class IndexManager<U> {
 	/**
 	 * @param collection the mongodb collection in which the indexes will be managed
 	 */
-	constructor(private readonly collection: Collection) {}
+	constructor(private readonly collection: Collection<U>) {}
 
 	/**
 	 * Returns a list of all indexes.
+	 * ListIndexesCursor.toArray() returns a promise any[]
 	 */
-	public async findAllIndexes(): Promise<IndexSpecification[]> {
+	public async findAllIndexes(): Promise<any[]> {
 		try {
 			return await this.collection.listIndexes().toArray();
-		} catch (e) {
-			LangUtils.throwN9ErrorFromError(e);
+		} catch (err) {
+			LangUtils.throwN9ErrorFromError(err);
 		}
 	}
 
@@ -28,11 +29,17 @@ export class IndexManager {
 	 * @param fieldOrSpec name / spec of the indexed field(s)
 	 * @param options extra mongodb index creation options
 	 */
-	public async createIndex(fieldOrSpec: string | any, options?: IndexOptions): Promise<void> {
+	public async createIndex(
+		fieldOrSpec: IndexSpecification,
+		options?: CreateIndexesOptions,
+	): Promise<string> {
 		try {
-			await this.collection.createIndex(fieldOrSpec, options);
-		} catch (e) {
-			LangUtils.throwN9ErrorFromError(e, { fieldOrSpec, options });
+			return await Promise.resolve(this.collection.createIndex(fieldOrSpec, options));
+		} catch (err) {
+			// eslint-disable-next-line
+			console.log('err.message', err.message);
+
+			LangUtils.throwN9ErrorFromError(err, { fieldOrSpec, options });
 		}
 	}
 
@@ -42,7 +49,10 @@ export class IndexManager {
 	 * @param fieldOrSpec name / spec of the indexed field(s)
 	 * @param options extra mongodb index creation options
 	 */
-	public async createUniqueIndex(fieldOrSpec: string | any, options?: IndexOptions): Promise<void> {
+	public async createUniqueIndex(
+		fieldOrSpec: IndexSpecification,
+		options?: CreateIndexesOptions,
+	): Promise<void> {
 		await this.createIndex(fieldOrSpec, { ...options, unique: true });
 	}
 
@@ -55,32 +65,32 @@ export class IndexManager {
 	 * @param options extra mongodb index creation options
 	 */
 	public async ensureExpirationIndex(
-		fieldOrSpec: string | object,
+		fieldOrSpec: IndexSpecification,
 		ttlInDays: number,
-		options: IndexOptions = {},
-	): Promise<void> {
+		options: CreateIndexesOptions = {},
+	): Promise<string> {
 		options.expireAfterSeconds = ttlInDays * 24 * 3600;
 		options.name = options.name || 'n9MongoClient_expiration';
 
 		try {
-			await this.collection.createIndex(fieldOrSpec, options);
-		} catch (e) {
+			return await Promise.resolve(this.collection.createIndex(fieldOrSpec, options));
+		} catch (err) {
 			// error 85 and 86 mean the index already exists with different parameters / fields
 			// 85 means different parameters
 			// 86 means different fields
-			if (e.code === 85 || e.code === 86) {
+			if (err.code === 85 || err.code === 86) {
 				try {
 					await this.collection.dropIndex(options.name);
-					await this.collection.createIndex(fieldOrSpec, options);
-				} catch (e2) {
-					LangUtils.throwN9ErrorFromError(e2, {
+					return await Promise.resolve(this.collection.createIndex(fieldOrSpec, options));
+				} catch (err2) {
+					LangUtils.throwN9ErrorFromError(err2, {
 						fieldOrSpec,
 						ttlInDays,
 						options,
 					});
 				}
 			} else {
-				LangUtils.throwN9ErrorFromError(e, {
+				LangUtils.throwN9ErrorFromError(err, {
 					fieldOrSpec,
 					ttlInDays,
 					options,

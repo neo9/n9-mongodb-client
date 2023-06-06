@@ -1,6 +1,6 @@
 import { N9Log } from '@neo9/n9-node-log';
 import ava, { Assertions } from 'ava';
-import { CollationDocument } from 'mongodb';
+import { CollationOptions } from 'mongodb';
 
 import { MongoClient } from '../src';
 import { BaseMongoObject } from '../src/models';
@@ -58,8 +58,8 @@ ava('[CRUD] Insert multiples and find with collation', async (t: Assertions) => 
 		'userId1',
 	);
 
-	const collationStrength1: CollationDocument = { locale: 'fr', strength: 1 };
-	const collationStrength2: CollationDocument = { locale: 'fr', strength: 2 };
+	const collationStrength1: CollationOptions = { locale: 'fr', strength: 1 };
+	const collationStrength2: CollationOptions = { locale: 'fr', strength: 2 };
 
 	const sizeWithElementIn = await mongoClient.count();
 	const findWithoutCollation = mongoClient.find({ field1String: 'test' });

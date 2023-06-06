@@ -1,4 +1,4 @@
-import { FilterQuery } from 'mongodb';
+import { Filter } from 'mongodb';
 
 import {
 	AggregationPipeline,
@@ -89,7 +89,7 @@ export class AggregationBuilder<U> {
 		return this.doAddStage({ [AggregationPipelineStageOperator.LOOKUP]: stageValue });
 	}
 
-	public match<T = U>(stageValue: FilterQuery<T>): AggregationBuilder<U> {
+	public match<T = U>(stageValue: Filter<T>): AggregationBuilder<U> {
 		return this.doAddStage({ [AggregationPipelineStageOperator.MATCH]: stageValue });
 	}
 

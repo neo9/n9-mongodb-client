@@ -1,6 +1,7 @@
 import { N9Log } from '@neo9/n9-node-log';
 import { waitFor } from '@neo9/n9-node-utils';
 import ava, { Assertions } from 'ava';
+import { Condition } from 'mongodb';
 
 import { MongoClient, MongoClientConfiguration, MongoUtils } from '../src';
 import { BaseMongoObject } from '../src/models';
@@ -79,7 +80,8 @@ async function insertThenUpdateOneFieldToNewValue(
 	}
 
 	// check entity in db
-	const dbEntity = await mongoClient.findOne({ _id: MongoUtils.oid(insertedEntity._id) });
+	const filter: Condition<string> = { _id: MongoUtils.oid(insertedEntity._id) };
+	const dbEntity = await mongoClient.findOne(filter);
 	const dbLastUpdateDate = dbEntity.objectInfos.lastUpdate.date;
 	const dbLastModificationDate = dbEntity.objectInfos.lastModification.date;
 	t.deepEqual('new-value1', dbEntity.property1, 'Property 1 did change in db');
@@ -165,7 +167,8 @@ async function insertThenUpdateOneFieldToNewValueWithoutReturningNewValue(
 	);
 
 	// check entity in db
-	const dbEntity = await mongoClient.findOne({ _id: MongoUtils.oid(insertedEntity._id) });
+	const filter: Condition<string> = { _id: MongoUtils.oid(insertedEntity._id) };
+	const dbEntity = await mongoClient.findOne(filter);
 	const dbLastUpdateDate = dbEntity.objectInfos.lastUpdate.date;
 	const dbLastModificationDate = dbEntity.objectInfos.lastModification.date;
 	t.deepEqual('new-value1', dbEntity.property1, 'Property 1 did change in db');
@@ -271,7 +274,8 @@ async function insertThenUpdateOneFieldToSameValue(
 	}
 
 	// check entity in db
-	const dbEntity = await mongoClient.findOne({ _id: MongoUtils.oid(insertedEntity._id) });
+	const filter: Condition<string> = { _id: MongoUtils.oid(insertedEntity._id) };
+	const dbEntity = await mongoClient.findOne(filter);
 	const dbLastUpdateDate = dbEntity.objectInfos.lastUpdate.date;
 	const dbLastModificationDate = dbEntity.objectInfos.lastModification.date;
 	t.deepEqual('value1', dbEntity.property1, 'Property 1 did not change in db');

@@ -13,6 +13,7 @@ ava('[Indexes] Create index', async (t: Assertions) => {
 	const mongoClient = new MongoClient(collection, BaseMongoObject, null);
 
 	await mongoClient.createIndex('name');
+
 	t.true(
 		(await collection.listIndexes().toArray()).some((i) => i.name === 'name_1'),
 		'index exists',
@@ -29,8 +30,7 @@ ava('[Indexes] List all indexes', async (t: Assertions) => {
 	await mongoClient.createIndex('index_2');
 	await mongoClient.createIndex('index_3');
 
-	const createdIndexes = await mongoClient.findAllIndexes();
-
+	const createdIndexes: any[] = await mongoClient.findAllIndexes();
 	t.true(createdIndexes.length === 4, 'correct number retrieved');
 	t.is(createdIndexes[1].name, 'index_1_1', 'index 1 created and listed');
 	t.is(createdIndexes[2].name, 'index_2_1', 'index 2 created and listed');

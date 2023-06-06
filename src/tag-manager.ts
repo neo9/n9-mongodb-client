@@ -1,4 +1,4 @@
-import { Collection, ObjectId, UpdateQuery } from 'mongodb';
+import { Collection, Filter, ObjectId, ReturnDocument, UpdateFilter } from 'mongodb';
 
 import { LangUtils } from './lang-utils';
 import { LodashReplacerUtils } from './lodash-replacer.utils';
@@ -8,9 +8,9 @@ import { MongoUtils } from './mongo-utils';
 /**
  * Class that can add and remvoe tags to entities in a colection
  */
-export class TagManager {
-	private static buildAddTagUpdate(userId: string, options: AddTagOptions): object {
-		const update: UpdateQuery<any> = { $addToSet: { 'objectInfos.tags': options.tag } as any };
+export class TagManager<U> {
+	private static buildAddTagUpdate(userId: string, options: AddTagOptions): UpdateFilter<any> {
+		const update: UpdateFilter<any> = { $addToSet: { 'objectInfos.tags': options.tag } as any };
 		const updateLastUpdate = LodashReplacerUtils.IS_BOOLEAN(options.updateLastUpdate)
 			? options.updateLastUpdate
 			: true;
@@ -27,8 +27,8 @@ export class TagManager {
 		tag: string,
 		userId: string,
 		options: RemoveTagOptions,
-	): object {
-		const update: UpdateQuery<any> = { $pull: { 'objectInfos.tags': tag } as any };
+	): UpdateFilter<any> {
+		const update: UpdateFilter<any> = { $pull: { 'objectInfos.tags': tag } as any };
 		const updateLastUpdate = LodashReplacerUtils.IS_BOOLEAN(options.updateLastUpdate)
 			? options.updateLastUpdate
 			: true;
@@ -44,7 +44,7 @@ export class TagManager {
 	/**
 	 * @param collection the mongodb collection in which the tags will be managed
 	 */
-	constructor(private collection: Collection) {}
+	constructor(private collection: Collection<U>) {}
 
 	/**
 	 * Add a tag to an entity.
@@ -56,17 +56,25 @@ export class TagManager {
 	 * @returns New tag
 	 */
 	public async addTagToOne(
-		query: object,
+		query: Filter<U>,
 		userId: string,
 		options: AddTagOptions = {},
 	): Promise<string> {
 		try {
 			options.tag = options.tag || new ObjectId().toHexString();
-			const update = TagManager.buildAddTagUpdate(userId, options);
-			await this.collection.findOneAndUpdate(query, update, { returnOriginal: false });
+
+			const update: UpdateFilter<U> = TagManager.buildAddTagUpdate(
+				userId,
+				options,
+			) as UpdateFilter<U>;
+
+			await this.collection.findOneAndUpdate(query, update, {
+				returnDocument: ReturnDocument.AFTER,
+			});
+
 			return options.tag;
-		} catch (e) {
-			LangUtils.throwN9ErrorFromError(e, {
+		} catch (err) {
+			LangUtils.throwN9ErrorFromError(err, {
 				query,
 				userId,
 				options,
@@ -87,24 +95,31 @@ export class TagManager {
 		userId: string,
 		options: AddTagOptions = {},
 	): Promise<string> {
-		return await this.addTagToOne({ _id: MongoUtils.oid(id) }, userId, options);
+		const query: Filter<U> = { _id: MongoUtils.oid(id) } as Filter<U>;
+
+		return await this.addTagToOne(query, userId, options);
 	}
 
 	/**
 	 * Same as addTagToOne, but for many entities
 	 */
 	public async addTagToMany(
-		query: object,
+		query: Filter<U>,
 		userId: string,
 		options: AddTagOptions = {},
 	): Promise<string> {
 		try {
 			options.tag = options.tag || new ObjectId().toHexString();
-			const update = TagManager.buildAddTagUpdate(userId, options);
+
+			const update: UpdateFilter<U> = TagManager.buildAddTagUpdate(
+				userId,
+				options,
+			) as UpdateFilter<U>;
+
 			await this.collection.updateMany(query, update);
 			return options.tag;
-		} catch (e) {
-			LangUtils.throwN9ErrorFromError(e, {
+		} catch (err) {
+			LangUtils.throwN9ErrorFromError(err, {
 				query,
 				userId,
 				options,
@@ -122,16 +137,23 @@ export class TagManager {
 	 * @param options options to customize the tag
 	 */
 	public async removeTagFromOne(
-		query: object,
+		query: Filter<U>,
 		tag: string,
 		userId: string,
 		options: RemoveTagOptions = {},
 	): Promise<void> {
 		try {
-			const update = TagManager.buildRemoveTagUpdate(tag, userId, options);
-			await this.collection.findOneAndUpdate(query, update, { returnOriginal: false });
-		} catch (e) {
-			LangUtils.throwN9ErrorFromError(e, {
+			const update: UpdateFilter<U> = TagManager.buildRemoveTagUpdate(
+				tag,
+				userId,
+				options,
+			) as UpdateFilter<U>;
+
+			await this.collection.findOneAndUpdate(query, update, {
+				returnDocument: ReturnDocument.AFTER,
+			});
+		} catch (err) {
+			LangUtils.throwN9ErrorFromError(err, {
 				query,
 				tag,
 				userId,
@@ -154,7 +176,9 @@ export class TagManager {
 		userId: string,
 		options: RemoveTagOptions = {},
 	): Promise<void> {
-		await this.removeTagFromOne({ _id: MongoUtils.oid(id) }, tag, userId, options);
+		const query: Filter<U> = { _id: MongoUtils.oid(id) } as Filter<U>;
+
+		await this.removeTagFromOne(query, tag, userId, options);
 	}
 
 	/**
@@ -166,16 +190,20 @@ export class TagManager {
 	 * @param options
 	 */
 	public async removeTagFromMany(
-		query: object,
+		query: Filter<U>,
 		tag: string,
 		userId: string,
 		options: RemoveTagOptions = {},
 	): Promise<void> {
 		try {
-			const update = TagManager.buildRemoveTagUpdate(tag, userId, options);
+			const update: UpdateFilter<U> = TagManager.buildRemoveTagUpdate(
+				tag,
+				userId,
+				options,
+			) as UpdateFilter<U>;
 			await this.collection.updateMany(query, update);
-		} catch (e) {
-			LangUtils.throwN9ErrorFromError(e, {
+		} catch (err) {
+			LangUtils.throwN9ErrorFromError(err, {
 				query,
 				tag,
 				userId,
@@ -188,10 +216,12 @@ export class TagManager {
 	 * Delete all entities with the given tag
 	 */
 	public async deleteManyWithTag(tag: string): Promise<void> {
+		const query: Filter<U> = { 'objectInfos.tags': tag } as unknown as Filter<U>;
+
 		try {
-			await this.collection.deleteMany({ 'objectInfos.tags': tag });
-		} catch (e) {
-			LangUtils.throwN9ErrorFromError(e, { tag });
+			await this.collection.deleteMany(query);
+		} catch (err) {
+			LangUtils.throwN9ErrorFromError(err, { tag });
 		}
 	}
 }

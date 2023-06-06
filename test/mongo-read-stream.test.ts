@@ -1,7 +1,7 @@
 import { N9Log } from '@neo9/n9-node-log';
 import { waitFor } from '@neo9/n9-node-utils';
 import ava, { Assertions } from 'ava';
-import { FilterQuery } from 'mongodb';
+import { Filter } from 'mongodb';
 
 import { MongoClient, MongoUtils } from '../src';
 import { BaseMongoObject } from '../src/models';
@@ -308,7 +308,7 @@ ava('[MONGO-READ-STREAM] Does not override conditions on _id', async (t: Asserti
 	}
 	let length = 0;
 	// filter on even docs, lower than 21, so 11 docs
-	const query: FilterQuery<TestItem> = {
+	const query: Filter<TestItem> = {
 		_id: { $in: ids },
 		$and: [{ i: { $lt: 21 } }],
 	};

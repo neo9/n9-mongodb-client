@@ -1,6 +1,7 @@
 import { N9Log } from '@neo9/n9-node-log';
 import ava, { Assertions } from 'ava';
 import * as mongodb from 'mongodb';
+import { ObjectId } from 'mongodb';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 
 import { MongoClient, MongoUtils } from '../../src';
@@ -52,7 +53,7 @@ ava('[ISSUE-OBJECT-ID] Object ID should be well compared', async (t: Assertions)
 				value: {},
 			},
 		],
-		otherId: new mongodb.ObjectID('5cb7397c1a9299f144b71ac6'),
+		otherId: new ObjectId('5cb7397c1a9299f144b71ac6'),
 		label: {
 			'fr-FR': 'produit à surcharger',
 			'en-GB': 'english label',
@@ -80,7 +81,7 @@ ava('[ISSUE-OBJECT-ID] Object ID should be well compared', async (t: Assertions)
 				value: 'new value',
 			},
 		],
-		otherId: new mongodb.ObjectID('5cb7397c1a9299f144b71ac6'),
+		otherId: new ObjectId('5cb7397c1a9299f144b71ac6'),
 		label: {
 			'en-GB': 'english label',
 			'fr-FR': 'produit surchargé',

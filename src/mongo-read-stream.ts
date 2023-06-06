@@ -1,6 +1,6 @@
 import { N9Error } from '@neo9/n9-node-utils';
 import * as _ from 'lodash';
-import { Cursor, FilterQuery } from 'mongodb';
+import { Filter, FindCursor } from 'mongodb';
 import { Readable, Writable } from 'stream';
 
 import { MongoClient } from './client';
@@ -68,13 +68,13 @@ export class MongoReadStream<
 	L extends BaseMongoObject,
 > extends Readable {
 	private lastItem: any;
-	private cursor: Cursor<Partial<U | L>> = null;
+	private cursor: FindCursor<Partial<U | L>> = null;
 	private hasAlreadyAddedIdConditionOnce: boolean = false;
-	private readonly _query: FilterQuery<any>;
+	private readonly _query: Filter<any>;
 
 	constructor(
 		private readonly mongoClient: MongoClient<U, L>,
-		_query: FilterQuery<any>,
+		_query: Filter<any>,
 		private readonly pageSize: number,
 		private readonly projection: object = {},
 		private readonly customType?: ClassType<Partial<U | L>>,
@@ -84,15 +84,16 @@ export class MongoReadStream<
 	) {
 		super({ objectMode: true });
 		try {
-			if ((projection as FilterQuery<BaseMongoObject>)._id === 0) {
+			// @ts-ignore-next-line
+			if ((projection as Filter<BaseMongoObject>)._id === 0) {
 				throw new N9Error('can-t-create-projection-without-_id', 400, { projection });
 			}
 			if (LodashReplacerUtils.IS_OBJECT_EMPTY(sort)) {
 				throw new N9Error('sort-cannot-be-empty', 400, { sort });
 			}
 			this._query = { ..._query };
-		} catch (e) {
-			LangUtils.throwN9ErrorFromError(e, {
+		} catch (err) {
+			LangUtils.throwN9ErrorFromError(err, {
 				pageSize,
 				projection,
 				customType,
@@ -103,7 +104,7 @@ export class MongoReadStream<
 		}
 	}
 
-	get query(): FilterQuery<any> {
+	get query(): Filter<any> {
 		return LodashReplacerUtils.CLONE_DEEP(this._query);
 	}
 

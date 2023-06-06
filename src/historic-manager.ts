@@ -1,6 +1,13 @@
 import { N9Log } from '@neo9/n9-node-log';
 import { diff as deepDiff } from 'deep-diff';
-import { Collection, Cursor, Db, IndexOptions, ObjectId } from 'mongodb';
+import {
+	Collection,
+	CreateIndexesOptions,
+	Db,
+	FindCursor,
+	IndexSpecification,
+	ObjectId,
+} from 'mongodb';
 
 import { IndexManager } from './index-manager';
 import { LangUtils } from './lang-utils';
@@ -15,7 +22,7 @@ export class HistoricManager<U extends BaseMongoObject> {
 	private readonly collection: Collection<EntityHistoricStored<U>>;
 	private readonly logger: N9Log;
 	private readonly db: Db;
-	private readonly indexManager: IndexManager;
+	private readonly indexManager: IndexManager<EntityHistoricStored<U>>;
 
 	constructor(collection: Collection<U>) {
 		this.logger = (global.log as N9Log).module('mongo-client-historic');
@@ -30,21 +37,24 @@ export class HistoricManager<U extends BaseMongoObject> {
 		await this.createIndex('entityId');
 	}
 
-	public async createIndex(fieldOrSpec: string | any, options?: IndexOptions): Promise<void> {
+	public async createIndex(
+		fieldOrSpec: IndexSpecification,
+		options?: CreateIndexesOptions,
+	): Promise<void> {
 		await this.indexManager.createIndex(fieldOrSpec, options);
 	}
 
 	public async createUniqueIndex(
-		fieldOrSpec: string | any = 'code',
-		options?: IndexOptions,
+		fieldOrSpec: IndexSpecification = 'code',
+		options?: CreateIndexesOptions,
 	): Promise<void> {
 		await this.indexManager.createUniqueIndex(fieldOrSpec, options);
 	}
 
 	public async ensureExpirationIndex(
 		ttlInDays: number,
-		fieldOrSpec: string | object = 'date',
-		options: IndexOptions = {},
+		fieldOrSpec: IndexSpecification,
+		options: CreateIndexesOptions = {},
 	): Promise<void> {
 		await this.indexManager.ensureExpirationIndex(fieldOrSpec, ttlInDays, options);
 	}
@@ -75,8 +85,8 @@ export class HistoricManager<U extends BaseMongoObject> {
 				snapshot: MongoUtils.removeSpecialCharactersInKeys(snapshot),
 			};
 			await this.collection.insertOne(change as any);
-		} catch (e) {
-			LangUtils.throwN9ErrorFromError(e, {
+		} catch (err) {
+			LangUtils.throwN9ErrorFromError(err, {
 				entityId,
 				snapshot,
 				updateDate,
@@ -100,8 +110,8 @@ export class HistoricManager<U extends BaseMongoObject> {
 				});
 			}
 			await this.collection.insertMany(changes as any);
-		} catch (e) {
-			LangUtils.throwN9ErrorFromError(e, {
+		} catch (err) {
+			LangUtils.throwN9ErrorFromError(err, {
 				snapshots,
 				updateDate,
 				userId,
@@ -114,15 +124,15 @@ export class HistoricManager<U extends BaseMongoObject> {
 		latestEntityVersion: U,
 		page: number = 0,
 		size: number = 10,
-	): Cursor<EntityHistoric<U>> {
+	): FindCursor<EntityHistoric<U>> {
 		try {
 			let previousEntityHistoricSnapshot: U = latestEntityVersion;
 			return this.collection
-				.find({ entityId: MongoUtils.oid(entityId) as any })
+				.find<U>({ entityId: MongoUtils.oid(entityId) as any })
 				.sort('_id', -1)
 				.skip(page * size)
 				.limit(size)
-				.map((a: EntityHistoric<U>) => {
+				.map((a: EntityHistoric<U> | any) => {
 					const entityHistoric = MongoUtils.mapObjectToClass<EntityHistoric<U>, EntityHistoric<U>>(
 						EntityHistoric,
 						MongoUtils.unRemoveSpecialCharactersInKeys(a),
@@ -136,8 +146,8 @@ export class HistoricManager<U extends BaseMongoObject> {
 					previousEntityHistoricSnapshot = entityHistoric.snapshot;
 					return entityHistoric;
 				});
-		} catch (e) {
-			LangUtils.throwN9ErrorFromError(e, {
+		} catch (err) {
+			LangUtils.throwN9ErrorFromError(err, {
 				entityId,
 				page,
 				size,
@@ -189,8 +199,8 @@ export class HistoricManager<U extends BaseMongoObject> {
 				return entityHistoric;
 			}
 			return;
-		} catch (e) {
-			LangUtils.throwN9ErrorFromError(e, {
+		} catch (err) {
+			LangUtils.throwN9ErrorFromError(err, {
 				entityId,
 				userId,
 			});
@@ -200,8 +210,8 @@ export class HistoricManager<U extends BaseMongoObject> {
 	public async countByEntityId(id: string): Promise<number> {
 		try {
 			return await this.collection.countDocuments({ entityId: MongoUtils.oid(id) as any });
-		} catch (e) {
-			LangUtils.throwN9ErrorFromError(e, { id });
+		} catch (err) {
+			LangUtils.throwN9ErrorFromError(err, { id });
 		}
 	}
 
@@ -216,16 +226,16 @@ export class HistoricManager<U extends BaseMongoObject> {
 				};
 			}
 			return await this.collection.countDocuments(query);
-		} catch (e) {
-			LangUtils.throwN9ErrorFromError(e, { entityId, historicIdReference });
+		} catch (err) {
+			LangUtils.throwN9ErrorFromError(err, { entityId, historicIdReference });
 		}
 	}
 
 	public async drop(): Promise<void> {
 		try {
 			await this.collection.drop();
-		} catch (e) {
-			LangUtils.throwN9ErrorFromError(e);
+		} catch (err) {
+			LangUtils.throwN9ErrorFromError(err);
 		}
 	}
 

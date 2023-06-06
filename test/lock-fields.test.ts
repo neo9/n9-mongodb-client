@@ -1,7 +1,7 @@
 import { N9Log } from '@neo9/n9-node-log';
 import ava, { Assertions } from 'ava';
 import * as _ from 'lodash';
-import { ObjectID } from 'mongodb';
+import { ObjectId } from 'mongodb';
 
 import { MongoClient, MongoClientConfiguration } from '../src';
 import { BaseMongoObject, EntityHistoric, StringMap } from '../src/models';
@@ -206,7 +206,7 @@ ava(
 		const dataWithDate = {
 			..._.cloneDeep(locksDataSample),
 			date,
-			id: new ObjectID(),
+			id: new ObjectId(),
 		};
 		const dataWithNewDate = {
 			..._.cloneDeep(dataWithDate),
@@ -345,7 +345,7 @@ ava('[LOCK-FIELDS] Insert&Update one with Date and change to String', async (t: 
 
 	const dataWithString = {
 		..._.cloneDeep(locksDataSample),
-		id: new ObjectID(),
+		id: new ObjectId(),
 		date: dateString,
 	};
 	const insertedEntity = await mongoClient.insertOne(dataWithString, '');
@@ -425,7 +425,7 @@ ava('[LOCK-FIELDS] Insert&Update one with String and change to Date', async (t: 
 	const dataWithDate = {
 		..._.cloneDeep(locksDataSample),
 		date,
-		id: new ObjectID(),
+		id: new ObjectId(),
 	};
 
 	const dataWithString = {
@@ -677,7 +677,7 @@ ava(
 	async (t: Assertions) => {
 		const mongoClient = getLockFieldsMongoClient();
 
-		const objectIDSample = new ObjectID();
+		const objectIDSample = new ObjectId();
 		const locksDataSample1: SampleComplexType = {
 			...locksDataSample,
 			text: 'id1',

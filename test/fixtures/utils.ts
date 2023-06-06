@@ -62,22 +62,26 @@ export function init(): void {
 	ava.before(async () => {
 		let mongoConnectionString;
 		try {
-			await MongoUtils.connect('mongodb://127.0.0.1:27017', {});
+			await MongoUtils.connect('mongodb://127.0.0.1:27017', {
+				serverSelectionTimeoutMS: 650, // 650ms, default is 30000ms
+			});
 			global.log.warn(`Using local MongoDB`);
-		} catch (e) {
-			if (e.name === 'MongoNetworkError') {
+		} catch (err) {
+			if (err.name === 'MongoServerSelectionError') {
 				global.log.warn(`Using MongoDB in memory`);
 				isInMemory = true;
+
 				// no classic mongodb available, so use one in memory
 				mongod = await MongoMemoryServer.create({
 					binary: {
-						version: '4.2.12',
+						version: '6.0.4',
 					},
 				});
+
 				mongoConnectionString = mongod.getUri();
 				await MongoUtils.connect(mongoConnectionString);
 			} else {
-				throw e;
+				throw err;
 			}
 		}
 	});
