@@ -45,7 +45,7 @@ export class MongoUtils {
 		});
 
 		mongoClient.on('serverClosed', () => {
-			log.warn(`mongo server Closed`);
+			log.warn(`Mongo server closed`);
 		});
 
 		try {

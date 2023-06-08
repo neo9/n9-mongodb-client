@@ -73,70 +73,17 @@ ava('[MONGO-UTILS] URI connection log', async (t: Assertions) => {
 
 ava('[MONGO-UTILS] Ensure event logs', async (t: Assertions) => {
 	mongod = await MongoMemoryServer.create();
-	const mongoURI = mongod.getUri();
+	const mongoURI: string = mongod.getUri();
 
 	await MongoUtils.connect(mongoURI, {
-		// autoReconnect: true,
-		// reconnectTries: 100,
-		// reconnectInterval: 50,
+		serverSelectionTimeoutMS: 650,
+		socketTimeoutMS: 1000,
 	});
+
 	await waitFor(100);
-	let output = stdMocks.flush();
+	const output = stdMocks.flush();
 
 	t.regex(output.stdout.pop(), /Client connected to/, 'Should have connection log');
-
-	await mongod.stop(false);
-	await waitFor(100);
-	output = stdMocks.flush();
-
-	// t.regex(output.stdout.pop(), /Client disconnected from/, 'Should have close event log');
-
-	// await mongod.start(true);
-	// await waitFor(200);
-	// output = stdMocks.flush();
-
-	// t.regex(output.stdout.pop(), /Client reconnected to/, 'Should have reconnect event log');
-	// t.truthy(global.dbClient.isConnected());
-
-	// await MongoUtils.disconnect();
-	// await MongoUtils.connect(mongoURI, {
-	// 	socketTimeoutMS: 1,
-	// });
-
-	// await MongoUtils.listCollectionsNames();
-	// await waitFor(10);
-	// output = stdMocks.flush();
-
-	// t.regex(
-	// 	output.stdout.pop(),
-	// 	/Client connection or operation timed out/,
-	// 	'Should have timeout event log',
-	// );
-
-	// await MongoUtils.disconnect();
-	// await MongoUtils.connect(
-	// 	mongoURI,
-	// 	{
-	// 		// autoReconnect: true,
-	// 		// reconnectTries: 1,
-	// 		// reconnectInterval: 50,
-	// 		// killProcessOnReconnectFailed: true,
-	// 	},
-	// 	// { killProcessOnReconnectFailed: false },
-	// );
-
-	// await mongod.stop(false);
-	// await waitFor(100);
-	// output = stdMocks.flush();
-
-	// t.regex(
-	// 	output.stdout.pop(),
-	// 	/Client reconnection failed/,
-	// 	'Should have reconnect failed event log',
-	// );
-	// t.falsy(global.dbClient.isConnected());
-
-	// await MongoUtils.disconnect();
 });
 
 ava('[MONGO-UTILS] List collection names', async (t: Assertions) => {

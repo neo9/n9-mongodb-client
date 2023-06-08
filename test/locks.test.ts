@@ -21,12 +21,18 @@ init();
 ava('[LOCKS] Test ensureIndexes works fine', async (t: Assertions) => {
 	// the lock name in this case doesn't matter, since we're not going to acquire this one
 	const lock = new N9MongoLock(col, 'whatever');
+
 	t.truthy(lock, 'Lock object created ok');
+
 	let result: string[];
+
 	await t.notThrowsAsync(async () => {
 		result = await lock.ensureIndexes();
 	});
+
 	t.truthy(result, 'Index creation was okay');
+	t.is(result.length, 1, 'Only one index was created');
+	t.is(result[0], 'name', 'The index created was the name index');
 });
 
 ava("[LOCKS] Test that the lock can't be acquired twice", async (t: Assertions) => {
@@ -544,7 +550,7 @@ ava('[LOCKS] Try acquiring lock with wrong collection name', async (t: Assertion
 	t.truthy(!code, "The lock can't be acquired due to invalid collection name (contains $)");
 });
 
-ava('[LOCKS] Try acquiring lock with valid key', async (t: Assertions) => {
+ava('[LOCKS] Try acquiring lock with valid key, containing a dot', async (t: Assertions) => {
 	const db = global.db;
 	delete global.db;
 	t.throws(() => new N9MongoLock('$collection-name'), {

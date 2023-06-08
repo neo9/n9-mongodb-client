@@ -378,7 +378,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			.skip(page * size)
 			.limit(size)
 			.project(projection)
-			.map<T>(transformFunction) as any as FindCursor<T>;
+			.map<T>(transformFunction);
 	}
 
 	public stream(
