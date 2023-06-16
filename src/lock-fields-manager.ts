@@ -4,15 +4,20 @@ import { ObjectID } from 'mongodb';
 
 import { LangUtils } from './lang-utils';
 import { LodashReplacerUtils } from './lodash-replacer.utils';
-import { BaseMongoObject, LockField, LockFieldConfiguration } from './models';
+import { BaseMongoObject, LockField, LockFieldConfiguration, StringMap } from './models';
 
 /**
  * Class that handles the basic operations on locked fields, like locking fields, unlocking fields
  * and update an entity with locked fields.
  */
 export class LockFieldsManager<U extends BaseMongoObject> {
+	private _arrayWithReferences: StringMap<string[]> = {};
+
 	constructor(private conf: LockFieldConfiguration) {
 		this.conf.excludedFields = _.union(this.conf.excludedFields, ['objectInfos', '_id']);
+		for (const [key, values] of Object.entries(this.conf.arrayWithReferences ?? {})) {
+			this._arrayWithReferences[key] = _.castArray(values);
+		}
 	}
 
 	/**
@@ -114,13 +119,18 @@ export class LockFieldsManager<U extends BaseMongoObject> {
 				// console.log(`--  key --`, basePath, lockFields.find((lockField) => lockField.path.startsWith(basePath)));
 				// console.log('--  ', JSON.stringify(existingEntity, null, 1), ` <<-- existingEntity`);
 				// console.log('--  ', JSON.stringify(newEntity, null, 1), ` <<-- newEntity`);
-				const fieldCodeName = this.conf.arrayWithReferences?.[basePath];
+				const fieldCodeNames = this._arrayWithReferences[basePath];
 				const mergedArray = [];
+
 				// add existing locked elements
 				for (const existingEntityElement of existingEntity) {
-					let elementPath;
-					if (fieldCodeName) {
-						elementPath = `${basePath}[${fieldCodeName}=${existingEntityElement[fieldCodeName]}]`;
+					let elementPath: string;
+					if (!LodashReplacerUtils.IS_ARRAY_EMPTY(fieldCodeNames)) {
+						const elementUnicity = this.getUnicityStringForArrayElement(
+							existingEntityElement,
+							fieldCodeNames,
+						);
+						elementPath = `${basePath}[${elementUnicity}]`;
 					} else {
 						elementPath = `${basePath}["${existingEntityElement}"]`;
 					}
@@ -136,14 +146,23 @@ export class LockFieldsManager<U extends BaseMongoObject> {
 
 				for (const newEntityElement of newEntity) {
 					// merge newEntityElement with associated existingEntityElement
-					if (fieldCodeName) {
+					if (!LodashReplacerUtils.IS_ARRAY_EMPTY(fieldCodeNames)) {
 						// array of objects
-						const elementPath = `${basePath}[${fieldCodeName}=${newEntityElement[fieldCodeName]}]`;
-						const alreadyAddedElementIndex = mergedArray.findIndex(
-							(mergedArrayElement) =>
-								!LodashReplacerUtils.IS_NIL(mergedArrayElement[fieldCodeName]) &&
-								mergedArrayElement[fieldCodeName] === newEntityElement[fieldCodeName],
+						const elementUnicity = this.getUnicityStringForArrayElement(
+							newEntityElement,
+							fieldCodeNames,
 						);
+						const elementPath = `${basePath}[${elementUnicity}]`;
+						const mainUniqKey = fieldCodeNames[0];
+
+						const alreadyAddedElementIndex = mergedArray.findIndex((mergedArrayElement) => {
+							return (
+								!LodashReplacerUtils.IS_NIL(mergedArrayElement[mainUniqKey]) &&
+								_.every(fieldCodeNames, (fieldCodeName) => {
+									return mergedArrayElement[fieldCodeName] === newEntityElement[fieldCodeName];
+								})
+							);
+						});
 						if (alreadyAddedElementIndex !== -1) {
 							mergedArray[alreadyAddedElementIndex] = this.mergeOldEntityWithNewOne(
 								mergedArray[alreadyAddedElementIndex],
@@ -156,11 +175,9 @@ export class LockFieldsManager<U extends BaseMongoObject> {
 						}
 					} else {
 						// array of non objects values
-						const elementPath = `${basePath}["${newEntityElement[fieldCodeName]}"]`;
-						const alreadyAddedElementIndex = mergedArray.findIndex(
-							(mergedArrayElement) =>
-								!LodashReplacerUtils.IS_NIL(mergedArrayElement[fieldCodeName]) &&
-								mergedArrayElement === newEntityElement,
+						const elementPath = `${basePath}["${newEntityElement}"]`;
+						const alreadyAddedElementIndex = mergedArray.findIndex((mergedArrayElement) =>
+							_.isEqual(mergedArrayElement, newEntityElement),
 						);
 						if (alreadyAddedElementIndex !== -1) {
 							mergedArray[alreadyAddedElementIndex] = this.mergeOldEntityWithNewOne(
@@ -174,6 +191,7 @@ export class LockFieldsManager<U extends BaseMongoObject> {
 						}
 					}
 				}
+
 				return mergedArray;
 			}
 			return newEntity;
@@ -214,7 +232,7 @@ export class LockFieldsManager<U extends BaseMongoObject> {
 	 */
 	private translatePathToLodashPath(path: string, entity: Partial<U>): string {
 		const objectsArrayPathRegex =
-			/(?<basePath>.*)\[(?<code>[^\]]+)=(?<value>[^\]]+)](?<pathLeft>.*)/;
+			/(?<basePath>.*?)\[(?<pairs>[^\]=]+=[^\]&]+(?:&[^\]]+=[^\]&]+)*)\](?<pathLeft>.*)/;
 		const simpleArrayPathRegex = /(?<basePath>.*)\[(?<value>[^\]]+)](?<pathLeft>.*)/;
 		const match = path.match(objectsArrayPathRegex);
 		const matchSimpleArray = path.match(simpleArrayPathRegex);
@@ -223,7 +241,14 @@ export class LockFieldsManager<U extends BaseMongoObject> {
 			const groups = match.groups;
 			const array: any[] = _.get(entity, groups.basePath);
 			if (!LodashReplacerUtils.IS_ARRAY_EMPTY(array)) {
-				const index = array.findIndex((item) => item && item[groups.code] === groups.value);
+				const codeValuePairs = groups.pairs.split('&').map((pair) => pair.split('='));
+				const index = array.findIndex(
+					(item) =>
+						item &&
+						_.every(codeValuePairs, ([code, value]) => {
+							return item[code] === value;
+						}),
+				);
 				if (index !== -1) {
 					newPath = `${groups.basePath}[${index}]`;
 				} else {
@@ -262,7 +287,7 @@ export class LockFieldsManager<U extends BaseMongoObject> {
 	private generateAllLockFields(
 		newEntity: any,
 		basePath: string,
-		ignoreOnePath?: string,
+		ignorePaths?: string[],
 	): string[] {
 		const keys: string[] = [];
 		if (LodashReplacerUtils.IS_NIL(newEntity)) return keys;
@@ -272,7 +297,7 @@ export class LockFieldsManager<U extends BaseMongoObject> {
 			// excluded fields
 			const newEntityElement = newEntity[key];
 			if (
-				key === ignoreOnePath ||
+				ignorePaths?.includes(key) ||
 				this.isExcludedField(joinedPath) ||
 				LodashReplacerUtils.IS_NIL(newEntityElement)
 			) {
@@ -284,25 +309,27 @@ export class LockFieldsManager<U extends BaseMongoObject> {
 				keys.push(...this.generateAllLockFields(newEntityElement, joinedPath));
 			} else if (Array.isArray(newEntityElement)) {
 				// a[b=1]
-				const arrayWithReferences = this.conf.arrayWithReferences;
-				if (arrayWithReferences && Object.keys(arrayWithReferences).includes(joinedPath)) {
-					const arrayKey = arrayWithReferences[joinedPath];
+				if (Object.keys(this._arrayWithReferences).includes(joinedPath)) {
+					const arrayKeys = this._arrayWithReferences[joinedPath];
 					for (const element of newEntityElement) {
 						if (!LodashReplacerUtils.IS_NIL(element)) {
-							const arrayPath = `${joinedPath}[${arrayKey}=${element[arrayKey]}]`;
-							if (LodashReplacerUtils.IS_NIL(element[arrayKey])) {
+							const elementUnicity = this.getUnicityStringForArrayElement(element, arrayKeys);
+							const arrayPath = `${joinedPath}[${elementUnicity}]`;
+							const mainArrayKey = arrayKeys[0];
+							if (LodashReplacerUtils.IS_NIL(element[mainArrayKey])) {
 								throw new N9Error('wrong-array-definition', 400, {
 									newEntity,
 									basePath,
-									ignoreOnePath,
+									ignorePaths,
 									arrayPath,
+									mainArrayKey,
 								});
 							}
 							if (LangUtils.isClassicObject(element)) {
-								if (LodashReplacerUtils.IS_OBJECT_EMPTY(_.omit(element, arrayKey))) {
+								if (LodashReplacerUtils.IS_OBJECT_EMPTY(_.omit(element, arrayKeys))) {
 									keys.push(arrayPath);
 								} else {
-									keys.push(...this.generateAllLockFields(element, arrayPath, arrayKey));
+									keys.push(...this.generateAllLockFields(element, arrayPath, arrayKeys));
 								}
 							} else {
 								// TODO: if Array.isArray(newEntity[key])
@@ -412,6 +439,8 @@ export class LockFieldsManager<U extends BaseMongoObject> {
 		newEntityElement: any[],
 		currentPath: string,
 	): any[] {
+		const codeKeyNames = this._arrayWithReferences[currentPath];
+
 		const ret = [];
 		for (let i = 0; i < Math.max(existingEntityArray?.length, newEntityElement?.length); i += 1) {
 			const existingEntityElementArrayElement = existingEntityArray[i];
@@ -420,12 +449,11 @@ export class LockFieldsManager<U extends BaseMongoObject> {
 				_.get(newEntityElement, [i]),
 				currentPath,
 			);
-			const codeKeyName = this.conf.arrayWithReferences?.[currentPath];
 
 			if (!LodashReplacerUtils.IS_NIL(newValue)) {
-				if (codeKeyName) {
+				codeKeyNames?.forEach((codeKeyName) => {
 					newValue[codeKeyName] = _.get(newEntityElement, [i, codeKeyName]);
-				}
+				});
 				ret.push(newValue);
 			}
 		}
@@ -433,20 +461,18 @@ export class LockFieldsManager<U extends BaseMongoObject> {
 		// If one delete an array element, we lock the others
 		if (existingEntityArray?.length > newEntityElement?.length) {
 			for (const newEntityElementArrayElement of newEntityElement) {
-				const codeKeyName = this.conf.arrayWithReferences?.[currentPath];
-
-				if (codeKeyName) {
-					const existingElementIndex = _.findIndex(ret, {
-						[codeKeyName]: _.get(newEntityElementArrayElement, codeKeyName),
+				const elementAlreadyExists = _.some(ret, (existingElement) => {
+					return codeKeyNames?.every((key) => {
+						return existingElement[key] === _.get(newEntityElementArrayElement, key);
 					});
-					if (existingElementIndex === -1) {
-						ret.push(newEntityElementArrayElement);
-					}
-				} else {
+				});
+
+				if (!elementAlreadyExists) {
 					ret.push(newEntityElementArrayElement);
 				}
 			}
 		}
+
 		return ret;
 	}
 
@@ -457,5 +483,18 @@ export class LockFieldsManager<U extends BaseMongoObject> {
 			}
 			return excludedField === path;
 		});
+	}
+
+	private getUnicityStringForArrayElement(
+		entityElement: any,
+		arrayWithReferences: string[],
+	): string {
+		const filteredReferences = arrayWithReferences.filter(
+			(reference) => !LodashReplacerUtils.IS_NIL(entityElement[reference]),
+		);
+		const mappedReferences = filteredReferences.map(
+			(reference) => `${reference}=${entityElement[reference]}`,
+		);
+		return mappedReferences.join('&');
 	}
 }
