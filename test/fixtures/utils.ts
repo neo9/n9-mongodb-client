@@ -29,7 +29,7 @@ export function generateMongoClient(): MongoClient<SampleEntityWithArray, null> 
 	return new MongoClient(collectionName, SampleEntityWithArray, null, {
 		lockFields: {
 			arrayWithReferences: {
-				'parameters.items': 'code',
+				'parameters.items': ['code', 'otherCode'],
 			},
 			excludedFields: ['code'],
 		},

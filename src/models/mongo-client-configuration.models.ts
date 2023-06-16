@@ -10,13 +10,14 @@ export interface LockFieldConfiguration {
 	excludedFields?: (string | RegExp)[];
 
 	/**
-	 * Array fields whose item unicity is determined by a key of the field,
+	 * Array fields whose item unicity is determined by one or several keys of the field,
 	 * and not by its index in the array.
-	 * Each key is the path to the array, and each value is the name of the field to use for unicity.
+	 * Each key is the path to the array, and each value is the name of the field(s) to use for unicity.
+	 * The first field must be defined. All others fields are optional.
 	 * Use this feature to lock specific items in the array, while still allowing to modify other items.
 	 * Set to empty object to disable this feature.
 	 */
-	arrayWithReferences?: StringMap<string>;
+	arrayWithReferences?: StringMap<string | string[]>;
 }
 
 export interface UpdateOnlyOnChangeConfiguration {
