@@ -1,11 +1,11 @@
 import { N9Log } from '@neo9/n9-node-log';
 import { waitFor } from '@neo9/n9-node-utils';
 import ava, { Assertions } from 'ava';
-import { FindCursor } from 'mongodb';
 import { Transform } from 'stream';
 
 import { MongoClient } from '../src';
 import { BaseMongoObject } from '../src/models';
+import { N9FindCursor } from '../src/n9-find-cursor';
 import { init } from './fixtures/utils';
 
 class SampleType extends BaseMongoObject {
@@ -72,8 +72,8 @@ ava('[Cursor] hasNext before piping into a stream ', async (t: Assertions) => {
 	await mongoClient.insertOne({ field1String: 'string5' }, 'userId1');
 
 	const items: SampleType[] = [];
-	const cursor: FindCursor<SampleType> = mongoClient.find({}, 0, 0);
-	const readStream = cursor.stream();
+	const cursor: N9FindCursor<SampleType> = mongoClient.find({}, 0, 0);
+	const readStream = cursor.stream(undefined);
 
 	await cursor.hasNext();
 
@@ -109,7 +109,7 @@ ava('[Cursor] sort and hasNext before piping into a stream ', async (t: Assertio
 
 	const items: SampleType[] = [];
 	const cursor = mongoClient.find({}, 0, 0, { field1String: 1 });
-	const readStream = cursor.stream();
+	const readStream = cursor.stream(undefined);
 
 	await cursor.hasNext();
 

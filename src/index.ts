@@ -13,3 +13,4 @@ export * from './models';
 export * from './mongo-read-stream';
 export * from './mongo-utils';
 export * from './aggregation-utils';
+export * from './n9-find-cursor';

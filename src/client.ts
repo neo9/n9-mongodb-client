@@ -55,6 +55,7 @@ import { MongoClientUpdateManyOptions } from './models/update-many-options.model
 import { UpdateManyToSameValueOptions } from './models/update-many-to-same-value-options.models';
 import { MongoReadStream } from './mongo-read-stream';
 import { MongoUtils } from './mongo-utils';
+import { N9FindCursor } from './n9-find-cursor';
 import { TagManager } from './tag-manager';
 
 const defaultConfiguration: MongoClientConfiguration = {
@@ -348,12 +349,8 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		sort: Sort = {},
 		projection: object = {},
 		collation?: CollationOptions,
-	): FindCursor<T> {
-		let findCursor: FindCursor<U> = this.collection.find<U>(query);
-
-		if (collation) {
-			findCursor = findCursor.collation(collation);
-		}
+	): N9FindCursor<T> {
+		const findCursor: FindCursor<U> = this.collection.find<U>(query, { collation });
 
 		let transformFunction: (a: Partial<U | L>) => any;
 		if (type) {
@@ -373,12 +370,14 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			});
 		}
 
-		return findCursor
+		findCursor
 			.sort(sort)
 			.skip(page * size)
 			.limit(size)
 			.project(projection)
 			.map<T>(transformFunction);
+
+		return new N9FindCursor(this.mongoClient, this.collection, findCursor, query, { collation });
 	}
 
 	public stream(
@@ -420,7 +419,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		sort: Sort = {},
 		projection: object = {},
 		collation?: CollationOptions,
-	): FindCursor<L> {
+	): N9FindCursor<L> {
 		return this.findWithType<L>(query, this.typeList, page, size, sort, projection, collation);
 	}
 
@@ -980,7 +979,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		entities: Partial<U>[],
 		userId: string,
 		options: UpdateManyAtOnceOptions<U> = {},
-	): Promise<FindCursor<U>> {
+	): Promise<N9FindCursor<U>> {
 		try {
 			options.upsert = LodashReplacerUtils.IS_BOOLEAN(options.upsert) ? options.upsert : false;
 			options.lockNewFields = LodashReplacerUtils.IS_BOOLEAN(options.lockNewFields)
@@ -1349,7 +1348,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		upsert?: boolean,
 		returnNewEntities: boolean = true,
 		options: MongoClientUpdateManyOptions = {},
-	): Promise<FindCursor<U>> {
+	): Promise<N9FindCursor<U>> {
 		try {
 			if (LodashReplacerUtils.IS_ARRAY_EMPTY(newEntities)) {
 				return this.getEmptyCursor<U>(this.type);
@@ -1782,7 +1781,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		}
 	}
 
-	private getEmptyCursor<X extends U>(type: ClassType<X>): FindCursor<X> {
+	private getEmptyCursor<X extends U>(type: ClassType<X>): N9FindCursor<X> {
 		return this.findWithType<X>({ $and: [{ _id: false }, { _id: true }] }, type, -1, 0);
 	}
 
