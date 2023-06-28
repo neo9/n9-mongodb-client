@@ -1,5 +1,12 @@
 
 
+# [0.32.0](https://github.com/neo9/n9-mongo-client/compare/0.31.0...0.32.0) (2023-06-28)
+
+
+### locks
+
+* Add possibility to include multiple keys in arrayWithReferences ([8bcf00a](https://github.com/neo9/n9-mongo-client/commit/8bcf00a21a59af5b8f3f7f10e2c31367ca6c15e8))
+
 # [0.31.0](https://github.com/neo9/n9-mongo-client/compare/0.30.1...0.31.0) (2023-05-31)
 
 
