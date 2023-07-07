@@ -7,7 +7,9 @@ import { BaseMongoObject, StringMap } from '../../src/models';
 
 export class ArrayElement {
 	public code: string;
-	public label: StringMap<string>;
+	public otherCode?: string;
+	public label?: StringMap<string>;
+	public value?: string | number | boolean;
 }
 
 export class SampleEntityWithArray extends BaseMongoObject {
@@ -30,6 +32,22 @@ export function generateMongoClient(): MongoClient<SampleEntityWithArray, null> 
 		lockFields: {
 			arrayWithReferences: {
 				'parameters.items': ['code', 'otherCode'],
+			},
+			excludedFields: ['code'],
+		},
+		keepHistoric: true,
+	});
+}
+
+export function generateMongoClientForSimpleArray(): MongoClient<
+	SampleEntityWithSimpleArray,
+	null
+> {
+	const collectionName = `test-${Math.ceil(Math.random() * 10000)}-${Date.now()}`;
+	return new MongoClient(collectionName, SampleEntityWithSimpleArray, null, {
+		lockFields: {
+			arrayWithReferences: {
+				'parameters.items': [],
 			},
 			excludedFields: ['code'],
 		},

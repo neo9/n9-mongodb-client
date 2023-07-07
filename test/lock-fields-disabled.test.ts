@@ -4,12 +4,7 @@ import * as _ from 'lodash';
 
 import { MongoClient } from '../src';
 import { BaseMongoObject } from '../src/models';
-import { init } from './fixtures/utils';
-
-class ArrayElement {
-	public code: string;
-	public value: string;
-}
+import { ArrayElement, init } from './fixtures/utils';
 
 class SampleComplexType extends BaseMongoObject {
 	public text: string;
