@@ -16,7 +16,10 @@ export class LockFieldsManager<U extends BaseMongoObject> {
 	constructor(private conf: LockFieldConfiguration) {
 		this.conf.excludedFields = _.union(this.conf.excludedFields, ['objectInfos', '_id']);
 		for (const [key, values] of Object.entries(this.conf.arrayWithReferences ?? {})) {
-			this._arrayWithReferences[key] = _.castArray(values);
+			const valuesAsArray = _.castArray(values);
+			if (LodashReplacerUtils.IS_ARRAY_EMPTY(valuesAsArray)) continue;
+
+			this._arrayWithReferences[key] = valuesAsArray;
 		}
 	}
 
@@ -37,7 +40,7 @@ export class LockFieldsManager<U extends BaseMongoObject> {
 	): LockField[] {
 		let keys: string[];
 		if (existingEntity) {
-			const entityWithOnlyNewValues = this.pickOnlyNewValues(existingEntity, newEntity, '');
+			const entityWithOnlyNewValues = this.pickValues(existingEntity, newEntity, '', true);
 			// console.log(`-- entityWithOnlyNewValues  --`, JSON.stringify(entityWithOnlyNewValues, null, 2));
 			keys = this.generateAllLockFields(entityWithOnlyNewValues, '');
 		} else {
@@ -125,7 +128,7 @@ export class LockFieldsManager<U extends BaseMongoObject> {
 				// add existing locked elements
 				for (const existingEntityElement of existingEntity) {
 					let elementPath: string;
-					if (!LodashReplacerUtils.IS_ARRAY_EMPTY(fieldCodeNames)) {
+					if (!LodashReplacerUtils.IS_NIL(fieldCodeNames)) {
 						const elementUnicity = this.getUnicityStringForArrayElement(
 							existingEntityElement,
 							fieldCodeNames,
@@ -146,7 +149,7 @@ export class LockFieldsManager<U extends BaseMongoObject> {
 
 				for (const newEntityElement of newEntity) {
 					// merge newEntityElement with associated existingEntityElement
-					if (!LodashReplacerUtils.IS_ARRAY_EMPTY(fieldCodeNames)) {
+					if (!LodashReplacerUtils.IS_NIL(fieldCodeNames)) {
 						// array of objects
 						const elementUnicity = this.getUnicityStringForArrayElement(
 							newEntityElement,
@@ -158,9 +161,11 @@ export class LockFieldsManager<U extends BaseMongoObject> {
 						const alreadyAddedElementIndex = mergedArray.findIndex((mergedArrayElement) => {
 							return (
 								!LodashReplacerUtils.IS_NIL(mergedArrayElement[mainUniqKey]) &&
-								_.every(fieldCodeNames, (fieldCodeName) => {
-									return mergedArrayElement[fieldCodeName] === newEntityElement[fieldCodeName];
-								})
+								this.elementsHaveSameReferences(
+									mergedArrayElement,
+									newEntityElement,
+									fieldCodeNames,
+								)
 							);
 						});
 						if (alreadyAddedElementIndex !== -1) {
@@ -352,22 +357,23 @@ export class LockFieldsManager<U extends BaseMongoObject> {
 		return keys;
 	}
 
-	private pickOnlyNewValues(
+	private pickValues(
 		existingEntity: U | string | number,
 		newEntity: Partial<U> | string | number,
 		basePath: string,
+		pickOnlyNewValues: boolean,
 	): Partial<U> | string | number {
 		if (LodashReplacerUtils.IS_OBJECT_EMPTY(newEntity)) return;
-		const existingEntityKeys = _.keys(existingEntity);
 		if (!LodashReplacerUtils.IS_OBJECT(existingEntity)) {
 			if (Array.isArray(existingEntity)) {
 				throw new N9Error('invalid-type', 400, { existingEntity, newEntity });
 			}
-			if (existingEntity !== newEntity) return newEntity;
-			return;
+			if (pickOnlyNewValues && existingEntity === newEntity) return;
+			return newEntity;
 		}
 
 		const ret: any = {};
+		const existingEntityKeys = _.keys(existingEntity);
 		for (const key of existingEntityKeys) {
 			const existingEntityElement = existingEntity[key];
 			const currentPath = LangUtils.getJoinPaths(basePath, key);
@@ -377,16 +383,22 @@ export class LockFieldsManager<U extends BaseMongoObject> {
 			}
 
 			if (LangUtils.isClassicObject(existingEntityElement)) {
-				ret[key] = this.pickOnlyNewValues(existingEntityElement, newEntity[key], currentPath);
+				ret[key] = this.pickValues(
+					existingEntityElement,
+					newEntity[key],
+					currentPath,
+					pickOnlyNewValues,
+				);
 				if (LodashReplacerUtils.IS_NIL(ret[key])) {
 					delete ret[key];
 				}
 			} else if (Array.isArray(existingEntityElement)) {
 				if (newEntity[key] !== null) {
-					ret[key] = this.pickOnlyNewValuesInArray(
+					ret[key] = this.pickValuesInArray(
 						existingEntityElement,
 						newEntity[key],
 						currentPath,
+						pickOnlyNewValues,
 					);
 				}
 
@@ -407,7 +419,7 @@ export class LockFieldsManager<U extends BaseMongoObject> {
 				}
 
 				if (
-					existingEntityElementToCompare !== newEntityElementToCompare &&
+					(!pickOnlyNewValues || existingEntityElementToCompare !== newEntityElementToCompare) &&
 					!LodashReplacerUtils.IS_NIL(newEntity[key])
 				) {
 					ret[key] = newEntity[key];
@@ -434,42 +446,50 @@ export class LockFieldsManager<U extends BaseMongoObject> {
 		return ret;
 	}
 
-	private pickOnlyNewValuesInArray(
+	private pickValuesInArray(
 		existingEntityArray: any[],
 		newEntityElement: any[],
 		currentPath: string,
+		pickOnlyNewValues: boolean,
 	): any[] {
 		const codeKeyNames = this._arrayWithReferences[currentPath];
 
+		// If one delete an array element, we lock all existing elements by returning the new array as such
+		if (existingEntityArray.length > newEntityElement?.length) {
+			return newEntityElement;
+		}
+
 		const ret = [];
-		for (let i = 0; i < Math.max(existingEntityArray?.length, newEntityElement?.length); i += 1) {
+		for (let i = 0; i < Math.max(existingEntityArray.length, newEntityElement?.length); i += 1) {
 			const existingEntityElementArrayElement = existingEntityArray[i];
-			const newValue = this.pickOnlyNewValues(
+			const newEntityElementArrayElement = _.get(newEntityElement, [i]);
+
+			let shouldPickOnlyNewValues = pickOnlyNewValues;
+			if (
+				shouldPickOnlyNewValues &&
+				codeKeyNames &&
+				!LodashReplacerUtils.IS_NIL(existingEntityElementArrayElement) &&
+				!LodashReplacerUtils.IS_NIL(newEntityElementArrayElement)
+			) {
+				shouldPickOnlyNewValues = this.elementsHaveSameReferences(
+					existingEntityElementArrayElement,
+					newEntityElementArrayElement,
+					codeKeyNames,
+				);
+			}
+
+			const newValue = this.pickValues(
 				existingEntityElementArrayElement,
-				_.get(newEntityElement, [i]),
+				newEntityElementArrayElement,
 				currentPath,
+				shouldPickOnlyNewValues,
 			);
 
 			if (!LodashReplacerUtils.IS_NIL(newValue)) {
 				codeKeyNames?.forEach((codeKeyName) => {
-					newValue[codeKeyName] = _.get(newEntityElement, [i, codeKeyName]);
+					newValue[codeKeyName] = _.get(newEntityElementArrayElement, codeKeyName);
 				});
 				ret.push(newValue);
-			}
-		}
-
-		// If one delete an array element, we lock the others
-		if (existingEntityArray?.length > newEntityElement?.length) {
-			for (const newEntityElementArrayElement of newEntityElement) {
-				const elementAlreadyExists = _.some(ret, (existingElement) => {
-					return codeKeyNames?.every((key) => {
-						return existingElement[key] === _.get(newEntityElementArrayElement, key);
-					});
-				});
-
-				if (!elementAlreadyExists) {
-					ret.push(newEntityElementArrayElement);
-				}
 			}
 		}
 
@@ -496,5 +516,13 @@ export class LockFieldsManager<U extends BaseMongoObject> {
 			(reference) => `${reference}=${entityElement[reference]}`,
 		);
 		return mappedReferences.join('&');
+	}
+
+	private elementsHaveSameReferences(
+		firstElement: any,
+		secondElement: any,
+		referenceKeys: string[],
+	): boolean {
+		return _.every(referenceKeys, (key) => firstElement[key] === secondElement[key]);
 	}
 }

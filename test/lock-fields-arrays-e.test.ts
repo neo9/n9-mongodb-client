@@ -2,9 +2,9 @@ import { N9Log } from '@neo9/n9-node-log';
 import ava, { Assertions } from 'ava';
 import * as _ from 'lodash';
 
-import { MongoClient } from '../src';
 import {
 	generateMongoClient,
+	generateMongoClientForSimpleArray,
 	init,
 	SampleEntityWithArray,
 	SampleEntityWithSimpleArray,
@@ -154,13 +154,7 @@ ava(
 			},
 		};
 
-		const collectionName = `test-${Math.ceil(Math.random() * 10000)}-${Date.now()}`;
-		const mongoClient = new MongoClient(collectionName, SampleEntityWithSimpleArray, null, {
-			lockFields: {
-				excludedFields: ['code'],
-			},
-			keepHistoric: true,
-		});
+		const mongoClient = generateMongoClientForSimpleArray();
 		await mongoClient.initHistoricIndexes();
 
 		// Simulate user creation
