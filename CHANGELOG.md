@@ -1,5 +1,12 @@
 
 
+## [0.32.1](https://github.com/neo9/n9-mongo-client/compare/0.32.0...0.32.1) (2023-07-11)
+
+
+### locks
+
+* Fix missing locks on array order changed ([a11e1d8](https://github.com/neo9/n9-mongo-client/commit/a11e1d8eef79b58fdee9048441bb48ba09551279))
+
 # [0.32.0](https://github.com/neo9/n9-mongo-client/compare/0.31.0...0.32.0) (2023-06-28)
 
 
