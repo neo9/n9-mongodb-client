@@ -72,12 +72,16 @@ export class MongoUtils {
 		});
 	}
 
+	public static isMongoId(id: string): boolean {
+		return this.MONGO_ID_REGEXP.test(id);
+	}
+
 	public static oid(id: string | mongodb.ObjectID): mongodb.ObjectID | null {
 		if (!id) return id as null;
 		try {
 			return new mongodb.ObjectID(id);
 		} catch (e) {
-			if (typeof id === 'string' && !this.MONGO_ID_REGEXP.test(id)) {
+			if (typeof id === 'string' && !this.isMongoId(id)) {
 				throw new N9Error('invalid-mongo-id', 400, { id });
 			} else {
 				throw e;
