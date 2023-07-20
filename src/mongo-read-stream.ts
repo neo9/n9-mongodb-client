@@ -1,12 +1,12 @@
 import { N9Error } from '@neo9/n9-node-utils';
+import * as _ from 'lodash';
 import { Cursor, FilterQuery } from 'mongodb';
 import { Readable, Writable } from 'stream';
 
 import { MongoClient } from './client';
 import { LangUtils } from './lang-utils';
 import { LodashReplacerUtils } from './lodash-replacer.utils';
-import { BaseMongoObject } from './models';
-import { ClassType } from './models/class-type.models';
+import { BaseMongoObject, ClassType } from './models';
 import { MongoUtils } from './mongo-utils';
 
 export type PageConsumer<T> = ((data: T[]) => Promise<void>) | ((data: T[]) => void);
@@ -67,7 +67,7 @@ export class MongoReadStream<
 	U extends BaseMongoObject,
 	L extends BaseMongoObject,
 > extends Readable {
-	private lastId: string = null;
+	private lastItem: any;
 	private cursor: Cursor<Partial<U | L>> = null;
 	private hasAlreadyAddedIdConditionOnce: boolean = false;
 	private readonly _query: FilterQuery<any>;
@@ -79,15 +79,27 @@ export class MongoReadStream<
 		private readonly projection: object = {},
 		private readonly customType?: ClassType<Partial<U | L>>,
 		private readonly hint?: string | object,
+		private readonly sort: object = { _id: 1 },
+		private limit?: number,
 	) {
 		super({ objectMode: true });
 		try {
 			if ((projection as FilterQuery<BaseMongoObject>)._id === 0) {
 				throw new N9Error('can-t-create-projection-without-_id', 400, { projection });
 			}
+			if (LodashReplacerUtils.IS_OBJECT_EMPTY(sort)) {
+				throw new N9Error('sort-cannot-be-empty', 400, { sort });
+			}
 			this._query = { ..._query };
 		} catch (e) {
-			LangUtils.throwN9ErrorFromError(e, { pageSize, projection, customType, query: _query });
+			LangUtils.throwN9ErrorFromError(e, {
+				pageSize,
+				projection,
+				customType,
+				query: _query,
+				sort,
+				limit,
+			});
 		}
 	}
 
@@ -132,35 +144,27 @@ export class MongoReadStream<
 
 	public async _read(): Promise<void> {
 		try {
+			if (this.limit === 0) {
+				this.push(null);
+				return;
+			}
 			if (!(this.cursor && (await this.cursor.hasNext()))) {
-				if (this.lastId) {
-					this._query.$and = this._query.$and || [];
-					const andConditions: FilterQuery<any>[] = (this._query as any).$and;
-					// avoid to add multiple time the _id condition
-					if (this.hasAlreadyAddedIdConditionOnce) {
-						andConditions[andConditions.length - 1]._id.$gt = MongoUtils.oid(this.lastId);
-					} else {
-						andConditions.push({ _id: { $gt: MongoUtils.oid(this.lastId) as any } });
-						this.hasAlreadyAddedIdConditionOnce = true;
-					}
+				if (this.lastItem) {
+					this.updateQueryWithSortParams();
 				}
+
+				const limit = Math.min(this.pageSize, this.limit ?? this.pageSize);
 				if (this.customType) {
 					this.cursor = this.mongoClient.findWithType(
 						this._query,
 						this.customType,
 						0,
-						this.pageSize,
-						{ _id: 1 },
+						limit,
+						this.sort,
 						this.projection,
 					);
 				} else {
-					this.cursor = this.mongoClient.find(
-						this._query,
-						0,
-						this.pageSize,
-						{ _id: 1 },
-						this.projection,
-					);
+					this.cursor = this.mongoClient.find(this._query, 0, limit, this.sort, this.projection);
 				}
 
 				if (this.hint) {
@@ -173,11 +177,53 @@ export class MongoReadStream<
 				item = await this.cursor.next();
 			}
 			if (item) {
-				this.lastId = item._id;
+				this.lastItem = { ...LodashReplacerUtils.PICK_PROPERTIES(item, Object.keys(this.sort)) };
+				if (this.limit) this.limit -= 1;
 			}
 			this.push(item);
 		} catch (e) {
 			this.emit('error', e);
 		}
+	}
+
+	private updateQueryWithSortParams(): void {
+		this._query.$and = this._query.$and ?? [];
+
+		const andConditions: FilterQuery<any>[] = (this._query as any).$and;
+		const sortConditions: FilterQuery<any>[] = [];
+		const previousFields: string[] = [];
+
+		for (const [field, sortType] of Object.entries(this.sort)) {
+			const condition: FilterQuery<any> = {};
+
+			if (previousFields.length > 0) {
+				for (const previousField of previousFields) {
+					condition[previousField] = this.getValueFromLastItem(previousField);
+				}
+			}
+
+			const fieldValue = this.getValueFromLastItem(field);
+			condition[field] = sortType === 1 ? { $gt: fieldValue } : { $lt: fieldValue };
+
+			previousFields.push(field);
+			sortConditions.push(condition);
+		}
+
+		const conditionsToAdd = sortConditions.length > 1 ? { $or: sortConditions } : sortConditions[0];
+		if (this.hasAlreadyAddedIdConditionOnce) {
+			andConditions[andConditions.length - 1] = conditionsToAdd;
+		} else {
+			andConditions.push(conditionsToAdd);
+			this.hasAlreadyAddedIdConditionOnce = true;
+		}
+	}
+
+	private getValueFromLastItem(field: string): any {
+		let fieldValue = _.get(this.lastItem, field);
+		if (typeof fieldValue === 'string' && MongoUtils.isMongoId(fieldValue)) {
+			fieldValue = MongoUtils.oid(fieldValue);
+		}
+
+		return fieldValue;
 	}
 }

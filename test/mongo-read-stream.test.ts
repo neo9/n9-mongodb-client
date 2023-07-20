@@ -81,6 +81,16 @@ ava('[MONGO-READ-STREAM] Create stream with no _id in projection', async (t: Ass
 	await mongoClient.dropCollection();
 });
 
+ava('[MONGO-READ-STREAM] Create stream with no or empty sort', async (t: Assertions) => {
+	const mongoClient = new MongoClient(`test-${Date.now()}`, TestItem, TestItem);
+	await mongoClient.insertOne({ key: `value-${Math.random()}` }, 'userId1', false);
+
+	t.throws(() => mongoClient.stream({}, 1, undefined, undefined, {}));
+	t.throws(() => mongoClient.streamWithType({}, TestItem, 1, undefined, undefined, null));
+
+	await mongoClient.dropCollection();
+});
+
 ava('[MONGO-READ-STREAM] Create stream with wrong hint', async (t: Assertions) => {
 	const mongoClient = new MongoClient(`test-${Date.now()}`, TestItem, TestItem);
 	await mongoClient.insertOne({ key: `value-${Math.random()}` }, 'userId1', false);
@@ -117,6 +127,113 @@ ava('[MONGO-READ-STREAM] Create stream with hint OK', async (t: Assertions) => {
 				t.pass('Should be called');
 			}),
 	);
+	await mongoClient.dropCollection();
+});
+
+ava('[MONGO-READ-STREAM] Create stream with sort OK', async (t: Assertions) => {
+	const mongoClient = new MongoClient(`test-${Date.now()}`, TestItem, TestItem);
+
+	for (let i = 0; i < 5; i += 1) {
+		// alternate value for testing sort on i
+		const value = i % 2 ? i : i + 20;
+		for (let j = 0; j < 2; j += 1) {
+			await mongoClient.insertOne({ key: `${j}`, i: value }, 'userId1', false);
+		}
+	}
+
+	// sort OK
+	let lastItem: TestItem;
+	let length = 0;
+	let stream = mongoClient.stream({}, 2, undefined, undefined, { i: 1 });
+	await stream.forEachAsync(async (item: TestItem) => {
+		if (!item) t.fail('missing item');
+		if (lastItem && lastItem.i > item.i) t.fail('bad sorting');
+
+		lastItem = item;
+		length += 1;
+		await waitFor(2); // add some time to simulate long process
+	});
+	t.is(length, 10);
+
+	lastItem = null;
+	length = 0;
+	stream = mongoClient.stream({}, 2, undefined, undefined, { key: 1, i: 1 });
+	await stream.forEachAsync(async (item: TestItem) => {
+		if (!item) t.fail('missing item');
+		if (lastItem) {
+			if (lastItem.key > item.key || (lastItem.key === item.key && lastItem.i > item.i)) {
+				t.fail('bad sorting');
+			}
+		}
+
+		length += 1;
+		lastItem = item;
+		await waitFor(2); // add some time to simulate long process
+	});
+	t.is(length, 10);
+
+	lastItem = null;
+	length = 0;
+	stream = mongoClient.streamWithType({}, TestItem, 2, undefined, undefined, { i: -1 });
+	await stream.forEachAsync(async (item: TestItem) => {
+		if (!item) t.fail('missing item');
+		if (lastItem && lastItem.i < item.i) t.fail('bad sorting');
+
+		length += 1;
+		lastItem = item;
+		await waitFor(2); // add some time to simulate long process
+	});
+	t.is(length, 10);
+
+	lastItem = null;
+	length = 0;
+	stream = mongoClient.streamWithType({}, TestItem, 2, undefined, undefined, { key: -1, i: 1 });
+	await stream.forEachAsync(async (item: TestItem) => {
+		if (!item) t.fail('missing item');
+		if (lastItem) {
+			if (lastItem.key < item.key || (lastItem.key === item.key && lastItem.i > item.i)) {
+				t.fail('bad sorting');
+			}
+		}
+
+		length += 1;
+		lastItem = item;
+		await waitFor(2); // add some time to simulate long process
+	});
+	t.is(length, 10);
+
+	await mongoClient.dropCollection();
+});
+
+ava('[MONGO-READ-STREAM] Create stream with limit OK', async (t: Assertions) => {
+	const mongoClient = new MongoClient(`test-${Date.now()}`, TestItem, TestItem);
+	for (let i = 0; i < 20; i += 1) {
+		await mongoClient.insertOne({ key: `value-${Math.random()}` }, 'userId1', false);
+	}
+
+	// limit OK
+	let length = 0;
+	await mongoClient
+		.stream({}, 5, undefined, undefined, undefined, 7)
+		.forEachAsync(async (item: TestItem) => {
+			if (!item) t.fail('missing item');
+
+			length += 1;
+			await waitFor(2); // add some time to simulate long process
+		});
+	t.is(length, 7, 'should stream only 7 elements');
+
+	length = 0;
+	await mongoClient
+		.streamWithType({}, TestItem, 5, undefined, undefined, undefined, 17)
+		.forEachAsync(async (item: TestItem) => {
+			if (!item) t.fail('missing item');
+
+			length += 1;
+			await waitFor(2); // add some time to simulate long process
+		});
+	t.is(length, 17, 'should stream only 17 elements');
+
 	await mongoClient.dropCollection();
 });
 
