@@ -1,5 +1,16 @@
 
 
+# [0.33.0](https://github.com/neo9/n9-mongo-client/compare/0.32.1...0.33.0) (2023-08-07)
+
+
+### client
+
+* Fix userId format on findOneAndUpdate lastModification #70 ([6d0c1e0](https://github.com/neo9/n9-mongo-client/commit/6d0c1e0f80a6006b69ac29d3dff6ae48b4a22a4e)), closes [#70](https://github.com/neo9/n9-mongo-client/issues/70)
+
+### stream
+
+* Add sort and limit params for stream #69 ([47cfe1d](https://github.com/neo9/n9-mongo-client/commit/47cfe1df8f7eb696847dbc59133195457114dea8)), closes [#69](https://github.com/neo9/n9-mongo-client/issues/69)
+
 ## [0.32.1](https://github.com/neo9/n9-mongo-client/compare/0.32.0...0.32.1) (2023-07-11)
 
 
