@@ -20,18 +20,20 @@ export interface FindOneAndUpdateTestCaseAssertions {
  *
  * @param t ava assertions object
  * @param inputParams input parameters to set
+ * @param userId the userId that do the update
  * @param assertions assertions to perform
  */
 async function insertThenUpdateOneFieldToNewValue(
 	t: Assertions,
 	inputParams: Partial<MongoClientConfiguration>,
+	userId: string,
 	assertions: FindOneAndUpdateTestCaseAssertions,
 ): Promise<void> {
 	const mongoClient = new MongoClient(`test-${Date.now()}`, SampleType, SampleType, {
 		...inputParams,
 	});
 
-	const insertedEntity = await mongoClient.insertOne({ property1: 'value1' }, 'TEST');
+	const insertedEntity = await mongoClient.insertOne({ property1: 'value1' }, userId);
 	const initialLastUpdateDate = insertedEntity.objectInfos.lastUpdate.date;
 	const initialLastModificationDate = insertedEntity.objectInfos.lastModification.date;
 	t.truthy(insertedEntity.objectInfos.creation.date, 'Creation date is set upon insertion');
@@ -43,10 +45,17 @@ async function insertThenUpdateOneFieldToNewValue(
 	const returnedEntity = await mongoClient.findOneAndUpdate(
 		{ _id: MongoUtils.oid(insertedEntity._id) as any },
 		{ $set: { property1: 'new-value1' } },
-		'TEST',
+		userId,
 		false,
 		false,
 	);
+	const creationUserId = returnedEntity.objectInfos.creation.userId;
+	const lastUpdateUserId = returnedEntity.objectInfos.lastUpdate.userId;
+	const lastModificationUserId = returnedEntity.objectInfos.lastModification.userId;
+	t.is(typeof creationUserId, 'string', `creationUserId is a string`);
+	t.is(typeof lastUpdateUserId, 'string', `lastUpdateUserId is a string`);
+	t.is(typeof lastModificationUserId, 'string', `lastModificationUserId is a string`);
+
 	const returnLastUpdateDate = returnedEntity?.objectInfos.lastUpdate.date;
 	const returnLastModificationDate = returnedEntity?.objectInfos.lastModification.date;
 	t.deepEqual('new-value1', returnedEntity.property1, 'Property 1 did change in return value');
@@ -93,6 +102,7 @@ async function insertThenUpdateOneFieldToNewValue(
 insertThenUpdateOneFieldToNewValue.title = (
 	providedTitle: string,
 	inputParams: Partial<MongoClientConfiguration>,
+	userId: string,
 	assertions: FindOneAndUpdateTestCaseAssertions,
 ): string => {
 	const pick = inputParams.updateOnlyOnChange?.changeFilters?.pick ?? [];
@@ -115,7 +125,7 @@ insertThenUpdateOneFieldToNewValue.title = (
 		default:
 			keepHistoric = `disabled`;
 	}
-	return `${providedTitle} findOneAndUpdate when updating a field with updateOnlyOnChange ${updateOnlyOnChange} and keepHistoric ${keepHistoric} should result in ${lastModificationDateShouldChange}`;
+	return `${providedTitle} findOneAndUpdate when updating a field with updateOnlyOnChange ${updateOnlyOnChange} and keepHistoric ${keepHistoric}, with userId ${userId}, should result in ${lastModificationDateShouldChange}`;
 };
 
 /**
@@ -123,18 +133,20 @@ insertThenUpdateOneFieldToNewValue.title = (
  *
  * @param t ava assertions object
  * @param inputParams input parameters to set
+ * @param userId the userId that do the update
  * @param assertions assertions to perform
  */
 async function insertThenUpdateOneFieldToNewValueWithoutReturningNewValue(
 	t: Assertions,
 	inputParams: Partial<MongoClientConfiguration>,
+	userId: string,
 	assertions: FindOneAndUpdateTestCaseAssertions,
 ): Promise<void> {
 	const mongoClient = new MongoClient(`test-${Date.now()}`, SampleType, SampleType, {
 		...inputParams,
 	});
 
-	const insertedEntity = await mongoClient.insertOne({ property1: 'value1' }, 'TEST');
+	const insertedEntity = await mongoClient.insertOne({ property1: 'value1' }, userId);
 	const initialLastUpdateDate = insertedEntity.objectInfos.lastUpdate.date;
 	const initialLastModificationDate = insertedEntity.objectInfos.lastModification.date;
 	t.truthy(insertedEntity.objectInfos.creation.date, 'Creation date is set upon insertion');
@@ -146,7 +158,7 @@ async function insertThenUpdateOneFieldToNewValueWithoutReturningNewValue(
 	await mongoClient.findOneAndUpdate(
 		{ _id: MongoUtils.oid(insertedEntity._id) as any },
 		{ $set: { property1: 'new-value1' } },
-		'TEST',
+		userId,
 		false,
 		false,
 		false,
@@ -176,6 +188,7 @@ async function insertThenUpdateOneFieldToNewValueWithoutReturningNewValue(
 insertThenUpdateOneFieldToNewValueWithoutReturningNewValue.title = (
 	providedTitle: string,
 	inputParams: Partial<MongoClientConfiguration>,
+	userId: string,
 	assertions: FindOneAndUpdateTestCaseAssertions,
 ): string => {
 	const pick = inputParams.updateOnlyOnChange?.changeFilters?.pick ?? [];
@@ -198,7 +211,7 @@ insertThenUpdateOneFieldToNewValueWithoutReturningNewValue.title = (
 		default:
 			keepHistoric = `disabled`;
 	}
-	return `${providedTitle} findOneAndUpdate (without returning new value) when updating a field with updateOnlyOnChange ${updateOnlyOnChange} and keepHistoric ${keepHistoric} should result in ${lastModificationDateShouldChange}`;
+	return `${providedTitle} findOneAndUpdate (without returning new value) when updating a field with updateOnlyOnChange ${updateOnlyOnChange} and keepHistoric ${keepHistoric}, with userId ${userId}, should result in ${lastModificationDateShouldChange}`;
 };
 
 /**
@@ -206,18 +219,20 @@ insertThenUpdateOneFieldToNewValueWithoutReturningNewValue.title = (
  *
  * @param t ava assertions object
  * @param inputParams input parameters to set
+ *  @param userId the userId that do the update
  * @param assertions assertions to perform
  */
 async function insertThenUpdateOneFieldToSameValue(
 	t: Assertions,
 	inputParams: Partial<MongoClientConfiguration>,
+	userId: string,
 	assertions: FindOneAndUpdateTestCaseAssertions,
 ): Promise<void> {
 	const mongoClient = new MongoClient(`test-${Date.now()}`, SampleType, SampleType, {
 		...inputParams,
 	});
 
-	const insertedEntity = await mongoClient.insertOne({ property1: 'value1' }, 'TEST');
+	const insertedEntity = await mongoClient.insertOne({ property1: 'value1' }, userId);
 	const initialLastUpdateDate = insertedEntity.objectInfos.lastUpdate.date;
 	const initialLastModificationDate = insertedEntity.objectInfos.lastModification.date;
 	t.truthy(insertedEntity.objectInfos.creation.date, 'Creation date is set upon insertion');
@@ -229,7 +244,7 @@ async function insertThenUpdateOneFieldToSameValue(
 	const returnedEntity = await mongoClient.findOneAndUpdate(
 		{ _id: MongoUtils.oid(insertedEntity._id) as any },
 		{ $set: { property1: 'value1' } },
-		'TEST',
+		userId,
 		false,
 		false,
 	);
@@ -279,6 +294,7 @@ async function insertThenUpdateOneFieldToSameValue(
 insertThenUpdateOneFieldToSameValue.title = (
 	providedTitle: string,
 	inputParams: Partial<MongoClientConfiguration>,
+	userId: string,
 	assertions: FindOneAndUpdateTestCaseAssertions,
 ): string => {
 	const pick = inputParams.updateOnlyOnChange?.changeFilters?.pick ?? [];
@@ -301,7 +317,7 @@ insertThenUpdateOneFieldToSameValue.title = (
 		default:
 			keepHistoric = `disabled`;
 	}
-	return `${providedTitle} findOneAndUpdate when updating a field to same value with updateOnlyOnChange ${updateOnlyOnChange} and keepHistoric ${keepHistoric} should result in ${lastModificationDateShouldChange}`;
+	return `${providedTitle} findOneAndUpdate when updating a field to same value with updateOnlyOnChange ${updateOnlyOnChange} and keepHistoric ${keepHistoric}, with userId ${userId}, should result in ${lastModificationDateShouldChange}`;
 };
 
 global.log = new N9Log('tests').module('update-only-on-change');
@@ -309,121 +325,18 @@ global.log = new N9Log('tests').module('update-only-on-change');
 init();
 
 const testPrefix = '[UPDATE-ONLY-ON-CHANGE]';
+const fakeUserIdValidObjectId = '012345678901234567890123';
+const fakeUserIdNotValidObjectId = 'TEST';
 
-// updateOnlyOnChange enabled
-ava.serial(
-	testPrefix,
-	insertThenUpdateOneFieldToNewValue,
-	{
-		updateOnlyOnChange: {},
-	},
-	{
-		lastModificationDateShouldChange: true,
-	},
-);
-
-ava.serial(
-	testPrefix,
-	insertThenUpdateOneFieldToNewValueWithoutReturningNewValue,
-	{
-		updateOnlyOnChange: {},
-	},
-	{
-		lastModificationDateShouldChange: true,
-	},
-);
-
-ava.serial(
-	testPrefix,
-	insertThenUpdateOneFieldToSameValue,
-	{
-		updateOnlyOnChange: {},
-	},
-	{
-		lastModificationDateShouldChange: false,
-	},
-);
-
-// updateOnlyOnChange enabled by historic
-ava.serial(
-	testPrefix,
-	insertThenUpdateOneFieldToNewValue,
-	{
-		keepHistoric: true,
-	},
-	{
-		lastModificationDateShouldChange: true,
-	},
-);
-
-ava.serial(
-	testPrefix,
-	insertThenUpdateOneFieldToNewValueWithoutReturningNewValue,
-	{
-		keepHistoric: true,
-	},
-	{
-		lastModificationDateShouldChange: true,
-	},
-);
-
-ava.serial(
-	testPrefix,
-	insertThenUpdateOneFieldToSameValue,
-	{
-		keepHistoric: true,
-	},
-	{
-		lastModificationDateShouldChange: false,
-	},
-);
-
-for (const keepHistoric of [undefined, true, false]) {
-	// updateOnlyOnChange enabled and field not picked
+for (const userId of [fakeUserIdValidObjectId, fakeUserIdNotValidObjectId]) {
+	// updateOnlyOnChange enabled
 	ava.serial(
 		testPrefix,
 		insertThenUpdateOneFieldToNewValue,
 		{
-			keepHistoric,
-			updateOnlyOnChange: {
-				changeFilters: {
-					pick: ['non-existant-property'],
-				},
-			},
+			updateOnlyOnChange: {},
 		},
-		{
-			lastModificationDateShouldChange: false,
-		},
-	);
-
-	ava.serial(
-		testPrefix,
-		insertThenUpdateOneFieldToNewValueWithoutReturningNewValue,
-		{
-			keepHistoric,
-			updateOnlyOnChange: {
-				changeFilters: {
-					pick: ['non-existant-property'],
-				},
-			},
-		},
-		{
-			lastModificationDateShouldChange: false,
-		},
-	);
-
-	// updateOnlyOnChange enabled and field picked
-	ava.serial(
-		testPrefix,
-		insertThenUpdateOneFieldToNewValue,
-		{
-			keepHistoric,
-			updateOnlyOnChange: {
-				changeFilters: {
-					pick: ['property1'],
-				},
-			},
-		},
+		userId,
 		{
 			lastModificationDateShouldChange: true,
 		},
@@ -433,32 +346,36 @@ for (const keepHistoric of [undefined, true, false]) {
 		testPrefix,
 		insertThenUpdateOneFieldToNewValueWithoutReturningNewValue,
 		{
-			keepHistoric,
-			updateOnlyOnChange: {
-				changeFilters: {
-					pick: ['property1'],
-				},
-			},
+			updateOnlyOnChange: {},
 		},
+		userId,
 		{
 			lastModificationDateShouldChange: true,
 		},
 	);
 
-	// updateOnlyOnChange enabled and field omitted
+	ava.serial(
+		testPrefix,
+		insertThenUpdateOneFieldToSameValue,
+		{
+			updateOnlyOnChange: {},
+		},
+		userId,
+		{
+			lastModificationDateShouldChange: false,
+		},
+	);
+
+	// updateOnlyOnChange enabled by historic
 	ava.serial(
 		testPrefix,
 		insertThenUpdateOneFieldToNewValue,
 		{
-			keepHistoric,
-			updateOnlyOnChange: {
-				changeFilters: {
-					omit: ['property1'],
-				},
-			},
+			keepHistoric: true,
 		},
+		userId,
 		{
-			lastModificationDateShouldChange: false,
+			lastModificationDateShouldChange: true,
 		},
 	);
 
@@ -466,33 +383,180 @@ for (const keepHistoric of [undefined, true, false]) {
 		testPrefix,
 		insertThenUpdateOneFieldToNewValueWithoutReturningNewValue,
 		{
-			keepHistoric,
-			updateOnlyOnChange: {
-				changeFilters: {
-					omit: ['property1'],
-				},
-			},
+			keepHistoric: true,
 		},
+		userId,
+		{
+			lastModificationDateShouldChange: true,
+		},
+	);
+
+	ava.serial(
+		testPrefix,
+		insertThenUpdateOneFieldToSameValue,
+		{
+			keepHistoric: true,
+		},
+		userId,
 		{
 			lastModificationDateShouldChange: false,
 		},
 	);
 
-	// updateOnlyOnChange enabled and field picked and omitted
+	for (const keepHistoric of [undefined, true, false]) {
+		// updateOnlyOnChange enabled and field not picked
+		ava.serial(
+			testPrefix,
+			insertThenUpdateOneFieldToNewValue,
+			{
+				keepHistoric,
+				updateOnlyOnChange: {
+					changeFilters: {
+						pick: ['non-existant-property'],
+					},
+				},
+			},
+			userId,
+			{
+				lastModificationDateShouldChange: false,
+			},
+		);
+
+		ava.serial(
+			testPrefix,
+			insertThenUpdateOneFieldToNewValueWithoutReturningNewValue,
+			{
+				keepHistoric,
+				updateOnlyOnChange: {
+					changeFilters: {
+						pick: ['non-existant-property'],
+					},
+				},
+			},
+			userId,
+			{
+				lastModificationDateShouldChange: false,
+			},
+		);
+
+		// updateOnlyOnChange enabled and field picked
+		ava.serial(
+			testPrefix,
+			insertThenUpdateOneFieldToNewValue,
+			{
+				keepHistoric,
+				updateOnlyOnChange: {
+					changeFilters: {
+						pick: ['property1'],
+					},
+				},
+			},
+			userId,
+			{
+				lastModificationDateShouldChange: true,
+			},
+		);
+
+		ava.serial(
+			testPrefix,
+			insertThenUpdateOneFieldToNewValueWithoutReturningNewValue,
+			{
+				keepHistoric,
+				updateOnlyOnChange: {
+					changeFilters: {
+						pick: ['property1'],
+					},
+				},
+			},
+			userId,
+			{
+				lastModificationDateShouldChange: true,
+			},
+		);
+
+		// updateOnlyOnChange enabled and field omitted
+		ava.serial(
+			testPrefix,
+			insertThenUpdateOneFieldToNewValue,
+			{
+				keepHistoric,
+				updateOnlyOnChange: {
+					changeFilters: {
+						omit: ['property1'],
+					},
+				},
+			},
+			userId,
+			{
+				lastModificationDateShouldChange: false,
+			},
+		);
+
+		ava.serial(
+			testPrefix,
+			insertThenUpdateOneFieldToNewValueWithoutReturningNewValue,
+			{
+				keepHistoric,
+				updateOnlyOnChange: {
+					changeFilters: {
+						omit: ['property1'],
+					},
+				},
+			},
+			userId,
+			{
+				lastModificationDateShouldChange: false,
+			},
+		);
+
+		// updateOnlyOnChange enabled and field picked and omitted
+		ava.serial(
+			testPrefix,
+			insertThenUpdateOneFieldToNewValue,
+			{
+				keepHistoric,
+				updateOnlyOnChange: {
+					changeFilters: {
+						pick: ['property1'],
+						omit: ['property1'],
+					},
+				},
+			},
+			userId,
+			{
+				lastModificationDateShouldChange: true, // omit is ignored
+			},
+		);
+
+		ava.serial(
+			testPrefix,
+			insertThenUpdateOneFieldToNewValueWithoutReturningNewValue,
+			{
+				keepHistoric,
+				updateOnlyOnChange: {
+					changeFilters: {
+						pick: ['property1'],
+						omit: ['property1'],
+					},
+				},
+			},
+			userId,
+			{
+				lastModificationDateShouldChange: true, // omit is ignored
+			},
+		);
+	}
+
+	// updateOnlyOnChange disabled
 	ava.serial(
 		testPrefix,
 		insertThenUpdateOneFieldToNewValue,
 		{
-			keepHistoric,
-			updateOnlyOnChange: {
-				changeFilters: {
-					pick: ['property1'],
-					omit: ['property1'],
-				},
-			},
+			updateOnlyOnChange: undefined,
 		},
+		userId,
 		{
-			lastModificationDateShouldChange: true, // omit is ignored
+			lastModificationDateShouldChange: true,
 		},
 	);
 
@@ -500,50 +564,23 @@ for (const keepHistoric of [undefined, true, false]) {
 		testPrefix,
 		insertThenUpdateOneFieldToNewValueWithoutReturningNewValue,
 		{
-			keepHistoric,
-			updateOnlyOnChange: {
-				changeFilters: {
-					pick: ['property1'],
-					omit: ['property1'],
-				},
-			},
+			updateOnlyOnChange: undefined,
 		},
+		userId,
 		{
-			lastModificationDateShouldChange: true, // omit is ignored
+			lastModificationDateShouldChange: true,
+		},
+	);
+
+	ava.serial(
+		testPrefix,
+		insertThenUpdateOneFieldToSameValue,
+		{
+			updateOnlyOnChange: undefined,
+		},
+		userId,
+		{
+			lastModificationDateShouldChange: true,
 		},
 	);
 }
-
-// updateOnlyOnChange disabled
-ava.serial(
-	testPrefix,
-	insertThenUpdateOneFieldToNewValue,
-	{
-		updateOnlyOnChange: undefined,
-	},
-	{
-		lastModificationDateShouldChange: true,
-	},
-);
-
-ava.serial(
-	testPrefix,
-	insertThenUpdateOneFieldToNewValueWithoutReturningNewValue,
-	{
-		updateOnlyOnChange: undefined,
-	},
-	{
-		lastModificationDateShouldChange: true,
-	},
-);
-
-ava.serial(
-	testPrefix,
-	insertThenUpdateOneFieldToSameValue,
-	{
-		updateOnlyOnChange: undefined,
-	},
-	{
-		lastModificationDateShouldChange: true,
-	},
-);
