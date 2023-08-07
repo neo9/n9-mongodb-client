@@ -620,7 +620,9 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 						const newUpdate = await this.updateLastModificationDate(newEntity._id, now, userId);
 
 						if (returnNewValue) {
-							newEntity.objectInfos.lastModification = newUpdate.objectInfos.lastModification;
+							newEntity.objectInfos.lastModification = MongoUtils.mapObjectIdToStringHex(
+								newUpdate.objectInfos.lastModification,
+							);
 						}
 					}
 				}
