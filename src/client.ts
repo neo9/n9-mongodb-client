@@ -5,25 +5,31 @@ import * as _ from 'lodash';
 import * as mingo from 'mingo-fork-no-hash';
 import {
 	AggregationCursor,
-	BulkWriteOperation,
 	ClientSession,
-	CollationDocument,
 	Collection,
-	CollectionAggregationOptions,
-	CollectionInsertManyOptions,
-	Cursor,
 	Db,
-	FilterQuery,
-	IndexOptions,
+	Document,
 	IndexSpecification,
 	MatchKeysAndValues,
 	MongoClient as MongodbClient,
 	ObjectId,
 	OptionalId,
-	UpdateQuery,
+	OptionalUnlessRequiredId,
+	ReturnDocument,
+	Sort,
 } from 'mongodb';
 import { PromisePoolExecutor } from 'promise-pool-executor';
 
+import {
+	BulkWriteOperation,
+	CollationDocument,
+	CollectionAggregationOptions,
+	CollectionInsertManyOptions,
+	Cursor,
+	FilterQuery,
+	IndexOptions,
+	UpdateQuery,
+} from '.';
 import { AggregationBuilder } from './aggregation-utils';
 import { HistoricManager } from './historic-manager';
 import { IndexManager } from './index-manager';
@@ -142,7 +148,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 
 	public async createExpirationIndex(
 		ttlInDays: number,
-		fieldOrSpec: string | object = 'objectInfos.creation.date',
+		fieldOrSpec: IndexSpecification = 'objectInfos.creation.date',
 		options: IndexOptions = {},
 	): Promise<void> {
 		await this.indexManager.ensureExpirationIndex(fieldOrSpec, ttlInDays, options);
@@ -264,7 +270,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			if (LodashReplacerUtils.IS_ARRAY_EMPTY(newEntities)) return;
 
 			const date = new Date();
-			const entitiesToInsert: any = newEntities.map((newEntity) => {
+			const entitiesToInsert: OptionalUnlessRequiredId<U>[] = newEntities.map((newEntity) => {
 				newEntity.objectInfos = {
 					creation: {
 						date,
@@ -289,13 +295,16 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			});
 
 			const insertResult = await this.collection.insertMany(entitiesToInsert, options);
+			// Cannot anymore return the new object values inserted
 			if (returnNewValue) {
-				return (insertResult.ops || []).map((newEntity) =>
-					MongoUtils.mapObjectToClass(
-						this.type,
-						MongoUtils.unRemoveSpecialCharactersInKeys(newEntity),
-					),
-				);
+				return await this.findWithType(
+					{
+						_id: { $in: Object.values(insertResult.insertedIds) },
+					},
+					this.type,
+					0,
+					0,
+				).toArray();
 			}
 		} catch (e) {
 			LangUtils.throwN9ErrorFromError(e, { count: newEntities?.length });
@@ -307,7 +316,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		type: ClassType<T>,
 		page: number = 0,
 		size: number = 10,
-		sort: object = {},
+		sort: Sort = {},
 		projection: object = {},
 		collation?: CollationDocument,
 	): Cursor<T> {
@@ -379,7 +388,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		query: object,
 		page: number = 0,
 		size: number = 10,
-		sort: object = {},
+		sort: Sort = {},
 		projection: object = {},
 		collation?: CollationDocument,
 	): Cursor<L> {
@@ -560,7 +569,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 					date: now,
 					userId: formattedUserId,
 				},
-			} as any;
+			};
 			if (!this.conf.updateOnlyOnChange) {
 				(updateQuery.$set as any)['objectInfos.lastModification'] = {
 					date: now,
@@ -575,7 +584,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 						date: now,
 						userId: formattedUserId,
 					},
-				} as any;
+				};
 
 				if (updateQuery.$set._id) {
 					this.logger.warn(
@@ -597,11 +606,11 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				snapshot = await this.findOne(query);
 			}
 
-			let newEntity = (
+			let newEntity: U = (
 				await this.collection.findOneAndUpdate(query, updateQuery, {
 					upsert,
 					arrayFilters,
-					returnOriginal: false,
+					returnDocument: ReturnDocument.AFTER,
 				})
 			).value;
 			if (returnNewValue || this.conf.keepHistoric || this.conf.updateOnlyOnChange) {
@@ -1003,7 +1012,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 					date: now,
 					userId: ObjectId.isValid(userId) ? MongoUtils.oid(userId) : userId,
 				},
-			} as any;
+			};
 
 			const updateResult = await this.collection.updateMany(query, updateQuery);
 
@@ -1076,7 +1085,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			const results: { _id: string; value?: number }[] = [];
 
 			do {
-				let cursor: Cursor<BaseMongoObject>;
+				let cursor: Cursor<Document>;
 				if (!lastId) {
 					cursor = this.collection.find(query).project({ _id: 1 }).sort({ _id: 1 }).limit(1);
 				} else {

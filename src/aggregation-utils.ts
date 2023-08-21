@@ -1,5 +1,4 @@
-import { FilterQuery } from 'mongodb';
-
+import { FilterQuery } from '.';
 import {
 	AggregationPipeline,
 	AggregationPipelineStage,

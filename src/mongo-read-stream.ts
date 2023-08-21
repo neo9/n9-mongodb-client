@@ -4,6 +4,7 @@ import { Cursor, FilterQuery } from 'mongodb';
 import { Readable, Writable } from 'stream';
 
 import { MongoClient } from './client';
+import { FilterQuery } from './index';
 import { LangUtils } from './lang-utils';
 import { LodashReplacerUtils } from './lodash-replacer.utils';
 import { BaseMongoObject, ClassType } from './models';

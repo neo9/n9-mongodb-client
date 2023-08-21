@@ -1,5 +1,6 @@
-import { Collection, IndexOptions, IndexSpecification } from 'mongodb';
+import { Collection, IndexSpecification } from 'mongodb';
 
+import { IndexOptions } from '.';
 import { LangUtils } from './lang-utils';
 
 /**
@@ -55,7 +56,7 @@ export class IndexManager {
 	 * @param options extra mongodb index creation options
 	 */
 	public async ensureExpirationIndex(
-		fieldOrSpec: string | object,
+		fieldOrSpec: IndexSpecification,
 		ttlInDays: number,
 		options: IndexOptions = {},
 	): Promise<void> {

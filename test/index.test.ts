@@ -61,9 +61,9 @@ ava('[CRUD] Insert one and find it', async (t: Assertions) => {
 	t.truthy(foundObject, 'found by query');
 	t.is(sizeWithElementIn, 1, 'nb element in collection');
 	t.is(foundObject.field2Number, intValue, 'found right element');
-	t.is(typeof foundObject._id, 'string', 'ID is a string and not ObjectID');
-	t.is(foundObject._id.constructor.name, 'String', 'ID is a string and not ObjectID');
-	t.is(foundWithNativeClient._id.constructor.name, 'ObjectID', 'ID is an ObjectID on MongoDB');
+	t.is(typeof foundObject._id, 'string', 'ID is a string and not ObjectId');
+	t.is(foundObject._id.constructor.name, 'String', 'ID is a string and not ObjectId');
+	t.is(foundWithNativeClient._id.constructor.name, 'ObjectId', 'ID is an ObjectId on MongoDB');
 	t.truthy(foundObjectById, 'found by ID');
 	t.truthy(foundObjectByKey, 'found by key');
 	t.true(existsById, 'exists by ID');

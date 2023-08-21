@@ -1,7 +1,8 @@
 import { N9Log } from '@neo9/n9-node-log';
 import { diff as deepDiff } from 'deep-diff';
-import { Collection, Cursor, Db, IndexOptions, ObjectId } from 'mongodb';
+import { Collection, Db, ObjectId, WithId } from 'mongodb';
 
+import { Cursor, IndexOptions } from '.';
 import { IndexManager } from './index-manager';
 import { LangUtils } from './lang-utils';
 import { LodashReplacerUtils } from './lodash-replacer.utils';
@@ -122,7 +123,7 @@ export class HistoricManager<U extends BaseMongoObject> {
 				.sort('_id', -1)
 				.skip(page * size)
 				.limit(size)
-				.map((a: EntityHistoric<U>) => {
+				.map((a: WithId<EntityHistoricStored<U>>) => {
 					const entityHistoric = MongoUtils.mapObjectToClass<EntityHistoric<U>, EntityHistoric<U>>(
 						EntityHistoric,
 						MongoUtils.unRemoveSpecialCharactersInKeys(a),
@@ -199,7 +200,7 @@ export class HistoricManager<U extends BaseMongoObject> {
 
 	public async countByEntityId(id: string): Promise<number> {
 		try {
-			return await this.collection.countDocuments({ entityId: MongoUtils.oid(id) as any });
+			return await this.collection.countDocuments({ entityId: MongoUtils.oid(id) });
 		} catch (e) {
 			LangUtils.throwN9ErrorFromError(e, { id });
 		}

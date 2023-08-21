@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import { N9Error } from '@neo9/n9-node-utils';
 import * as _ from 'lodash';
-import { MongoError, ObjectID } from 'mongodb';
+import { MongoError } from 'mongodb';
 
 import { LodashReplacerUtils } from './lodash-replacer.utils';
 
@@ -68,7 +68,7 @@ export class LangUtils {
 	public static isClassicObject(existingEntityElement: any): boolean {
 		return (
 			LodashReplacerUtils.IS_OBJECT(existingEntityElement) &&
-			!(existingEntityElement instanceof ObjectID) &&
+			!(existingEntityElement instanceof ObjectId) &&
 			!(existingEntityElement instanceof Date) &&
 			!Array.isArray(existingEntityElement)
 		);

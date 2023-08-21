@@ -515,7 +515,7 @@ ava('[LOCKS] Try ensuring index with wrong collection name', async (t: Assertion
 			result = await lock.ensureIndexes();
 		},
 		{
-			message: "collection names must not contain '$'",
+			message: "Collection names must not contain '$'",
 		},
 	);
 	t.truthy(!result, "The lock can't be ensured due to invalid collection name (contains $)");
@@ -537,13 +537,13 @@ ava('[LOCKS] Try acquiring lock with wrong collection name', async (t: Assertion
 			code = await lock.acquire();
 		},
 		{
-			message: "collection names must not contain '$'",
+			message: "Collection names must not contain '$'",
 		},
 	);
 	t.truthy(!code, "The lock can't be acquired due to invalid collection name (contains $)");
 });
 
-ava('[LOCKS] Try acquiring lock with invalid key', async (t: Assertions) => {
+ava('[LOCKS] Try acquiring lock with valid key', async (t: Assertions) => {
 	const db = global.db;
 	delete global.db;
 	t.throws(() => new N9MongoLock('$collection-name'), {
@@ -553,6 +553,7 @@ ava('[LOCKS] Try acquiring lock with invalid key', async (t: Assertions) => {
 
 	const lockWithCollectionNameOk = new N9MongoLock('collection-name', { 'a.b': 123 } as any);
 
+	// TODO: check
 	let code: string;
 	await t.throwsAsync(
 		async () => {
@@ -581,7 +582,7 @@ ava('[LOCKS] Try releasing lock with wrong collection name', async (t: Assertion
 			ok = await lock.release('a-fake-lock-id');
 		},
 		{
-			message: "collection names must not contain '$'",
+			message: "Collection names must not contain '$'",
 		},
 	);
 	t.truthy(!ok, "The lock can't be released due to invalid collection name (contains $)");

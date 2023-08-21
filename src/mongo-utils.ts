@@ -3,7 +3,9 @@ import { N9Error } from '@neo9/n9-node-utils';
 import { ClassTransformOptions, plainToClass } from 'class-transformer';
 import * as _ from 'lodash';
 import * as mongodb from 'mongodb';
+import { ListCollectionsOptions } from 'mongodb';
 
+import { ReadPreferenceOrMode } from './index';
 import { LodashReplacerUtils } from './lodash-replacer.utils';
 import { ClassType } from './models/class-type.models';
 import { MongoUtilsOptions } from './models/mongo-utils-options.models';
@@ -17,7 +19,7 @@ export class MongoUtils {
 
 	public static async connect(
 		url: string,
-		options: mongodb.MongoClientOptions = { useNewUrlParser: true },
+		options: mongodb.MongoClientOptions = {},
 		connectOptions: MongoUtilsOptions = {},
 	): Promise<mongodb.Db> {
 		const baseConnectOptions: MongoUtilsOptions = {
@@ -67,19 +69,17 @@ export class MongoUtils {
 
 		const log = global.log.module('mongo');
 		log.info(`Disconnecting from MongoDB...`);
-		await new Promise((resolve) => {
-			(global.dbClient as mongodb.MongoClient).logout(resolve);
-		});
+		await (global.dbClient as mongodb.MongoClient).close();
 	}
 
 	public static isMongoId(id: string): boolean {
 		return this.MONGO_ID_REGEXP.test(id);
 	}
 
-	public static oid(id: string | mongodb.ObjectID): mongodb.ObjectID | null {
+	public static oid(id: string | mongodb.ObjectId): mongodb.ObjectId | null {
 		if (!id) return id as null;
 		try {
-			return new mongodb.ObjectID(id);
+			return new mongodb.ObjectId(id);
 		} catch (e) {
 			if (typeof id === 'string' && !this.isMongoId(id)) {
 				throw new N9Error('invalid-mongo-id', 400, { id });
@@ -90,8 +90,8 @@ export class MongoUtils {
 	}
 
 	public static oids(
-		ids: string[] | mongodb.ObjectID[] | (string | mongodb.ObjectID)[],
-	): mongodb.ObjectID[] | undefined {
+		ids: string[] | mongodb.ObjectId[] | (string | mongodb.ObjectId)[],
+	): mongodb.ObjectId[] | undefined {
 		if (ids) {
 			return (ids as any[]).map((id) => MongoUtils.oid(id));
 		}
@@ -100,7 +100,7 @@ export class MongoUtils {
 
 	public static mapObjectIdToStringHex(obj: any): any {
 		for (const [key, value] of Object.entries(obj)) {
-			if (value instanceof mongodb.ObjectID) {
+			if (value instanceof mongodb.ObjectId) {
 				obj[key] = value.toHexString();
 			} else if (value && typeof value === 'object') {
 				MongoUtils.mapObjectIdToStringHex(value);
@@ -127,7 +127,7 @@ export class MongoUtils {
 			LodashReplacerUtils.IS_STRING(obj) ||
 			LodashReplacerUtils.IS_BOOLEAN(obj) ||
 			LodashReplacerUtils.IS_NUMBER(obj) ||
-			obj instanceof mongodb.ObjectID ||
+			obj instanceof mongodb.ObjectId ||
 			LodashReplacerUtils.IS_DATE(obj)
 		) {
 			return obj;
@@ -153,7 +153,7 @@ export class MongoUtils {
 			LodashReplacerUtils.IS_STRING(obj) ||
 			LodashReplacerUtils.IS_BOOLEAN(obj) ||
 			LodashReplacerUtils.IS_NUMBER(obj) ||
-			obj instanceof mongodb.ObjectID ||
+			obj instanceof mongodb.ObjectId ||
 			LodashReplacerUtils.IS_DATE(obj)
 		) {
 			return obj;
@@ -196,10 +196,10 @@ export class MongoUtils {
 		options?: {
 			nameOnly?: boolean;
 			batchSize?: number;
-			readPreference?: mongodb.ReadPreferenceOrMode;
+			readPreference?: ReadPreferenceOrMode;
 			session?: mongodb.ClientSession;
-		},
-	): mongodb.CommandCursor {
+		} & ListCollectionsOptions,
+	): mongodb.ListCollectionsCursor {
 		return (global.db as mongodb.Db).listCollections(filter, options);
 	}
 
