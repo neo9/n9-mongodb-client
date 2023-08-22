@@ -62,9 +62,15 @@ export function init(): void {
 	ava.before(async () => {
 		let mongoConnectionString;
 		try {
-			await MongoUtils.connect('mongodb://127.0.0.1:27017', {
-				serverSelectionTimeoutMS: 650, // 650ms, default is 30000ms
-			});
+			await MongoUtils.connect(
+				'mongodb://127.0.0.1:27017',
+				{
+					serverSelectionTimeoutMS: 650, // 650ms, default is 30000ms
+				},
+				{
+					killProcessOnReconnectFailed: false,
+				},
+			);
 			global.log.warn(`Using local MongoDB`);
 		} catch (err) {
 			if (err.name === 'MongoServerSelectionError') {
@@ -79,7 +85,13 @@ export function init(): void {
 				});
 
 				mongoConnectionString = mongod.getUri();
-				await MongoUtils.connect(mongoConnectionString);
+				await MongoUtils.connect(
+					mongoConnectionString,
+					{},
+					{
+						killProcessOnReconnectFailed: false,
+					},
+				);
 			} else {
 				throw err;
 			}

@@ -47,7 +47,7 @@ ava('[Listing] List elements', async (t: Assertions) => {
 	const listing = await mongoClient.find({}).toArray();
 
 	t.truthy(listing[0].fieldEntity, 'entity field is present');
-	t.falsy((listing[0] as any).fieldListing, 'listing field is missing');
+	t.falsy(listing[0].fieldListing, 'listing field is missing');
 
 	const listingWithDetails = await mongoClient.findWithType({}, SampleTypeEntity).toArray();
 
@@ -77,7 +77,7 @@ ava('[Listing] List entities without class-transformer', async (t: Assertions) =
 	const listing = await mongoClient.findWithType({}, SampleTypeEntity2).toArray();
 
 	t.truthy(listing[0].fieldEntity, 'entity field is present');
-	t.falsy((listing[0] as any).fieldListing, 'listing field is missing');
+	t.falsy(listing[0].fieldListing, 'listing field is missing');
 
 	const listingWithDetails = await mongoClient
 		.findWithType<SampleTypeEntity2>(

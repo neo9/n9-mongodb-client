@@ -404,14 +404,14 @@ export class LockFieldsManager<U extends BaseMongoObject> {
 
 				if (LodashReplacerUtils.IS_OBJECT_EMPTY(ret[key])) delete ret[key];
 			} else {
-				let existingEntityElementToCompare: string = existingEntityElement;
+				let existingEntityElementToCompare: Date | ObjectId | string = existingEntityElement;
 				if (existingEntityElementToCompare instanceof ObjectId) {
 					existingEntityElementToCompare = existingEntityElementToCompare.toHexString();
 				} else if (existingEntityElementToCompare instanceof Date) {
 					existingEntityElementToCompare = existingEntityElementToCompare.toISOString();
 				}
 
-				let newEntityElementToCompare: string = newEntity[key];
+				let newEntityElementToCompare: Date | ObjectId | string = newEntity[key];
 				if (newEntityElementToCompare instanceof ObjectId) {
 					newEntityElementToCompare = newEntityElementToCompare.toHexString();
 				} else if (newEntityElementToCompare instanceof Date) {

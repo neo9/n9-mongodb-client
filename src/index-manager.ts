@@ -6,11 +6,11 @@ import { LangUtils } from './lang-utils';
 /**
  * Class that handlez the creation, update and deletion of mongodb indexes
  */
-export class IndexManager {
+export class IndexManager<U> {
 	/**
 	 * @param collection the mongodb collection in which the indexes will be managed
 	 */
-	constructor(private readonly collection: Collection) {}
+	constructor(private readonly collection: Collection<U>) {}
 
 	/**
 	 * Returns a list of all indexes.

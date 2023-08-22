@@ -9,7 +9,7 @@ import { MongoUtils } from './mongo-utils';
 /**
  * Class that can add and remvoe tags to entities in a colection
  */
-export class TagManager {
+export class TagManager<U> {
 	private static buildAddTagUpdate(userId: string, options: AddTagOptions): object {
 		const update: UpdateQuery<any> = { $addToSet: { 'objectInfos.tags': options.tag } as any };
 		const updateLastUpdate = LodashReplacerUtils.IS_BOOLEAN(options.updateLastUpdate)
@@ -45,7 +45,7 @@ export class TagManager {
 	/**
 	 * @param collection the mongodb collection in which the tags will be managed
 	 */
-	constructor(private collection: Collection) {}
+	constructor(private collection: Collection<U>) {}
 
 	/**
 	 * Add a tag to an entity.
@@ -194,7 +194,7 @@ export class TagManager {
 	 */
 	public async deleteManyWithTag(tag: string): Promise<void> {
 		try {
-			await this.collection.deleteMany({ 'objectInfos.tags': tag });
+			await this.collection.deleteMany({ 'objectInfos.tags': tag } as any);
 		} catch (e) {
 			LangUtils.throwN9ErrorFromError(e, { tag });
 		}

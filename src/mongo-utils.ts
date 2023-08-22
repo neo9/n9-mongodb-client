@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import { N9Error } from '@neo9/n9-node-utils';
+import { N9Error, waitFor } from '@neo9/n9-node-utils';
 import { ClassTransformOptions, plainToClass } from 'class-transformer';
 import * as _ from 'lodash';
 import * as mongodb from 'mongodb';
@@ -27,10 +27,11 @@ export class MongoUtils {
 			...connectOptions,
 		};
 		const log = global.log.module('mongo');
-		log.info(`Connecting to ${MongoUtils.hidePasswordFromURI(url)}...`);
 
 		const mongoClient = new mongodb.MongoClient(url, options);
 		const safeUrl = MongoUtils.hidePasswordFromURI(url);
+		// See https://www.mongodb.com/community/forums/t/what-is-the-minimum-and-maximum-values-of-reconnecttries-and-reconnectinterval-of-mongodb-node-js-driver/155949
+		// NOW we have to use serverSelectionTimeoutMS, socketTimeoutMS instead of reconnectTries and reconnectInterval
 
 		mongoClient.on('serverOpening', () => {
 			log.info(`Connection to the mongodb server is being established...`);
@@ -48,18 +49,31 @@ export class MongoUtils {
 			log.warn(`Client connection or operation timed out`);
 		});
 
-		const dbClient = await mongoClient.connect();
-		global.dbClient = dbClient;
-		const db = dbClient.db();
-		global.db = db;
+		mongoClient.on('connectionCreated', () => {
+			log.warn(`Client connection created`);
+		});
 
-		(db as any).s.topology.on('reconnectFailed', () => {
-			log.warn(`Client reconnection failed.`);
+		mongoClient.on('serverClosed', async () => {
+			log.warn(`Mongo server closed`);
 			if (baseConnectOptions.killProcessOnReconnectFailed) {
 				log.warn(`Sending SIGTERM to stop process.`);
+				await waitFor(10); // let some time for logs to print
 				process.kill(process.pid, 'SIGTERM');
 			}
 		});
+
+		try {
+			log.info(`Connecting to ${MongoUtils.hidePasswordFromURI(url)}...`);
+			await mongoClient.connect();
+			await mongoClient.db().admin().ping();
+			log.info(`Client connected to ${safeUrl}.`);
+		} catch (err) {
+			log.error(`Client failed to connect to ${safeUrl}.`);
+			throw err;
+		}
+		global.dbClient = mongoClient;
+		const db = mongoClient.db();
+		global.db = db;
 
 		return db;
 	}

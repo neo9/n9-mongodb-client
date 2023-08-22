@@ -8,6 +8,7 @@ import { Cursor, FilterQuery } from './index';
 import { LangUtils } from './lang-utils';
 import { LodashReplacerUtils } from './lodash-replacer.utils';
 import { BaseMongoObject, ClassType } from './models';
+import { ProjectionQuery } from './models/find-paramters.models';
 import { MongoUtils } from './mongo-utils';
 
 export type PageConsumer<T> = ((data: T[]) => Promise<void>) | ((data: T[]) => void);
@@ -77,7 +78,7 @@ export class MongoReadStream<
 		private readonly mongoClient: MongoClient<U, L>,
 		_query: FilterQuery<any>,
 		private readonly pageSize: number,
-		private readonly projection: object = {},
+		private readonly projection: ProjectionQuery<U> = {},
 		private readonly customType?: ClassType<Partial<U | L>>,
 		private readonly hint?: string | object,
 		private readonly sort: Sort = { _id: 1 },
@@ -85,7 +86,7 @@ export class MongoReadStream<
 	) {
 		super({ objectMode: true });
 		try {
-			if ((projection as FilterQuery<BaseMongoObject>)._id === 0) {
+			if ((projection as Record<string, 0 | 1>)._id === 0) {
 				throw new N9Error('can-t-create-projection-without-_id', 400, { projection });
 			}
 			if (LodashReplacerUtils.IS_OBJECT_EMPTY(sort)) {
