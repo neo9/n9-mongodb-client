@@ -2,11 +2,10 @@ import { N9Log } from '@neo9/n9-node-log';
 import { waitFor } from '@neo9/n9-node-utils';
 import ava, { Assertions } from 'ava';
 import * as _ from 'lodash';
-import { ObjectID } from 'mongodb';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import * as stdMocks from 'std-mocks';
 
-import { BaseMongoObject, MongoClient, MongoUtils } from '../src';
+import { BaseMongoObject, MongoClient, MongoUtils, ObjectID } from '../src';
 
 class SampleType extends BaseMongoObject {
 	public test: string;
@@ -76,29 +75,30 @@ ava('[MONGO-UTILS] Ensure event logs', async (t: Assertions) => {
 	const mongoURI = mongod.getUri();
 
 	await MongoUtils.connect(mongoURI, {
-		autoReconnect: true,
-		reconnectTries: 100,
-		reconnectInterval: 50,
+		// autoReconnect: true,
+		// reconnectTries: 100,
+		// reconnectInterval: 50,
+		// TODO: view https://mongodb.github.io/node-mongodb-native/3.6/reference/unified-topology/
 	});
 	await waitFor(100);
 	let output = stdMocks.flush();
 
 	t.regex(output.stdout.pop(), /Client connected to/, 'Should have connection log');
-	t.truthy(global.dbClient.isConnected());
+	t.truthy(MongoUtils.isConnected());
 
 	await mongod.stop(false);
 	await waitFor(100);
 	output = stdMocks.flush();
 
 	t.regex(output.stdout.pop(), /Client disconnected from/, 'Should have close event log');
-	t.falsy(global.dbClient.isConnected());
+	t.falsy(MongoUtils.isConnected());
 
 	await mongod.start(true);
 	await waitFor(200);
 	output = stdMocks.flush();
 
 	t.regex(output.stdout.pop(), /Client reconnected to/, 'Should have reconnect event log');
-	t.truthy(global.dbClient.isConnected());
+	t.truthy(MongoUtils.isConnected());
 
 	await MongoUtils.disconnect();
 	await MongoUtils.connect(mongoURI, {
@@ -119,9 +119,10 @@ ava('[MONGO-UTILS] Ensure event logs', async (t: Assertions) => {
 	await MongoUtils.connect(
 		mongoURI,
 		{
-			autoReconnect: true,
-			reconnectTries: 1,
-			reconnectInterval: 50,
+			// autoReconnect: true,
+			// reconnectTries: 1,
+			// reconnectInterval: 50,
+			// TODO : https://mongodb.github.io/node-mongodb-native/3.6/reference/unified-topology/
 		},
 		{ killProcessOnReconnectFailed: false },
 	);
@@ -135,9 +136,27 @@ ava('[MONGO-UTILS] Ensure event logs', async (t: Assertions) => {
 		/Client reconnection failed/,
 		'Should have reconnect failed event log',
 	);
-	t.falsy(global.dbClient.isConnected());
+	t.falsy(MongoUtils.isConnected());
 
 	await MongoUtils.disconnect();
+});
+
+ava('[MONGO-UTILS] IsConnected', async (t: Assertions) => {
+	t.false(await MongoUtils.isConnected(), 'is not yet connected, check read only');
+	t.false(await MongoUtils.isConnected(false), 'is not yet connected, check read only');
+
+	mongod = await MongoMemoryServer.create();
+	const mongoURI = mongod.getUri();
+	await MongoUtils.connect(mongoURI, {
+		// autoReconnect: true,
+		// reconnectTries: 100,
+		// reconnectInterval: 50,
+		// TODO: view https://mongodb.github.io/node-mongodb-native/3.6/reference/unified-topology/
+	});
+	await waitFor(100);
+
+	t.true(await MongoUtils.isConnected(), 'is not yet connected, check read only');
+	t.true(await MongoUtils.isConnected(false), 'is not yet connected, check read only');
 });
 
 ava('[MONGO-UTILS] List collection names', async (t: Assertions) => {

@@ -1,5 +1,6 @@
-import { Collection, ObjectId, UpdateQuery } from 'mongodb';
+import { Collection, ObjectId, ReturnDocument } from 'mongodb';
 
+import { UpdateQuery } from '../src';
 import { LangUtils } from './lang-utils';
 import { LodashReplacerUtils } from './lodash-replacer.utils';
 import { AddTagOptions, RemoveTagOptions } from './models';
@@ -63,7 +64,9 @@ export class TagManager {
 		try {
 			options.tag = options.tag || new ObjectId().toHexString();
 			const update = TagManager.buildAddTagUpdate(userId, options);
-			await this.collection.findOneAndUpdate(query, update, { returnOriginal: false });
+			await this.collection.findOneAndUpdate(query, update, {
+				returnDocument: ReturnDocument.AFTER,
+			});
 			return options.tag;
 		} catch (e) {
 			LangUtils.throwN9ErrorFromError(e, {
@@ -129,7 +132,9 @@ export class TagManager {
 	): Promise<void> {
 		try {
 			const update = TagManager.buildRemoveTagUpdate(tag, userId, options);
-			await this.collection.findOneAndUpdate(query, update, { returnOriginal: false });
+			await this.collection.findOneAndUpdate(query, update, {
+				returnDocument: ReturnDocument.AFTER,
+			});
 		} catch (e) {
 			LangUtils.throwN9ErrorFromError(e, {
 				query,

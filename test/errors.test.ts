@@ -1,7 +1,6 @@
 import { N9Log } from '@neo9/n9-node-log';
 import { N9Error, waitFor } from '@neo9/n9-node-utils';
 import ava, { Assertions } from 'ava';
-import { MongoClient as MongodbClient } from 'mongodb';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 
 import { BaseMongoObject, MongoClient, MongoUtils } from '../src';
@@ -19,8 +18,10 @@ ava('[Errors] Check error thrown on every client function', async (t: Assertions
 		connectTimeoutMS: 100,
 		socketTimeoutMS: 100,
 		waitQueueTimeoutMS: 100,
-		wtimeout: 100,
-		reconnectTries: 0,
+		writeConcern: {
+			wtimeoutMS: 100,
+		},
+		// reconnectTries: 0, : https://mongodb.github.io/node-mongodb-native/3.6/reference/unified-topology/
 	});
 
 	const client = new MongoClient(`test-${Date.now()}`, BaseMongoObject, BaseMongoObject, {
@@ -93,7 +94,8 @@ ava('[Errors] Check error thrown on every client function', async (t: Assertions
 	// STOP MONGO
 	await client.dropCollection();
 	await client2.dropCollection();
-	while ((global.dbClient as MongodbClient).isConnected()) {
+
+	while (await MongoUtils.isConnected()) {
 		await MongoUtils.disconnect();
 		await waitFor(50);
 	}

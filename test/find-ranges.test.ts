@@ -1,7 +1,7 @@
 import { N9Log } from '@neo9/n9-node-log';
 import ava, { ExecutionContext } from 'ava';
-import { FilterQuery } from 'mongodb';
 
+import { FilterQuery } from '..';
 import { MongoClient, StringMap } from '../src';
 import { BaseMongoObject } from '../src/models';
 import { init } from './fixtures/utils';

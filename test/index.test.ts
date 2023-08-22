@@ -35,7 +35,7 @@ global.log = new N9Log('tests');
 init();
 
 ava('[CRUD] Insert one and find it', async (t: Assertions) => {
-	const collection = (global.db as Db).collection(`test-${Date.now()}`);
+	const collection = (global.db as Db).collection<SampleType>(`test-${Date.now()}`);
 	const mongoClient = new MongoClient(collection, SampleType, SampleTypeListing);
 	const size = await mongoClient.count();
 

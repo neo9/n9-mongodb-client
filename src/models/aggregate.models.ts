@@ -1,5 +1,4 @@
-import { FilterQuery } from 'mongodb';
-
+import { FilterQuery } from '..';
 import { StringMap } from './maps.models';
 
 /* eslint-disable no-use-before-define */

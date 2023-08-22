@@ -3,7 +3,7 @@ import { N9Error } from '@neo9/n9-node-utils';
 import { ClassTransformOptions, plainToClass } from 'class-transformer';
 import * as _ from 'lodash';
 import * as mongodb from 'mongodb';
-import { ListCollectionsOptions } from 'mongodb';
+import { ListCollectionsOptions, MongoClient as MongodbClient, ReadPreference } from 'mongodb';
 
 import { ReadPreferenceOrMode } from './index';
 import { LodashReplacerUtils } from './lodash-replacer.utils';
@@ -62,6 +62,32 @@ export class MongoUtils {
 		});
 
 		return db;
+	}
+
+	public static async isConnected(checkWritable: boolean = true): Promise<boolean> {
+		const dbClient = global.dbClient as MongodbClient;
+		if (!dbClient) {
+			return false;
+		}
+		try {
+			if (!checkWritable) {
+				await dbClient.db().admin().ping({
+					retryWrites: false,
+					willRetryWrite: false,
+					readPreference: ReadPreference.PRIMARY,
+				});
+				// TODO : check response content
+				return true;
+			}
+			await dbClient.db().admin().serverStatus({
+				retryWrites: false,
+				willRetryWrite: false,
+				readPreference: ReadPreference.PRIMARY,
+			});
+			return true;
+		} catch (e) {
+			return false;
+		}
 	}
 
 	public static async disconnect(): Promise<void> {

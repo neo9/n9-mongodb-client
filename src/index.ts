@@ -38,7 +38,7 @@ export type ObjectID = ObjectId;
 /**
  * @deprecated
  */
-export type BulkWriteOperation = AnyBulkWriteOperation;
+export type BulkWriteOperation<T> = AnyBulkWriteOperation<T>;
 /**
  * @deprecated
  */

@@ -1,6 +1,6 @@
 import { N9Log } from '@neo9/n9-node-log';
 import { diff as deepDiff } from 'deep-diff';
-import { Collection, Db, ObjectId, WithId } from 'mongodb';
+import { Collection, Db, IndexSpecification, ObjectId, WithId } from 'mongodb';
 
 import { Cursor, IndexOptions } from '.';
 import { IndexManager } from './index-manager';
@@ -44,7 +44,7 @@ export class HistoricManager<U extends BaseMongoObject> {
 
 	public async ensureExpirationIndex(
 		ttlInDays: number,
-		fieldOrSpec: string | object = 'date',
+		fieldOrSpec: IndexSpecification = 'date',
 		options: IndexOptions = {},
 	): Promise<void> {
 		await this.indexManager.ensureExpirationIndex(fieldOrSpec, ttlInDays, options);

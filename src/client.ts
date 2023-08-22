@@ -9,6 +9,7 @@ import {
 	Collection,
 	Db,
 	Document,
+	IndexDescription,
 	IndexSpecification,
 	MatchKeysAndValues,
 	MongoClient as MongodbClient,
@@ -127,7 +128,8 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		return new MongoClient<U, L>(newName, this.type, this.typeList, this.conf);
 	}
 
-	public async findAllIndexes(): Promise<IndexSpecification[]> {
+	public async findAllIndexes(): Promise<IndexDescription[]> {
+		// TODO: add test on this function
 		return await this.indexManager.findAllIndexes();
 	}
 
@@ -178,7 +180,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 
 	public async createHistoricExpirationIndex(
 		ttlInDays: number,
-		fieldOrSpec: string | object = 'date',
+		fieldOrSpec: IndexSpecification = 'date',
 		options: IndexOptions = {},
 	): Promise<void> {
 		await this.historicManager.ensureExpirationIndex(ttlInDays, fieldOrSpec, options);
@@ -357,7 +359,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		pageSize: number,
 		projection: object = {},
 		hint?: string | object,
-		sort?: object,
+		sort?: Sort,
 		limit?: number,
 	): MongoReadStream<Partial<U>, Partial<L>> | MongoReadStream<U, L> {
 		return new MongoReadStream<U, L>(
@@ -378,7 +380,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		pageSize: number,
 		projection: object = {},
 		hint?: string | object,
-		sort?: object,
+		sort?: Sort,
 		limit?: number,
 	): MongoReadStream<Partial<U>, Partial<L>> | MongoReadStream<U, L> {
 		return new MongoReadStream<U, L>(this, query, pageSize, projection, type, hint, sort, limit);
@@ -1627,7 +1629,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			}
 
 			if (options.hooks?.mapAfterLockFieldsApplied) {
-				const mappedEntity = await options.hooks.mapAfterLockFieldsApplied({
+				const mappedEntity: Partial<U> = await options.hooks.mapAfterLockFieldsApplied({
 					...updateEntity,
 					_id: currentValue._id,
 				});
@@ -1755,7 +1757,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				} as any,
 			},
 			{
-				returnOriginal: false,
+				returnDocument: ReturnDocument.AFTER,
 			},
 		);
 		return updateResult.value;

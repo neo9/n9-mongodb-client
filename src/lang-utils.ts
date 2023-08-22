@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import { N9Error } from '@neo9/n9-node-utils';
 import * as _ from 'lodash';
-import { MongoError } from 'mongodb';
+import { MongoError, ObjectId } from 'mongodb';
 
 import { LodashReplacerUtils } from './lodash-replacer.utils';
 

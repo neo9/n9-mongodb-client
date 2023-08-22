@@ -1,9 +1,8 @@
 import { N9Log } from '@neo9/n9-node-log';
 import { waitFor } from '@neo9/n9-node-utils';
 import ava, { Assertions } from 'ava';
-import { FilterQuery } from 'mongodb';
 
-import { MongoClient, MongoUtils } from '../src';
+import { FilterQuery, MongoClient, MongoUtils } from '../src';
 import { BaseMongoObject } from '../src/models';
 import { init } from './fixtures/utils';
 

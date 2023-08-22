@@ -75,6 +75,7 @@ ava('[Cursor] hasNext before piping into a stream ', async (t: Assertions) => {
 	await cursor.hasNext();
 	const items: SampleType[] = [];
 	cursor
+		// TODO : create N9Cursor
 		.pipe(
 			new Transform({
 				readableObjectMode: false,
@@ -109,6 +110,7 @@ ava('[Cursor] sort and hasNext before piping into a stream ', async (t: Assertio
 	await cursor.hasNext();
 	const items: SampleType[] = [];
 	cursor
+		// TODO : create N9Cursor
 		.pipe(
 			new Transform({
 				readableObjectMode: false,

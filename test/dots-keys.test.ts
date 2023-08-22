@@ -23,7 +23,7 @@ ava('[DOTS-KEYS] Insert one with dots and find it', async (t: Assertions) => {
 	const aKeyWithDots: keyof SampleType = 'a.key.with.dots';
 	const newEntity: SampleType = {
 		[aKeyWithDots]: intValue,
-	};
+	} as SampleType;
 	await mongoClient.insertOne(newEntity, 'userId1');
 
 	const sizeWithElementIn = await mongoClient.count();
@@ -78,7 +78,7 @@ ava('[DOTS-KEYS] Insert&update and check historic', async (t: Assertions) => {
 	const aKeyWithDots: keyof SampleType = 'a.key.with.dots';
 	const newEntity: SampleType = {
 		[aKeyWithDots]: intValue,
-	};
+	} as SampleType;
 	const insertedValue = await mongoClient.insertOne(newEntity, 'userId1');
 	const updatedValue = await mongoClient.findOneAndUpdateByKey(
 		intValue,
@@ -116,7 +116,7 @@ ava('[DOTS-KEYS] Insert many with dots and find it', async (t: Assertions) => {
 	const aKeyWithDots: keyof SampleType = 'a.key.with.dots';
 	const newEntity: SampleType = {
 		[aKeyWithDots]: intValue,
-	};
+	} as SampleType;
 	await mongoClient.insertMany([newEntity, newEntity], 'userId1', undefined, false);
 
 	const sizeWithElementIn = await mongoClient.count();

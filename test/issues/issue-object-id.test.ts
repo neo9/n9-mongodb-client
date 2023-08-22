@@ -52,7 +52,7 @@ ava('[ISSUE-OBJECT-ID] Object ID should be well compared', async (t: Assertions)
 				value: {},
 			},
 		],
-		otherId: new mongodb.ObjectID('5cb7397c1a9299f144b71ac6'),
+		otherId: new mongodb.ObjectId('5cb7397c1a9299f144b71ac6'),
 		label: {
 			'fr-FR': 'produit à surcharger',
 			'en-GB': 'english label',
@@ -80,7 +80,7 @@ ava('[ISSUE-OBJECT-ID] Object ID should be well compared', async (t: Assertions)
 				value: 'new value',
 			},
 		],
-		otherId: new mongodb.ObjectID('5cb7397c1a9299f144b71ac6'),
+		otherId: new mongodb.ObjectId('5cb7397c1a9299f144b71ac6'),
 		label: {
 			'en-GB': 'english label',
 			'fr-FR': 'produit surchargé',

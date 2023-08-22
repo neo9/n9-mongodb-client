@@ -1,10 +1,10 @@
 import { N9Error } from '@neo9/n9-node-utils';
 import * as _ from 'lodash';
-import { Cursor, FilterQuery } from 'mongodb';
+import { Sort } from 'mongodb';
 import { Readable, Writable } from 'stream';
 
 import { MongoClient } from './client';
-import { FilterQuery } from './index';
+import { Cursor, FilterQuery } from './index';
 import { LangUtils } from './lang-utils';
 import { LodashReplacerUtils } from './lodash-replacer.utils';
 import { BaseMongoObject, ClassType } from './models';
@@ -80,7 +80,7 @@ export class MongoReadStream<
 		private readonly projection: object = {},
 		private readonly customType?: ClassType<Partial<U | L>>,
 		private readonly hint?: string | object,
-		private readonly sort: object = { _id: 1 },
+		private readonly sort: Sort = { _id: 1 },
 		private limit?: number,
 	) {
 		super({ objectMode: true });
@@ -178,7 +178,7 @@ export class MongoReadStream<
 				item = await this.cursor.next();
 			}
 			if (item) {
-				this.lastItem = { ...LodashReplacerUtils.PICK_PROPERTIES(item, Object.keys(this.sort)) };
+				this.lastItem = { ..._.pick(item, Object.keys(this.sort)) };
 				if (this.limit) this.limit -= 1;
 			}
 			this.push(item);
