@@ -1,31 +1,23 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import { N9Error, waitFor } from '@neo9/n9-node-utils';
+import { N9Error } from '@neo9/n9-node-utils';
 import { ClassTransformOptions, plainToClass } from 'class-transformer';
 import * as _ from 'lodash';
 import * as mongodb from 'mongodb';
-import { ListCollectionsOptions, MongoClient as MongodbClient, ReadPreference } from 'mongodb';
+import { ListCollectionsOptions } from 'mongodb';
 
 import { ReadPreferenceOrMode } from './index';
 import { LodashReplacerUtils } from './lodash-replacer.utils';
 import { ClassType } from './models/class-type.models';
-import { MongoUtilsOptions } from './models/mongo-utils-options.models';
-
-const defaultConnectOptions: MongoUtilsOptions = {
-	killProcessOnReconnectFailed: true,
-};
 
 export class MongoUtils {
 	private static readonly MONGO_ID_REGEXP: RegExp = /^[0-9a-f]{24}$/;
+	private static wasConnected: boolean = false;
+	private static isHeartbeatKO: boolean = true;
 
 	public static async connect(
 		url: string,
 		options: mongodb.MongoClientOptions = {},
-		connectOptions: MongoUtilsOptions = {},
 	): Promise<mongodb.Db> {
-		const baseConnectOptions: MongoUtilsOptions = {
-			...defaultConnectOptions,
-			...connectOptions,
-		};
 		const log = global.log.module('mongo');
 
 		const mongoClient = new mongodb.MongoClient(url, options);
@@ -40,6 +32,7 @@ export class MongoUtils {
 			log.info(`Client connected to ${safeUrl}.`);
 		});
 		mongoClient.on('close', () => {
+			this.isHeartbeatKO = true;
 			log.info(`Client disconnected from ${safeUrl}.`);
 		});
 		mongoClient.on('reconnect', () => {
@@ -48,18 +41,33 @@ export class MongoUtils {
 		mongoClient.on('timeout', () => {
 			log.warn(`Client connection or operation timed out`);
 		});
+		mongoClient.on('serverHeartbeatFailed', () => {
+			this.isHeartbeatKO = true;
+		});
+		mongoClient.on('serverHeartbeatSucceeded', () => {
+			this.isHeartbeatKO = false;
+		});
 
 		mongoClient.on('connectionCreated', () => {
 			log.warn(`Client connection created`);
 		});
+		mongoClient.on('topologyClosed', () => {
+			this.isHeartbeatKO = true;
+			log.warn(`Topology closed`);
+		});
+		mongoClient.on(
+			'topologyDescriptionChanged',
+			(change: mongodb.TopologyDescriptionChangedEvent) => {
+				log.warn(`Topology description changed`, {
+					argString: JSON.stringify(change),
+				});
+				// eslint-disable-next-line @typescript-eslint/no-floating-promises
+				this.ping();
+			},
+		);
 
-		mongoClient.on('serverClosed', async () => {
+		mongoClient.on('serverClosed', () => {
 			log.warn(`Mongo server closed`);
-			if (baseConnectOptions.killProcessOnReconnectFailed) {
-				log.warn(`Sending SIGTERM to stop process.`);
-				await waitFor(10); // let some time for logs to print
-				process.kill(process.pid, 'SIGTERM');
-			}
 		});
 
 		try {
@@ -78,28 +86,51 @@ export class MongoUtils {
 		return db;
 	}
 
-	public static async isConnected(checkWritable: boolean = true): Promise<boolean> {
-		const dbClient = global.dbClient as MongodbClient;
-		if (!dbClient) {
-			return false;
-		}
+	public static isConnected(): boolean {
+		return !this.isHeartbeatKO;
+		// const dbClient = global.dbClient as MongodbClient;
+		// if (!dbClient) {
+		// 	return false;
+		// }
+		// const log = global.log.module('mongo');
+		// try {
+		// 	if (!checkWritable) {
+		// 		return this.isConnected;
+		// 	}
+		// 	// await dbClient.db().admin().serverStatus({
+		// 	// 	retryWrites: false,
+		// 	// 	willRetryWrite: false,
+		// 	// 	readPreference: ReadPreference.PRIMARY,
+		// 	// });
+		// 	// inspired from : https://www.mongodb.com/docs/v6.0/reference/method/db.hello/#db.hello
+		// 	const helloResponse = await dbClient.db().admin().command({ hello: 1 });
+		// 	if (helloResponse) return true;
+		// } catch (e) {
+		// 	log.warn(`Mongo isConnected error ${e.message}`, { errString: JSON.stringify(e) });
+		// 	return false;
+		// }
+	}
+
+	public static async ping(): Promise<boolean> {
+		const start = Date.now();
+		const log = global.log.module('mongo');
 		try {
-			if (!checkWritable) {
-				await dbClient.db().admin().ping({
-					retryWrites: false,
-					willRetryWrite: false,
-					readPreference: ReadPreference.PRIMARY,
-				});
-				// TODO : check response content
-				return true;
+			const dbClient: mongodb.MongoClient = global.dbClient;
+			if (!dbClient) {
+				log.warn(`Missing dbClient for ping`);
+				return false;
 			}
-			await dbClient.db().admin().serverStatus({
-				retryWrites: false,
-				willRetryWrite: false,
-				readPreference: ReadPreference.PRIMARY,
-			});
-			return true;
+			// serverSelectionTimeoutMS cannot be reduced for this request :
+			// https://github.com/mongodb/specifications/blob/3ff380031d7f4295335f0d63585acf24c96f8d7b/source/server-selection/server-selection.rst#serverselectiontimeoutms
+			const pingResponse: Partial<{ ok: 1 }> = await dbClient.db().admin().ping();
+			if (!this.wasConnected) {
+				log.info(`Client reconnected to MongoDB`, { durationMs: Date.now() - start });
+				this.wasConnected = true;
+			}
+			return pingResponse.ok === 1;
 		} catch (e) {
+			log.warn('Ping KO', { durationMs: Date.now() - start, errString: JSON.stringify(e) });
+			this.wasConnected = false;
 			return false;
 		}
 	}
@@ -243,8 +274,11 @@ export class MongoUtils {
 		return (global.db as mongodb.Db).listCollections(filter, options);
 	}
 
-	public static async listCollectionsNames(filter?: object): Promise<string[]> {
-		const cursor = MongoUtils.listCollections(filter, { nameOnly: true });
+	public static async listCollectionsNames(
+		filter?: object,
+		options?: ListCollectionsOptions,
+	): Promise<string[]> {
+		const cursor = MongoUtils.listCollections(filter, { ...options, nameOnly: true });
 		const ret: string[] = [];
 		while (await cursor.hasNext()) {
 			const item: any = await cursor.next();

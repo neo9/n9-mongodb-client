@@ -1,5 +1,5 @@
 import { N9Log } from '@neo9/n9-node-log';
-import ava, { Assertions } from 'ava';
+import test, { Assertions } from 'ava';
 
 import { BaseMongoObject, MongoClient } from '../src';
 import { init } from './fixtures/utils';
@@ -8,7 +8,7 @@ global.log = new N9Log('tests');
 
 init();
 
-ava('[Indexes] Create index', async (t: Assertions) => {
+test('[Indexes] Create index', async (t: Assertions) => {
 	const collection = global.db.collection(`test-${Date.now()}`);
 	const mongoClient = new MongoClient(collection, BaseMongoObject, null);
 
@@ -21,7 +21,7 @@ ava('[Indexes] Create index', async (t: Assertions) => {
 	await mongoClient.dropCollection();
 });
 
-ava('[Indexes] List all indexes', async (t: Assertions) => {
+test('[Indexes] List all indexes', async (t: Assertions) => {
 	const collection = global.db.collection(`test-${Date.now()}`);
 	const mongoClient = new MongoClient(collection, BaseMongoObject, null);
 
@@ -39,7 +39,7 @@ ava('[Indexes] List all indexes', async (t: Assertions) => {
 	await mongoClient.dropCollection();
 });
 
-ava('[Indexes] Create unique index', async (t: Assertions) => {
+test('[Indexes] Create unique index', async (t: Assertions) => {
 	const collection = global.db.collection(`test-${Date.now()}`);
 	const mongoClient = new MongoClient(collection, BaseMongoObject, null);
 
@@ -53,7 +53,7 @@ ava('[Indexes] Create unique index', async (t: Assertions) => {
 	await mongoClient.dropCollection();
 });
 
-ava('[Indexes] Drop index', async (t: Assertions) => {
+test('[Indexes] Drop index', async (t: Assertions) => {
 	const collection = global.db.collection(`test-${Date.now()}`);
 	await collection.createIndex('name');
 	const mongoClient = new MongoClient(collection, BaseMongoObject, null);
@@ -71,7 +71,7 @@ ava('[Indexes] Drop index', async (t: Assertions) => {
 	await mongoClient.dropCollection();
 });
 
-ava('[Indexes] Create expiration index', async (t: Assertions) => {
+test('[Indexes] Create expiration index', async (t: Assertions) => {
 	const collection = global.db.collection(`test-${Date.now()}`);
 	const mongoClient = new MongoClient(collection, BaseMongoObject, null);
 
@@ -86,7 +86,7 @@ ava('[Indexes] Create expiration index', async (t: Assertions) => {
 	await mongoClient.dropCollection();
 });
 
-ava('[Indexes] Create historic expiration index', async (t: Assertions) => {
+test('[Indexes] Create historic expiration index', async (t: Assertions) => {
 	const collection = global.db.collection(`test-${Date.now()}`);
 	const historicCollection = global.db.collection(`test-${Date.now()}Historic`);
 	const mongoClient = new MongoClient(collection, BaseMongoObject, BaseMongoObject, {
@@ -104,7 +104,7 @@ ava('[Indexes] Create historic expiration index', async (t: Assertions) => {
 	await mongoClient.dropHistory();
 });
 
-ava('[Indexes] Update expiration index if it exists', async (t: Assertions) => {
+test('[Indexes] Update expiration index if it exists', async (t: Assertions) => {
 	const collection = global.db.collection(`test-${Date.now()}`);
 	const mongoClient = new MongoClient(collection, BaseMongoObject, null);
 
@@ -139,7 +139,7 @@ ava('[Indexes] Update expiration index if it exists', async (t: Assertions) => {
 	await mongoClient.dropCollection();
 });
 
-ava('[Indexes] Update historic expiration index if it exists', async (t: Assertions) => {
+test('[Indexes] Update historic expiration index if it exists', async (t: Assertions) => {
 	const collection = global.db.collection(`test-${Date.now()}`);
 	const historicCollection = global.db.collection(`test-${Date.now()}Historic`);
 	const mongoClient = new MongoClient(collection, BaseMongoObject, BaseMongoObject, {

@@ -1,5 +1,5 @@
 import { N9Log } from '@neo9/n9-node-log';
-import ava, { Assertions } from 'ava';
+import test, { Assertions } from 'ava';
 
 import { MongoClient } from '../src';
 import { BaseMongoObject } from '../src/models';
@@ -13,7 +13,7 @@ global.log = new N9Log('tests');
 
 init();
 
-ava('[EXISTS] Create collection and test existence', async (t: Assertions) => {
+test('[EXISTS] Create collection and test existence', async (t: Assertions) => {
 	const collectionName1 = `test1-${Date.now()}`;
 	const collectionName2 = `test2-${Date.now()}`;
 	const mongoClient1 = new MongoClient(collectionName1, SampleType, null);

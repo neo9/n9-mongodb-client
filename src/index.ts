@@ -25,49 +25,49 @@ export * from './models';
 export { Filter, CollationOptions, IndexSpecification } from 'mongodb';
 
 /**
- * @deprecated
+ * @deprecated : Replace with ObjectId
  */
 // eslint-disable-next-line @typescript-eslint/naming-convention
 export const ObjectID = ObjectId;
 /**
- * @deprecated
+ * @deprecated : Replace with ObjectId
  */
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export type ObjectID = ObjectId;
 
 /**
- * @deprecated
+ * @deprecated : Replace with AnyBulkWriteOperation<T>
  */
 export type BulkWriteOperation<T> = AnyBulkWriteOperation<T>;
 /**
- * @deprecated
+ * @deprecated : Replace with CollationOptions
  */
 export type CollationDocument = CollationOptions;
 /**
- * @deprecated
+ * @deprecated : Replace with AggregateOptions
  */
 export type CollectionAggregationOptions = AggregateOptions;
 /**
- * @deprecated
+ * @deprecated : Replace with BulkWriteOptions
  */
 export type CollectionInsertManyOptions = BulkWriteOptions;
 /**
- * @deprecated
+ * @deprecated : Replace with FindCursor<T>
  */
 export type Cursor<T> = FindCursor<T>;
 /**
- * @deprecated
+ * @deprecated : Replace with  Filter<T>
  */
 export type FilterQuery<T> = Filter<T>;
 /**
- * @deprecated
+ * @deprecated : Replace with CreateIndexesOptions
  */
 export type IndexOptions = CreateIndexesOptions;
 /**
- * @deprecated
+ * @deprecated : Replace with  UpdateFilter<T>
  */
 export type UpdateQuery<T> = UpdateFilter<T>;
 /**
- * @deprecated
+ * @deprecated : Replace with ReadPreferenceLike
  */
 export type ReadPreferenceOrMode = ReadPreferenceLike;

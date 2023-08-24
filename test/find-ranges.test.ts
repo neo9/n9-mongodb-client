@@ -1,5 +1,5 @@
 import { N9Log } from '@neo9/n9-node-log';
-import ava, { ExecutionContext } from 'ava';
+import test, { ExecutionContext } from 'ava';
 
 import { FilterQuery, MongoClient, StringMap } from '../src';
 import { BaseMongoObject } from '../src/models';
@@ -18,7 +18,7 @@ interface TestContext {
 	mongoClient: MongoClient<SampleType, SampleType>;
 }
 
-ava.beforeEach(async (t: ExecutionContext<TestContext>) => {
+test.beforeEach(async (t: ExecutionContext<TestContext>) => {
 	const mongoClient = new MongoClient(`test-${Date.now()}`, SampleType, SampleType);
 	const size = await mongoClient.count();
 
@@ -34,67 +34,61 @@ ava.beforeEach(async (t: ExecutionContext<TestContext>) => {
 	t.context.mongoClient = mongoClient;
 });
 
-ava(
-	'[GET-RANGES] Get ranges with multiple sizes without indexes',
-	async (t: ExecutionContext<TestContext>) => {
-		const allIds = await t.context.mongoClient.find({}, 0, 0, {}, { _id: 1 }).toArray();
-		const expectedIdsByRange: StringMap<{ _id: string }[]> = {};
-		for (const range of [1, 2, 3, 4, 5, 10, 20, 80]) {
-			let index = 0;
-			for (const id of allIds) {
-				if (index % range === 0) {
-					if (!expectedIdsByRange[range]) {
-						expectedIdsByRange[range] = [];
-					}
-					expectedIdsByRange[range.toString()].push({ _id: id._id });
+test('[GET-RANGES] Get ranges with multiple sizes without indexes', async (t: ExecutionContext<TestContext>) => {
+	const allIds = await t.context.mongoClient.find({}, 0, 0, {}, { _id: 1 }).toArray();
+	const expectedIdsByRange: StringMap<{ _id: string }[]> = {};
+	for (const range of [1, 2, 3, 4, 5, 10, 20, 80]) {
+		let index = 0;
+		for (const id of allIds) {
+			if (index % range === 0) {
+				if (!expectedIdsByRange[range]) {
+					expectedIdsByRange[range] = [];
 				}
-				index += 1;
+				expectedIdsByRange[range.toString()].push({ _id: id._id });
 			}
-
-			const foundIds = await t.context.mongoClient.findIdsEveryNthEntities(range);
-			t.deepEqual(
-				expectedIdsByRange[range],
-				foundIds,
-				'Found ids are the good onces in the same order',
-			);
+			index += 1;
 		}
-		await t.context.mongoClient.dropCollection();
-	},
-);
 
-ava(
-	'[GET-RANGES] Get ranges with multiple sizes with ranges index',
-	async (t: ExecutionContext<TestContext>) => {
-		const allIds = await t.context.mongoClient.find({}, 0, 0, {}, { _id: 1 }).toArray();
-		const expectedIdsByRange: StringMap<{ _id: string; value: number }[]> = {};
-		for (const range of [1, 2, 3, 4, 5, 10, 20, 80]) {
-			let index = 0;
-			for (const id of allIds) {
-				if (index % range === 0) {
-					if (!expectedIdsByRange[range]) {
-						expectedIdsByRange[range] = [];
-					}
-					expectedIdsByRange[range.toString()].push({ _id: id._id, value: index });
+		const foundIds = await t.context.mongoClient.findIdsEveryNthEntities(range);
+		t.deepEqual(
+			expectedIdsByRange[range],
+			foundIds,
+			'Found ids are the good onces in the same order',
+		);
+	}
+	await t.context.mongoClient.dropCollection();
+});
+
+test('[GET-RANGES] Get ranges with multiple sizes with ranges index', async (t: ExecutionContext<TestContext>) => {
+	const allIds = await t.context.mongoClient.find({}, 0, 0, {}, { _id: 1 }).toArray();
+	const expectedIdsByRange: StringMap<{ _id: string; value: number }[]> = {};
+	for (const range of [1, 2, 3, 4, 5, 10, 20, 80]) {
+		let index = 0;
+		for (const id of allIds) {
+			if (index % range === 0) {
+				if (!expectedIdsByRange[range]) {
+					expectedIdsByRange[range] = [];
 				}
-				index += 1;
+				expectedIdsByRange[range.toString()].push({ _id: id._id, value: index });
 			}
-
-			const foundIds = await t.context.mongoClient.findIdsEveryNthEntities(
-				range,
-				{},
-				{ returnRangeIndex: true },
-			);
-			t.deepEqual(
-				expectedIdsByRange[range],
-				foundIds,
-				'Found ids are the good onces in the same order',
-			);
+			index += 1;
 		}
-		await t.context.mongoClient.dropCollection();
-	},
-);
 
-ava('[GET-RANGES] Get ranges with query filter', async (t: ExecutionContext<TestContext>) => {
+		const foundIds = await t.context.mongoClient.findIdsEveryNthEntities(
+			range,
+			{},
+			{ returnRangeIndex: true },
+		);
+		t.deepEqual(
+			expectedIdsByRange[range],
+			foundIds,
+			'Found ids are the good onces in the same order',
+		);
+	}
+	await t.context.mongoClient.dropCollection();
+});
+
+test('[GET-RANGES] Get ranges with query filter', async (t: ExecutionContext<TestContext>) => {
 	const query: FilterQuery<SampleType> = { index: { $in: [2, 10, 30, 25, 41, 33] } };
 	const allIds = await t.context.mongoClient.find(query, 0, 0, {}, { _id: 1 }).toArray();
 	const expectedIdsByRange: StringMap<{ _id: string; value: number }[]> = {};
@@ -122,7 +116,7 @@ ava('[GET-RANGES] Get ranges with query filter', async (t: ExecutionContext<Test
 	await t.context.mongoClient.dropCollection();
 });
 
-ava('[GET-RANGES] Get ranges throw error', async (t: ExecutionContext<TestContext>) => {
+test('[GET-RANGES] Get ranges throw error', async (t: ExecutionContext<TestContext>) => {
 	await t.throwsAsync(
 		async () => {
 			await t.context.mongoClient.findIdsEveryNthEntities(-1);

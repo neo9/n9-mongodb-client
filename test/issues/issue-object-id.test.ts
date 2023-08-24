@@ -1,5 +1,5 @@
 import { N9Log } from '@neo9/n9-node-log';
-import ava, { Assertions } from 'ava';
+import test, { Assertions } from 'ava';
 import * as mongodb from 'mongodb';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 
@@ -10,20 +10,20 @@ global.log = new N9Log('tests').module('issues');
 
 let mongod: MongoMemoryServer;
 
-ava.before(async () => {
+test.before(async () => {
 	mongod = await MongoMemoryServer.create();
 	const uri = mongod.getUri();
 	await MongoUtils.connect(uri);
 });
 
-ava.after(async () => {
+test.after(async () => {
 	global.log.info(`DROP DB after tests OK`);
 	await (global.db as mongodb.Db).dropDatabase();
 	await MongoUtils.disconnect();
 	await mongod.stop();
 });
 
-ava('[ISSUE-OBJECT-ID] Object ID should be well compared', async (t: Assertions) => {
+test('[ISSUE-OBJECT-ID] Object ID should be well compared', async (t: Assertions) => {
 	const mongoClient = new MongoClient(`test-${Date.now()}`, BaseMongoObject, BaseMongoObject, {
 		lockFields: {
 			excludedFields: ['sku', 'externalReferences'],

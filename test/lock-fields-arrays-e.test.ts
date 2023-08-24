@@ -1,5 +1,5 @@
 import { N9Log } from '@neo9/n9-node-log';
-import ava, { Assertions } from 'ava';
+import test, { Assertions } from 'ava';
 import * as _ from 'lodash';
 
 import {
@@ -43,7 +43,7 @@ const c = {
  * Creation of E by an operator (human) =>  all is locked => [a🔒,b🔒,c🔒]
  * Import E' => nothing should have changed => [a🔒,b🔒,c🔒]
  */
-ava('[LOCK-FIELDS-ARRAY E] Lock fields array should not disappear', async (t: Assertions) => {
+test('[LOCK-FIELDS-ARRAY E] Lock fields array should not disappear', async (t: Assertions) => {
 	const vE: SampleEntityWithArray = {
 		code: 'e',
 		parameters: {
@@ -89,7 +89,7 @@ ava('[LOCK-FIELDS-ARRAY E] Lock fields array should not disappear', async (t: As
  * Creation of E by an operator (human) =>  all is locked => [a🔒,b🔒,c🔒]
  * Edit with E' => array should be null => null
  */
-ava('[LOCK-FIELDS-ARRAY E] Lock fields array delete array', async (t: Assertions) => {
+test('[LOCK-FIELDS-ARRAY E] Lock fields array delete array', async (t: Assertions) => {
 	const vE: SampleEntityWithArray = {
 		code: 'e',
 		parameters: {
@@ -144,45 +144,38 @@ ava('[LOCK-FIELDS-ARRAY E] Lock fields array delete array', async (t: Assertions
  * Creation of E by an operator (human) =>  all is locked => [a🔒,b🔒,c🔒]
  * Import E' => nothing should have changed => [a🔒,b🔒,c🔒]
  */
-ava(
-	'[LOCK-FIELDS-ARRAY E] Lock fields array should not disappear with simple array',
-	async (t: Assertions) => {
-		const vE: SampleEntityWithSimpleArray = {
-			code: 'e',
-			parameters: {
-				items: ['a', 'b', 'c'],
-			},
-		};
+test('[LOCK-FIELDS-ARRAY E] Lock fields array should not disappear with simple array', async (t: Assertions) => {
+	const vE: SampleEntityWithSimpleArray = {
+		code: 'e',
+		parameters: {
+			items: ['a', 'b', 'c'],
+		},
+	};
 
-		const mongoClient = generateMongoClientForSimpleArray();
-		await mongoClient.initHistoricIndexes();
+	const mongoClient = generateMongoClientForSimpleArray();
+	await mongoClient.initHistoricIndexes();
 
-		// Simulate user creation
-		const entityCreated = await mongoClient.insertOne(vE, 'userId', true);
-		t.truthy(entityCreated.objectInfos.lockFields, '[entityCreated] Has all fields locked');
-		t.is(entityCreated.objectInfos.lockFields.length, 3, '[entityCreated] Has all fields locked');
-		t.deepEqual(
-			entityCreated.parameters.items,
-			['a', 'b', 'c'],
-			'[entityCreated] All values saved',
-		);
+	// Simulate user creation
+	const entityCreated = await mongoClient.insertOne(vE, 'userId', true);
+	t.truthy(entityCreated.objectInfos.lockFields, '[entityCreated] Has all fields locked');
+	t.is(entityCreated.objectInfos.lockFields.length, 3, '[entityCreated] Has all fields locked');
+	t.deepEqual(entityCreated.parameters.items, ['a', 'b', 'c'], '[entityCreated] All values saved');
 
-		const vEp = _.cloneDeep(vE);
-		vEp.parameters.items = null;
+	const vEp = _.cloneDeep(vE);
+	vEp.parameters.items = null;
 
-		// Simulate import
-		const resultImport1: SampleEntityWithSimpleArray[] = await (
-			await mongoClient.updateManyAtOnce([vEp], 'externalUser', {
-				upsert: true,
-				lockNewFields: false,
-				query: 'code',
-			})
-		).toArray();
-		t.truthy(resultImport1[0].objectInfos.lockFields, '[resultImport1] Has lock fields');
-		t.deepEqual(
-			resultImport1[0].parameters.items,
-			['a', 'b', 'c'],
-			'[resultImport1] Elements are still there',
-		);
-	},
-);
+	// Simulate import
+	const resultImport1: SampleEntityWithSimpleArray[] = await (
+		await mongoClient.updateManyAtOnce([vEp], 'externalUser', {
+			upsert: true,
+			lockNewFields: false,
+			query: 'code',
+		})
+	).toArray();
+	t.truthy(resultImport1[0].objectInfos.lockFields, '[resultImport1] Has lock fields');
+	t.deepEqual(
+		resultImport1[0].parameters.items,
+		['a', 'b', 'c'],
+		'[resultImport1] Elements are still there',
+	);
+});

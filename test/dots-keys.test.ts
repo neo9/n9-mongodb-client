@@ -1,5 +1,5 @@
 import { N9Log } from '@neo9/n9-node-log';
-import ava, { Assertions } from 'ava';
+import test, { Assertions } from 'ava';
 
 import { MongoClient, MongoUtils } from '../src';
 import { BaseMongoObject } from '../src/models';
@@ -13,7 +13,7 @@ global.log = new N9Log('tests').module('dots-keys');
 
 init();
 
-ava('[DOTS-KEYS] Insert one with dots and find it', async (t: Assertions) => {
+test('[DOTS-KEYS] Insert one with dots and find it', async (t: Assertions) => {
 	const mongoClient = new MongoClient(`test-${Date.now()}`, SampleType, SampleType);
 	const size = await mongoClient.count();
 
@@ -68,7 +68,7 @@ ava('[DOTS-KEYS] Insert one with dots and find it', async (t: Assertions) => {
 	await mongoClient.dropCollection();
 });
 
-ava('[DOTS-KEYS] Insert&update and check historic', async (t: Assertions) => {
+test('[DOTS-KEYS] Insert&update and check historic', async (t: Assertions) => {
 	const mongoClient = new MongoClient(`test-${Date.now()}`, SampleType, SampleType, {
 		keepHistoric: true,
 	});
@@ -106,7 +106,7 @@ ava('[DOTS-KEYS] Insert&update and check historic', async (t: Assertions) => {
 	);
 });
 
-ava('[DOTS-KEYS] Insert many with dots and find it', async (t: Assertions) => {
+test('[DOTS-KEYS] Insert many with dots and find it', async (t: Assertions) => {
 	const mongoClient = new MongoClient(`test-${Date.now()}`, SampleType, SampleType);
 	const size = await mongoClient.count();
 

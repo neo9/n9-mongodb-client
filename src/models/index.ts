@@ -6,7 +6,6 @@ export * from './historic.models';
 export * from './lock-field.models';
 export * from './maps.models';
 export * from './mongo-client-configuration.models';
-export * from './mongo-utils-options.models';
 export * from './tag-options.models';
 export * from './update-many-at-once-options.models';
 export * from './update-many-to-same-value-options.models';

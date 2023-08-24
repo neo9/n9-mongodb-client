@@ -1,6 +1,6 @@
 import { N9Log } from '@neo9/n9-node-log';
 import { waitFor } from '@neo9/n9-node-utils';
-import ava, { Assertions } from 'ava';
+import test, { Assertions } from 'ava';
 
 import { MongoClient, MongoUtils } from '../src';
 import { BaseMongoObject, UpdateOnlyOnChangeConfiguration } from '../src/models';
@@ -282,7 +282,7 @@ init();
 const testPrefix = '[UPDATE-ONLY-ON-CHANGE]';
 
 // updateOnlyOnChange enabled
-ava.serial(
+test.serial(
 	testPrefix,
 	insertThenUpdateOneFieldToNewValue,
 	{
@@ -294,7 +294,7 @@ ava.serial(
 );
 
 // updateOnlyOnChange enabled
-ava.serial(
+test.serial(
 	testPrefix,
 	insertThenUpdateOneFieldToNewValueWithoutReturningNewValue,
 	{
@@ -305,7 +305,7 @@ ava.serial(
 	},
 );
 
-ava.serial(
+test.serial(
 	testPrefix,
 	insertThenUpdateOneFieldToSameValue,
 	{
@@ -317,7 +317,7 @@ ava.serial(
 );
 
 // updateOnlyOnChange enabled and field not picked
-ava.serial(
+test.serial(
 	testPrefix,
 	insertThenUpdateOneFieldToNewValue,
 	{
@@ -333,7 +333,7 @@ ava.serial(
 );
 
 // updateOnlyOnChange enabled and field not picked
-ava.serial(
+test.serial(
 	testPrefix,
 	insertThenUpdateOneFieldToNewValueWithoutReturningNewValue,
 	{
@@ -349,7 +349,7 @@ ava.serial(
 );
 
 // updateOnlyOnChange enabled and field picked
-ava.serial(
+test.serial(
 	testPrefix,
 	insertThenUpdateOneFieldToNewValue,
 	{
@@ -365,7 +365,7 @@ ava.serial(
 );
 
 // updateOnlyOnChange enabled and field picked
-ava.serial(
+test.serial(
 	testPrefix,
 	insertThenUpdateOneFieldToNewValueWithoutReturningNewValue,
 	{
@@ -381,7 +381,7 @@ ava.serial(
 );
 
 // updateOnlyOnChange enabled and field omitted
-ava.serial(
+test.serial(
 	testPrefix,
 	insertThenUpdateOneFieldToNewValue,
 	{
@@ -397,7 +397,7 @@ ava.serial(
 );
 
 // updateOnlyOnChange enabled and field omitted
-ava.serial(
+test.serial(
 	testPrefix,
 	insertThenUpdateOneFieldToNewValueWithoutReturningNewValue,
 	{
@@ -413,7 +413,7 @@ ava.serial(
 );
 
 // updateOnlyOnChange enabled and field picked and omitted
-ava.serial(
+test.serial(
 	testPrefix,
 	insertThenUpdateOneFieldToNewValue,
 	{
@@ -430,7 +430,7 @@ ava.serial(
 );
 
 // updateOnlyOnChange enabled and field picked and omitted
-ava.serial(
+test.serial(
 	testPrefix,
 	insertThenUpdateOneFieldToNewValueWithoutReturningNewValue,
 	{
@@ -447,7 +447,7 @@ ava.serial(
 );
 
 // updateOnlyOnChange disabled
-ava.serial(
+test.serial(
 	testPrefix,
 	insertThenUpdateOneFieldToNewValue,
 	{
@@ -459,7 +459,7 @@ ava.serial(
 );
 
 // updateOnlyOnChange disabled
-ava.serial(
+test.serial(
 	testPrefix,
 	insertThenUpdateOneFieldToNewValueWithoutReturningNewValue,
 	{
@@ -470,7 +470,7 @@ ava.serial(
 	},
 );
 
-ava.serial(
+test.serial(
 	testPrefix,
 	insertThenUpdateOneFieldToSameValue,
 	{

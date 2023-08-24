@@ -1,5 +1,5 @@
 import { N9Log } from '@neo9/n9-node-log';
-import ava, { Assertions } from 'ava';
+import test, { Assertions } from 'ava';
 import { CollationOptions } from 'mongodb';
 
 import { CollationDocument, MongoClient } from '../src';
@@ -19,7 +19,7 @@ global.log = new N9Log('tests');
 
 init();
 
-ava('[CRUD] Insert multiples and find with collation', async (t: Assertions) => {
+test('[CRUD] Insert multiples and find with collation', async (t: Assertions) => {
 	const mongoClient = new MongoClient(`test-${Date.now()}`, SampleType, SampleTypeListing);
 	const size = await mongoClient.count();
 

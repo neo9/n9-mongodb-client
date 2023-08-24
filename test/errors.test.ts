@@ -1,13 +1,13 @@
 import { N9Log } from '@neo9/n9-node-log';
 import { N9Error, waitFor } from '@neo9/n9-node-utils';
-import ava, { Assertions } from 'ava';
+import test, { Assertions } from 'ava';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 
 import { BaseMongoObject, MongoClient, MongoUtils } from '../src';
 
 global.log = new N9Log('tests');
 
-ava('[Errors] Check error thrown on every client function', async (t: Assertions) => {
+test('[Errors] Check error thrown on every client function', async (t: Assertions) => {
 	const mongoMemoryServer = await MongoMemoryServer.create();
 	const uri = mongoMemoryServer.getUri();
 
@@ -33,7 +33,8 @@ ava('[Errors] Check error thrown on every client function', async (t: Assertions
 		client.createIndex('$.test'),
 		{
 			instanceOf: N9Error,
-			message: "Index key contains an illegal field name: field name starts with '$'.",
+			message:
+				'Error in specification { name: "$.test_1", key: { $.test: 1 } } :: caused by :: Index key contains an illegal field name: field name starts with \'$\'.',
 		},
 		'createIndex error',
 	);
@@ -41,7 +42,8 @@ ava('[Errors] Check error thrown on every client function', async (t: Assertions
 		client.createUniqueIndex('$test'),
 		{
 			instanceOf: N9Error,
-			message: "Index key contains an illegal field name: field name starts with '$'.",
+			message:
+				'Error in specification { unique: true, name: "$test_1", key: { $test: 1 } } :: caused by :: Index key contains an illegal field name: field name starts with \'$\'.',
 		},
 		'createUniqueIndex error',
 	);
@@ -49,7 +51,8 @@ ava('[Errors] Check error thrown on every client function', async (t: Assertions
 		client.createExpirationIndex(10, '$test'),
 		{
 			instanceOf: N9Error,
-			message: "Index key contains an illegal field name: field name starts with '$'.",
+			message:
+				'Error in specification { expireAfterSeconds: 864000, name: "n9MongoClient_expiration", key: { $test: 1 } } :: caused by :: Index key contains an illegal field name: field name starts with \'$\'.',
 		},
 		'createExpirationIndex error',
 	);
@@ -57,7 +60,8 @@ ava('[Errors] Check error thrown on every client function', async (t: Assertions
 		client.createHistoricIndex('$test'),
 		{
 			instanceOf: N9Error,
-			message: "Index key contains an illegal field name: field name starts with '$'.",
+			message:
+				'Error in specification { name: "$test_1", key: { $test: 1 } } :: caused by :: Index key contains an illegal field name: field name starts with \'$\'.',
 		},
 		'createHistoricIndex error',
 	);
@@ -65,7 +69,8 @@ ava('[Errors] Check error thrown on every client function', async (t: Assertions
 		client.createHistoricUniqueIndex('$test'),
 		{
 			instanceOf: N9Error,
-			message: "Index key contains an illegal field name: field name starts with '$'.",
+			message:
+				'Error in specification { unique: true, name: "$test_1", key: { $test: 1 } } :: caused by :: Index key contains an illegal field name: field name starts with \'$\'.',
 		},
 		'createHistoricUniqueIndex error',
 	);
@@ -73,7 +78,8 @@ ava('[Errors] Check error thrown on every client function', async (t: Assertions
 		client.createHistoricExpirationIndex(10, '$test'),
 		{
 			instanceOf: N9Error,
-			message: "Index key contains an illegal field name: field name starts with '$'.",
+			message:
+				'Error in specification { expireAfterSeconds: 864000, name: "n9MongoClient_expiration", key: { $test: 1 } } :: caused by :: Index key contains an illegal field name: field name starts with \'$\'.',
 		},
 		'createHistoricExpirationIndex error',
 	);
@@ -95,7 +101,7 @@ ava('[Errors] Check error thrown on every client function', async (t: Assertions
 	await client.dropCollection();
 	await client2.dropCollection();
 
-	while (await MongoUtils.isConnected()) {
+	while (MongoUtils.isConnected()) {
 		await MongoUtils.disconnect();
 		await waitFor(50);
 	}
@@ -103,22 +109,22 @@ ava('[Errors] Check error thrown on every client function', async (t: Assertions
 
 	await t.throwsAsync(
 		client.dropIndex('test'),
-		{ instanceOf: N9Error, message: 'topology was destroyed' },
+		{ instanceOf: N9Error, message: 'Client must be connected before running operations' },
 		'dropIndex error',
 	);
 	await t.throwsAsync(
 		client.dropHistoryIndex('test'),
-		{ instanceOf: N9Error, message: 'topology was destroyed' },
+		{ instanceOf: N9Error, message: 'Client must be connected before running operations' },
 		'dropHistoryIndex error',
 	);
 	await t.throwsAsync(
 		client.insertOne({}, 'test'),
-		{ instanceOf: N9Error, message: 'server instance pool was destroyed' },
+		{ instanceOf: N9Error, message: 'Client must be connected before running operations' },
 		'insertOne error',
 	);
 	await t.throwsAsync(
 		client.insertMany([{}], 'test'),
-		{ instanceOf: N9Error, message: 'server instance pool was destroyed' },
+		{ instanceOf: N9Error, message: 'Client must be connected before running operations' },
 		'insertMany error',
 	);
 	await t.throwsAsync(
@@ -128,12 +134,12 @@ ava('[Errors] Check error thrown on every client function', async (t: Assertions
 	);
 	await t.throwsAsync(
 		client.findOneByKey('test'),
-		{ instanceOf: N9Error, message: 'pool destroyed' },
+		{ instanceOf: N9Error, message: 'Client must be connected before running operations' },
 		'findOneByKey error',
 	);
 	await t.throwsAsync(
 		client.findOne({}),
-		{ instanceOf: N9Error, message: 'pool destroyed' },
+		{ instanceOf: N9Error, message: 'Client must be connected before running operations' },
 		'findOne error',
 	);
 	await t.throwsAsync(
@@ -143,12 +149,12 @@ ava('[Errors] Check error thrown on every client function', async (t: Assertions
 	);
 	await t.throwsAsync(
 		client.existsByKey('test'),
-		{ instanceOf: N9Error, message: 'pool destroyed' },
+		{ instanceOf: N9Error, message: 'Client must be connected before running operations' },
 		'existsByKey error',
 	);
 	await t.throwsAsync(
 		client.exists({}),
-		{ instanceOf: N9Error, message: 'pool destroyed' },
+		{ instanceOf: N9Error, message: 'Client must be connected before running operations' },
 		'exists error',
 	);
 	await t.throwsAsync(
@@ -158,17 +164,17 @@ ava('[Errors] Check error thrown on every client function', async (t: Assertions
 	);
 	await t.throwsAsync(
 		client.findOneAndUpdateByKey('test', {}, 'test', undefined, true),
-		{ instanceOf: N9Error, message: 'topology was destroyed' },
+		{ instanceOf: N9Error, message: 'Client must be connected before running operations' },
 		'findOneAndUpdateByKey error',
 	);
 	await t.throwsAsync(
 		client.findOneAndUpdate({}, {}, 'test', true),
-		{ instanceOf: N9Error, message: 'topology was destroyed' },
+		{ instanceOf: N9Error, message: 'Client must be connected before running operations' },
 		'findOneAndUpdate error',
 	);
 	await t.throwsAsync(
 		client.findOneAndUpsert({}, {}, 'test', true),
-		{ instanceOf: N9Error, message: 'topology was destroyed' },
+		{ instanceOf: N9Error, message: 'Client must be connected before running operations' },
 		'findOneAndUpsert error',
 	);
 	await t.throwsAsync(
@@ -178,12 +184,12 @@ ava('[Errors] Check error thrown on every client function', async (t: Assertions
 	);
 	await t.throwsAsync(
 		client.findOneByKeyAndRemoveLock('test', 'test', 'test'),
-		{ instanceOf: N9Error, message: 'topology was destroyed' },
+		{ instanceOf: N9Error, message: 'Client must be connected before running operations' },
 		'findOneByKeyAndRemoveLock error',
 	);
 	await t.throwsAsync(
 		client.findOneAndRemoveLock({}, 'test', 'test'),
-		{ instanceOf: N9Error, message: 'topology was destroyed' },
+		{ instanceOf: N9Error, message: 'Client must be connected before running operations' },
 		'findOneAndRemoveLock error',
 	);
 	await t.throwsAsync(
@@ -193,7 +199,7 @@ ava('[Errors] Check error thrown on every client function', async (t: Assertions
 	);
 	await t.throwsAsync(
 		client.findOneByKeyAndRemoveLockSubparts('test', 'test', 'test'),
-		{ instanceOf: N9Error, message: 'topology was destroyed' },
+		{ instanceOf: N9Error, message: 'Client must be connected before running operations' },
 		'findOneByKeyAndRemoveLock error',
 	);
 	await t.throwsAsync(
@@ -208,27 +214,27 @@ ava('[Errors] Check error thrown on every client function', async (t: Assertions
 	);
 	await t.throwsAsync(
 		client.deleteOneByKey('test'),
-		{ instanceOf: N9Error, message: 'pool destroyed' },
+		{ instanceOf: N9Error, message: 'Client must be connected before running operations' },
 		'deleteOneByKey error',
 	);
 	await t.throwsAsync(
 		client.deleteOne({}),
-		{ instanceOf: N9Error, message: 'pool destroyed' },
+		{ instanceOf: N9Error, message: 'Client must be connected before running operations' },
 		'deleteOne error',
 	);
 	await t.throwsAsync(
 		client.deleteMany({}),
-		{ instanceOf: N9Error, message: 'server instance pool was destroyed' },
+		{ instanceOf: N9Error, message: 'Client must be connected before running operations' },
 		'deleteMany error',
 	);
 	await t.throwsAsync(
 		client.updateManyAtOnce([{}], 'test'),
-		{ instanceOf: N9Error, message: 'server instance pool was destroyed' },
+		{ instanceOf: N9Error, message: 'Client must be connected before running operations' },
 		'updateManyAtOnce error',
 	);
 	await t.throwsAsync(
 		client2.updateManyToSameValue({}, {}, 'test'),
-		{ instanceOf: N9Error, message: 'server instance pool was destroyed' },
+		{ instanceOf: N9Error, message: 'Client must be connected before running operations' },
 		'updateManyToSameValue error',
 	);
 	await t.throwsAsync(
@@ -253,7 +259,7 @@ ava('[Errors] Check error thrown on every client function', async (t: Assertions
 	);
 	await t.throwsAsync(
 		client.addTagToOne({}, 'test'),
-		{ instanceOf: N9Error, message: 'topology was destroyed' },
+		{ instanceOf: N9Error, message: 'Client must be connected before running operations' },
 		'addTagToOne error',
 	);
 	await t.throwsAsync(
@@ -263,12 +269,12 @@ ava('[Errors] Check error thrown on every client function', async (t: Assertions
 	);
 	await t.throwsAsync(
 		client.addTagToMany({}, 'test'),
-		{ instanceOf: N9Error, message: 'server instance pool was destroyed' },
+		{ instanceOf: N9Error, message: 'Client must be connected before running operations' },
 		'addTagToMany error',
 	);
 	await t.throwsAsync(
 		client.removeTagFromOne({}, 'test', 'test'),
-		{ instanceOf: N9Error, message: 'topology was destroyed' },
+		{ instanceOf: N9Error, message: 'Client must be connected before running operations' },
 		'removeTagFromOne error',
 	);
 	await t.throwsAsync(
@@ -278,12 +284,12 @@ ava('[Errors] Check error thrown on every client function', async (t: Assertions
 	);
 	await t.throwsAsync(
 		client.removeTagFromMany({}, 'test', 'test'),
-		{ instanceOf: N9Error, message: 'server instance pool was destroyed' },
+		{ instanceOf: N9Error, message: 'Client must be connected before running operations' },
 		'removeTagFromMany error',
 	);
 	await t.throwsAsync(
 		client.deleteManyWithTag('test'),
-		{ instanceOf: N9Error, message: 'server instance pool was destroyed' },
+		{ instanceOf: N9Error, message: 'Client must be connected before running operations' },
 		'deleteManyWithTag error',
 	);
 });

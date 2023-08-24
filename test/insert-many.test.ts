@@ -1,5 +1,5 @@
 import { N9Log } from '@neo9/n9-node-log';
-import ava, { Assertions } from 'ava';
+import test, { Assertions } from 'ava';
 import { Db } from 'mongodb';
 
 import { FilterQuery, MongoClient } from '../src';
@@ -10,7 +10,7 @@ global.log = new N9Log('tests').module('issues');
 
 init();
 
-ava('[INSERT-MANY] Insert many', async (t: Assertions) => {
+test('[INSERT-MANY] Insert many', async (t: Assertions) => {
 	const collectionName = `test-${Date.now()}`;
 	const mongoClient = new MongoClient(collectionName, BaseMongoObject, BaseMongoObject);
 	const startTestTime = Date.now();

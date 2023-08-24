@@ -1,5 +1,5 @@
 import { N9Log } from '@neo9/n9-node-log';
-import ava, { Assertions } from 'ava';
+import test, { Assertions } from 'ava';
 
 import { MongoClient } from '../src';
 import { BaseMongoObject } from '../src/models';
@@ -9,7 +9,7 @@ global.log = new N9Log('tests').module('issues');
 
 init();
 
-ava('[DELETE-ONE] Delete one by id', async (t: Assertions) => {
+test('[DELETE-ONE] Delete one by id', async (t: Assertions) => {
 	const mongoClient = new MongoClient(`test-${Date.now()}`, BaseMongoObject, BaseMongoObject);
 
 	const initialValue: any = {

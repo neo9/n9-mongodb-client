@@ -1,9 +1,10 @@
-import ava from 'ava';
+import test from 'ava';
 import * as mongodb from 'mongodb';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 
-import { MongoClient, MongoUtils } from '../../src';
-import { BaseMongoObject, StringMap } from '../../src/models';
+import { BaseMongoObject, MongoClient, MongoUtils, StringMap } from '../../src';
+
+export const print = true;
 
 export class ArrayElement {
 	public code: string;
@@ -59,18 +60,12 @@ export function init(): void {
 	let mongod: MongoMemoryServer;
 	let isInMemory: boolean;
 
-	ava.before(async () => {
-		let mongoConnectionString;
+	test.before(async () => {
+		let mongoConnectionString: string;
 		try {
-			await MongoUtils.connect(
-				'mongodb://127.0.0.1:27017',
-				{
-					serverSelectionTimeoutMS: 650, // 650ms, default is 30000ms
-				},
-				{
-					killProcessOnReconnectFailed: false,
-				},
-			);
+			await MongoUtils.connect('mongodb://127.0.0.1:27017', {
+				serverSelectionTimeoutMS: 650, // 650ms, default is 30000ms
+			});
 			global.log.warn(`Using local MongoDB`);
 		} catch (err) {
 			if (err.name === 'MongoServerSelectionError') {
@@ -85,20 +80,14 @@ export function init(): void {
 				});
 
 				mongoConnectionString = mongod.getUri();
-				await MongoUtils.connect(
-					mongoConnectionString,
-					{},
-					{
-						killProcessOnReconnectFailed: false,
-					},
-				);
+				await MongoUtils.connect(mongoConnectionString);
 			} else {
 				throw err;
 			}
 		}
 	});
 
-	ava.after(async () => {
+	test.after(async () => {
 		if (isInMemory) {
 			global.log.info(`DROP DB after tests OK`);
 			if (global.db) {

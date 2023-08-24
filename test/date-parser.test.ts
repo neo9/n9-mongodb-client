@@ -1,5 +1,5 @@
 import { N9Log } from '@neo9/n9-node-log';
-import ava, { Assertions } from 'ava';
+import test, { Assertions } from 'ava';
 import { Transform } from 'class-transformer';
 import * as _ from 'lodash';
 
@@ -21,7 +21,7 @@ global.log = new N9Log('tests').module('date-parser');
 
 init();
 
-ava('[DATE-PARSER] Insert&update entity with date', async (t: Assertions) => {
+test('[DATE-PARSER] Insert&update entity with date', async (t: Assertions) => {
 	const entity: WithDateEntity = {
 		date: '2019-01-02',
 	};
@@ -38,7 +38,7 @@ ava('[DATE-PARSER] Insert&update entity with date', async (t: Assertions) => {
 	t.is(entityFound.date.constructor.name, 'Date', 'date found has Date constructor');
 });
 
-ava('[DATE-PARSER] Insert&update entity with date and no transformer', async (t: Assertions) => {
+test('[DATE-PARSER] Insert&update entity with date and no transformer', async (t: Assertions) => {
 	const collectionName = `test-${Date.now()}`;
 	const entity: WithDateAndNoTransformerEntity = {
 		date: new Date('2019-01-02'),

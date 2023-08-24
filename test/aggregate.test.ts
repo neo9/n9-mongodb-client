@@ -1,5 +1,5 @@
 import { N9Log } from '@neo9/n9-node-log';
-import ava, { Assertions } from 'ava';
+import test, { Assertions } from 'ava';
 import { AggregationCursor } from 'mongodb';
 
 import { MongoClient } from '../src';
@@ -19,7 +19,7 @@ global.log = new N9Log('tests');
 
 init();
 
-ava('[AGG] Insert some and aggregate it 2', async (t: Assertions) => {
+test('[AGG] Insert some and aggregate it 2', async (t: Assertions) => {
 	const mongoClient = new MongoClient(`test-${Date.now()}`, SampleType, SampleType);
 	const size = await mongoClient.count();
 
@@ -60,7 +60,7 @@ ava('[AGG] Insert some and aggregate it 2', async (t: Assertions) => {
 	await mongoClient.dropCollection();
 });
 
-ava('[AGG] Insert some and aggregate with output', async (t: Assertions) => {
+test('[AGG] Insert some and aggregate with output', async (t: Assertions) => {
 	const aggregationCollectionSourceName = `test-${Math.round(Math.random() * 100000)}${Date.now()}`;
 	const mongoClientRead = new MongoClient(aggregationCollectionSourceName, SampleType, null);
 	const mongoClientOut = new MongoClient(`test-output-${Date.now()}`, SampleType, null, {

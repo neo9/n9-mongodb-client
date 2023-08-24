@@ -1,5 +1,5 @@
 import { N9Log } from '@neo9/n9-node-log';
-import ava, { Assertions } from 'ava';
+import test, { Assertions } from 'ava';
 import { Db } from 'mongodb';
 
 import { MongoClient } from '../src';
@@ -34,7 +34,7 @@ global.log = new N9Log('tests');
 
 init();
 
-ava('[CRUD] Insert one and find it', async (t: Assertions) => {
+test('[CRUD] Insert one and find it', async (t: Assertions) => {
 	const collection = (global.db as Db).collection<SampleType>(`test-${Date.now()}`);
 	const mongoClient = new MongoClient(collection, SampleType, SampleTypeListing);
 	const size = await mongoClient.count();
@@ -71,7 +71,7 @@ ava('[CRUD] Insert one and find it', async (t: Assertions) => {
 	await mongoClient.dropCollection();
 });
 
-ava('[CRUD] Find one and update', async (t: Assertions) => {
+test('[CRUD] Find one and update', async (t: Assertions) => {
 	const mongoClient = new MongoClient(
 		global.db.collection(`test-${Date.now()}`),
 		SampleType,
@@ -129,7 +129,7 @@ ava('[CRUD] Find one and update', async (t: Assertions) => {
 	await mongoClient.dropCollection();
 });
 
-ava('[CRUD] Find one and update with filter', async (t: Assertions) => {
+test('[CRUD] Find one and update with filter', async (t: Assertions) => {
 	const mongoClient = new MongoClient(
 		global.db.collection(`test-${Date.now()}`),
 		SampleArrayType,
@@ -201,7 +201,7 @@ ava('[CRUD] Find one and update with filter', async (t: Assertions) => {
 	await mongoClient.dropCollection();
 });
 
-ava('[CRUD] Find one and upsert', async (t: Assertions) => {
+test('[CRUD] Find one and upsert', async (t: Assertions) => {
 	const mongoClient = new MongoClient(`test-${Date.now()}`, SampleType, SampleTypeListing);
 	const size = await mongoClient.count();
 
