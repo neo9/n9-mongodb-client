@@ -4,12 +4,13 @@ import { Sort } from 'mongodb';
 import { Readable, Writable } from 'stream';
 
 import { MongoClient } from './client';
-import { Cursor, FilterQuery } from './index';
+import { FilterQuery } from './index';
 import { LangUtils } from './lang-utils';
 import { LodashReplacerUtils } from './lodash-replacer.utils';
 import { BaseMongoObject, ClassType } from './models';
 import { ProjectionQuery } from './models/find-paramters.models';
 import { MongoUtils } from './mongo-utils';
+import { N9FindCursor } from './n9-find-cursor';
 
 export type PageConsumer<T> = ((data: T[]) => Promise<void>) | ((data: T[]) => void);
 export type ItemConsumer<T> = ((data: T) => Promise<void>) | ((data: T) => void);
@@ -70,7 +71,7 @@ export class MongoReadStream<
 	L extends BaseMongoObject,
 > extends Readable {
 	private lastItem: any;
-	private cursor: Cursor<Partial<U | L>> = null;
+	private cursor: N9FindCursor<Partial<U | L>> | N9FindCursor<L> = null;
 	private hasAlreadyAddedIdConditionOnce: boolean = false;
 	private readonly _query: FilterQuery<any>;
 

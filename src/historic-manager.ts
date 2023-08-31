@@ -144,8 +144,7 @@ export class HistoricManager<U extends BaseMongoObject> {
 					return entityHistoric;
 				});
 
-			// TODO : review undefined
-			return new N9FindCursor<EntityHistoric<U>>(this.collection, findCursor, filterQuery, {});
+			return new N9FindCursor<EntityHistoric<U>>(this.collection, findCursor, filterQuery);
 		} catch (e) {
 			LangUtils.throwN9ErrorFromError(e, {
 				entityId,

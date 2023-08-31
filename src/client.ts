@@ -349,13 +349,13 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			});
 		}
 
-		findCursor
+		const listCursor = findCursor
 			.sort(sort)
 			.skip(page * size)
 			.limit(size)
 			.project(projection)
 			.map<T>(transformFunction);
-		return new N9FindCursor(this.collection, findCursor, query, { collation });
+		return new N9FindCursor<T>(this.collection, listCursor, query, { collation });
 	}
 
 	public stream(
@@ -608,13 +608,11 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				snapshot = await this.findOne(query);
 			}
 
-			let newEntity: U = (
-				await this.collection.findOneAndUpdate(query, updateQuery, {
-					upsert,
-					arrayFilters,
-					returnDocument: ReturnDocument.AFTER,
-				})
-			).value as U; // WithId<U>
+			let newEntity: U = (await this.collection.findOneAndUpdate(query, updateQuery, {
+				upsert,
+				arrayFilters,
+				returnDocument: ReturnDocument.AFTER,
+			})) as U; // WithId<U>
 			if (returnNewValue || this.conf.keepHistoric || this.conf.updateOnlyOnChange) {
 				newEntity = MongoUtils.mapObjectToClass(
 					this.type,
@@ -1753,7 +1751,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				returnDocument: ReturnDocument.AFTER,
 			},
 		);
-		return updateResult.value;
+		return updateResult;
 	}
 
 	private async updateLastModificationDateBulk(

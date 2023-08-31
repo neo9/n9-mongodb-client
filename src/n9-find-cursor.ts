@@ -1,3 +1,4 @@
+import { N9Error } from '@neo9/n9-node-utils';
 import * as _ from 'lodash';
 import {
 	AbstractCursor,
@@ -7,7 +8,6 @@ import {
 	Collection,
 	CommonEvents,
 	CursorFlag,
-	CursorStreamOptions,
 	Document,
 	ExplainVerbosityLike,
 	Filter,
@@ -28,42 +28,26 @@ import { Readable } from 'stream';
 
 import { AggregationBuilder } from './aggregation-utils';
 
-export class N9FindCursor<U> extends Readable implements FindCursor<U> {
-	private readonly collection: Collection<any>;
-	private readonly query: Filter<U>;
-	private readonly cursor: FindCursor<U>;
-	private readonly options: Pick<FindOptions, 'collation'>;
-
+export class N9FindCursor<E> extends Readable implements FindCursor<E> {
 	public constructor(
-		collection: Collection<any>,
-		cursor: FindCursor,
-		query: Filter<U>,
-		options: FindOptions,
+		private readonly collection: Collection<any>,
+		private readonly cursor: FindCursor<E>,
+		private filterQuery: Filter<E>, // can be edited with filter function
+		private readonly options: Pick<FindOptions, 'collation'> = {},
 	) {
 		super({
 			objectMode: true,
 			highWaterMark: 1, // same as mongodb-native-client : https://github.com/mongodb/node-mongodb-native/blob/v5.7.0/src/cursor/abstract_cursor.ts#L339C19-L339C19
 		});
-		this.cursor = cursor;
-		this.collection = collection;
-		this.query = query;
-		this.options = options;
-	}
-
-	/*
-	 * Custom features
-	 */
-	public getNativeCursor(): FindCursor<U> {
-		return this.cursor;
 	}
 
 	public async count(): Promise<number> {
 		// EstimatedCount or CountDocuments don't handle collation options.
 		// It needs an aggregate function with the collation options to return a count value
-		if (this.options?.collation) {
+		if (this.options.collation) {
 			const cursor: AggregationCursor<Document> = this.collection.aggregate(
 				new AggregationBuilder(this.collection.collectionName)
-					.match(this.query)
+					.match(this.filterQuery)
 					.group({ _id: '1', count: { $sum: 1 } })
 					.build(),
 				{ collation: this.options.collation },
@@ -71,15 +55,14 @@ export class N9FindCursor<U> extends Readable implements FindCursor<U> {
 			return (await cursor.toArray())[0].count;
 		}
 
-		return await this.collection.countDocuments(this.query);
+		return await this.collection.countDocuments(this.filterQuery);
 	}
 
-	/*
-	 * Readable Overrides
-	 */
+	// //////////////////
+	// Readable Overrides
+	// //////////////////
 
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	// _read(size: number): void {
 	async _read(size: number): Promise<void> {
 		try {
 			this.pause();
@@ -110,6 +93,10 @@ export class N9FindCursor<U> extends Readable implements FindCursor<U> {
 
 	// Surcharge all function that return a findcursor and return a N9FindCursor instead to keep cascading available.
 	// Src : https://github.com/mongodb/node-mongodb-native/blob/v5.7.0/src/cursor/find_cursor.ts
+
+	/**
+	 * @deprecated Use MongoClient.find parameter `sort` instead
+	 */
 	sort(sort: Sort | string, direction?: SortDirection): this {
 		this.cursor.sort(sort, direction);
 		return this;
@@ -119,30 +106,42 @@ export class N9FindCursor<U> extends Readable implements FindCursor<U> {
 		return this.cursor.hasNext();
 	}
 
+	/**
+	 * @deprecated Use MongoClient.find parameter `collation` instead
+	 */
 	collation(value: CollationOptions): this {
 		this.cursor.collation(value);
+		this.options.collation = value;
 		return this;
 	}
 
+	/**
+	 * @deprecated Use MongoClient.find parameter `page` and `pageSize` instead
+	 */
 	skip(value: number): this {
 		this.cursor.skip(value);
 		return this;
 	}
 
+	/**
+	 * @deprecated Use MongoClient.find parameter `page` and `pageSize` instead
+	 */
 	limit(value: number): this {
 		this.cursor.limit(value);
 		return this;
 	}
 
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	project<T extends Document = Document>(value: Document): N9FindCursor<U> {
+	/**
+	 * @deprecated Use MongoClient.find parameter `project` instead
+	 */
+	project<T>(value: Document): N9FindCursor<T> {
 		this.cursor.project(value);
-		return this;
+		return this as any;
 	}
 
-	map<T>(transform: (doc: any) => T): N9FindCursor<U> {
+	map<T>(transform: (doc: E) => T): N9FindCursor<T> {
 		this.cursor.map(transform);
-		return this;
+		return this as any;
 	}
 
 	addCursorFlag(flag: CursorFlag, value: boolean): this {
@@ -150,9 +149,15 @@ export class N9FindCursor<U> extends Readable implements FindCursor<U> {
 		return this;
 	}
 
+	/**
+	 * @deprecated Use specific cursor method instead
+	 * https://www.mongodb.com/docs/v6.0/release-notes/6.0-compatibility/#removed-operators
+	 * Not implemented
+	 */
 	addQueryModifier(name: string, value: string | boolean | number | Document): this {
-		this.cursor.addQueryModifier(name, value);
-		return this;
+		throw new N9Error('unsupported-function-addQueryModifier', 501, {
+			argString: JSON.stringify({ name, value }),
+		});
 	}
 
 	allowDiskUse(allow: boolean | undefined): this {
@@ -169,12 +174,17 @@ export class N9FindCursor<U> extends Readable implements FindCursor<U> {
 		return this.cursor.bufferedCount();
 	}
 
-	clone(): FindCursor<any> {
-		return this.cursor.clone();
+	clone(): N9FindCursor<E> {
+		return new N9FindCursor<E>(
+			this.collection,
+			this.cursor.clone(),
+			this.filterQuery,
+			this.options,
+		);
 	}
 
 	async close(): Promise<void> {
-		return this.cursor.close();
+		await this.cursor.close();
 	}
 
 	// eslint-disable-next-line @typescript-eslint/member-ordering
@@ -187,17 +197,21 @@ export class N9FindCursor<U> extends Readable implements FindCursor<U> {
 		return this;
 	}
 
-	async explain(verbosity: ExplainVerbosityLike | undefined): Promise<Document> {
+	async explain(verbosity?: ExplainVerbosityLike | undefined): Promise<Document> {
 		return this.cursor.explain(verbosity);
 	}
 
-	filter(filter: Document): this {
+	filter(filter: Filter<E>): this {
 		this.cursor.filter(filter);
+		this.filterQuery = filter;
 		return this;
 	}
 
+	/**
+	 * @deprecated Use for await ... of ... instead
+	 */
 	async forEach(iterator: (doc: any) => boolean | void): Promise<void> {
-		return this.cursor.forEach(iterator);
+		return await this.cursor.forEach(iterator);
 	}
 
 	hint(hint: Hint): this {
@@ -210,19 +224,22 @@ export class N9FindCursor<U> extends Readable implements FindCursor<U> {
 		return this.cursor.id;
 	}
 
+	/**
+	 * @deprecated No use case found
+	 * Not implemented
+	 */
 	// eslint-disable-next-line @typescript-eslint/member-ordering
 	get killed(): boolean {
-		return this.cursor.killed;
+		throw new N9Error('unsupported-function-killed', 501);
 	}
 
+	/**
+	 * @deprecated No use case found
+	 * Not implemented
+	 */
 	// eslint-disable-next-line @typescript-eslint/member-ordering
 	get loadBalanced(): boolean {
-		return this.cursor.loadBalanced;
-	}
-
-	max(max: Document): this {
-		this.cursor.max(max);
-		return this;
+		throw new N9Error('unsupported-function-loadBalanced', 501);
 	}
 
 	maxAwaitTimeMS(value: number): this {
@@ -235,9 +252,20 @@ export class N9FindCursor<U> extends Readable implements FindCursor<U> {
 		return this;
 	}
 
+	/**
+	 * @deprecated You may prefer the $lte operator for the query if possible
+	 * Not implemented
+	 */
+	max(max: Document): this {
+		throw new N9Error('unsupported-function-max', 501, { agrString: JSON.stringify({ max }) });
+	}
+
+	/**
+	 * @deprecated You may prefer the $gte operator for the query if possible
+	 * Not implemented
+	 */
 	min(min: Document): this {
-		this.cursor.min(min);
-		return this;
+		throw new N9Error('unsupported-function-min', 501, { agrString: JSON.stringify({ min }) });
 	}
 
 	// eslint-disable-next-line @typescript-eslint/member-ordering
@@ -246,10 +274,10 @@ export class N9FindCursor<U> extends Readable implements FindCursor<U> {
 	}
 
 	async next(): Promise<any> {
-		return this.cursor.next();
+		return await this.cursor.next();
 	}
 
-	readBufferedDocuments(number: number | undefined): any[] {
+	readBufferedDocuments(number?: number | undefined): any[] {
 		return this.cursor.readBufferedDocuments(number);
 	}
 
@@ -277,15 +305,20 @@ export class N9FindCursor<U> extends Readable implements FindCursor<U> {
 		return this;
 	}
 
-	stream(options: CursorStreamOptions | undefined): Readable & AsyncIterable<any> {
-		return this.cursor.stream(options);
+	/**
+	 * @deprecated You use directly the cursor as a ReadableStream
+	 * Examples available in cursor.test.ts
+	 * Not implemented
+	 */
+	stream(): Readable & AsyncIterable<any> {
+		throw new N9Error('unsupported-function-stream', 501);
 	}
 
-	async toArray(): Promise<any[]> {
+	async toArray(): Promise<E[]> {
 		return this.cursor.toArray();
 	}
 
-	async tryNext(): Promise<any> {
+	async tryNext(): Promise<E> {
 		return this.cursor.tryNext();
 	}
 
@@ -299,7 +332,7 @@ export class N9FindCursor<U> extends Readable implements FindCursor<U> {
 		return this;
 	}
 
-	[Symbol.asyncIterator](): AsyncGenerator<any, void, void> {
+	[Symbol.asyncIterator](): AsyncGenerator<E, void, void> {
 		return this.cursor[Symbol.asyncIterator]();
 	}
 
@@ -318,7 +351,11 @@ export class N9FindCursor<U> extends Readable implements FindCursor<U> {
 	addListener(eventName: string | symbol, listener: (...args: any[]) => void): this;
 	// eslint-disable-next-line no-dupe-class-members,@typescript-eslint/typedef
 	addListener(event, listener): this {
-		this.cursor.addListener(event, listener);
+		// Source : https://github.com/mongodb/node-mongodb-native/blob/v5.7.0/src/cursor/abstract_cursor.ts#L128
+		if (event === AbstractCursor.CLOSE) {
+			this.cursor.on(event, listener);
+		}
+		super.addListener(event, listener);
 		return this;
 	}
 
@@ -381,6 +418,7 @@ export class N9FindCursor<U> extends Readable implements FindCursor<U> {
 	off(event: string | symbol, listener: GenericListener): this;
 	// eslint-disable-next-line no-dupe-class-members,@typescript-eslint/unified-signatures
 	off(eventName: string | symbol, listener: (...args: any[]) => void): this;
+	// istanbul ignore next
 	// eslint-disable-next-line no-dupe-class-members,@typescript-eslint/typedef
 	off(event, listener): this {
 		this.cursor.off(event, listener);
@@ -425,7 +463,11 @@ export class N9FindCursor<U> extends Readable implements FindCursor<U> {
 	once(eventName: string | symbol, listener: (...args: any[]) => void): this;
 	// eslint-disable-next-line no-dupe-class-members,@typescript-eslint/typedef
 	once(event, listener): this {
-		this.cursor.once(event, listener);
+		// Source : https://github.com/mongodb/node-mongodb-native/blob/v5.7.0/src/cursor/abstract_cursor.ts#L128
+		if (event === AbstractCursor.CLOSE) {
+			this.cursor.once(event, listener);
+		}
+		super.once(event, listener);
 		return this;
 	}
 
@@ -442,9 +484,14 @@ export class N9FindCursor<U> extends Readable implements FindCursor<U> {
 	prependListener(event: string | symbol, listener: GenericListener): this;
 	// eslint-disable-next-line no-dupe-class-members,@typescript-eslint/unified-signatures
 	prependListener(eventName: string | symbol, listener: (...args: any[]) => void): this;
+	// istanbul ignore next
 	// eslint-disable-next-line no-dupe-class-members,@typescript-eslint/typedef
 	prependListener(event, listener): this {
-		this.cursor.prependListener(event, listener);
+		// Source : https://github.com/mongodb/node-mongodb-native/blob/v5.7.0/src/cursor/abstract_cursor.ts#L128
+		if (event === AbstractCursor.CLOSE) {
+			this.cursor.prependListener(event, listener);
+		}
+		super.prependListener(event, listener);
 		return this;
 	}
 
@@ -461,9 +508,14 @@ export class N9FindCursor<U> extends Readable implements FindCursor<U> {
 	prependOnceListener(event: string | symbol, listener: GenericListener): this;
 	// eslint-disable-next-line no-dupe-class-members,@typescript-eslint/unified-signatures
 	prependOnceListener(eventName: string | symbol, listener: (...args: any[]) => void): this;
+	// istanbul ignore next
 	// eslint-disable-next-line no-dupe-class-members,@typescript-eslint/typedef
 	prependOnceListener(event, listener): this {
-		this.cursor.prependOnceListener(event, listener);
+		// Source : https://github.com/mongodb/node-mongodb-native/blob/v5.7.0/src/cursor/abstract_cursor.ts#L128
+		if (event === AbstractCursor.CLOSE) {
+			this.cursor.prependOnceListener(event, listener);
+		}
+		super.prependOnceListener(event, listener);
 		return this;
 	}
 
@@ -472,9 +524,10 @@ export class N9FindCursor<U> extends Readable implements FindCursor<U> {
 	): AbstractCursorEvents[EventKey][];
 	// eslint-disable-next-line no-dupe-class-members,@typescript-eslint/ban-types
 	rawListeners(eventName: string | symbol): Function[];
+	// istanbul ignore next
 	// eslint-disable-next-line no-dupe-class-members,@typescript-eslint/typedef
 	rawListeners(event): any {
-		return this.cursor.rawListeners(event);
+		return super.rawListeners(event);
 	}
 
 	removeAllListeners<EventKey extends keyof AbstractCursorEvents>(
@@ -482,9 +535,11 @@ export class N9FindCursor<U> extends Readable implements FindCursor<U> {
 	): this;
 	// eslint-disable-next-line no-dupe-class-members
 	removeAllListeners(event?: string | symbol): this;
+	// istanbul ignore next
 	// eslint-disable-next-line no-dupe-class-members,@typescript-eslint/typedef
 	removeAllListeners(event?): this {
 		this.cursor.removeAllListeners(event);
+		super.removeAllListeners(event);
 		return this;
 	}
 
@@ -501,18 +556,22 @@ export class N9FindCursor<U> extends Readable implements FindCursor<U> {
 	removeListener(event: string | symbol, listener: GenericListener): this;
 	// eslint-disable-next-line no-dupe-class-members,@typescript-eslint/unified-signatures
 	removeListener(eventName: string | symbol, listener: (...args: any[]) => void): this;
+	// istanbul ignore next
 	// eslint-disable-next-line no-dupe-class-members,@typescript-eslint/typedef
 	removeListener(event, listener): this {
 		this.cursor.removeListener(event, listener);
+		super.removeListener(event, listener);
 		return this;
 	}
 
 	setMaxListeners(n: number): this;
 	// eslint-disable-next-line no-dupe-class-members
 	setMaxListeners(n: number): this;
+	// istanbul ignore next
 	// eslint-disable-next-line no-dupe-class-members
 	setMaxListeners(n: number): this {
 		this.cursor.setMaxListeners(n);
+		super.setMaxListeners(n);
 		return this;
 	}
 }

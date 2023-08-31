@@ -56,11 +56,7 @@ export class TagManager<U> {
 	 * @param options options to customize the tag
 	 * @returns New tag
 	 */
-	public async addTagToOne(
-		query: object,
-		userId: string,
-		options: AddTagOptions = {},
-	): Promise<string> {
+	public async addTagToOne(query: object, userId: string, options: AddTagOptions): Promise<string> {
 		try {
 			options.tag = options.tag || new ObjectId().toHexString();
 			const update = TagManager.buildAddTagUpdate(userId, options);
@@ -88,7 +84,7 @@ export class TagManager<U> {
 	public async addTagToOneById(
 		id: string,
 		userId: string,
-		options: AddTagOptions = {},
+		options: AddTagOptions,
 	): Promise<string> {
 		return await this.addTagToOne({ _id: MongoUtils.oid(id) }, userId, options);
 	}
@@ -99,7 +95,7 @@ export class TagManager<U> {
 	public async addTagToMany(
 		query: object,
 		userId: string,
-		options: AddTagOptions = {},
+		options: AddTagOptions,
 	): Promise<string> {
 		try {
 			options.tag = options.tag || new ObjectId().toHexString();
@@ -128,7 +124,7 @@ export class TagManager<U> {
 		query: object,
 		tag: string,
 		userId: string,
-		options: RemoveTagOptions = {},
+		options: RemoveTagOptions,
 	): Promise<void> {
 		try {
 			const update = TagManager.buildRemoveTagUpdate(tag, userId, options);
@@ -157,7 +153,7 @@ export class TagManager<U> {
 		id: string,
 		tag: string,
 		userId: string,
-		options: RemoveTagOptions = {},
+		options: RemoveTagOptions,
 	): Promise<void> {
 		await this.removeTagFromOne({ _id: MongoUtils.oid(id) }, tag, userId, options);
 	}
@@ -174,7 +170,7 @@ export class TagManager<U> {
 		query: object,
 		tag: string,
 		userId: string,
-		options: RemoveTagOptions = {},
+		options: RemoveTagOptions,
 	): Promise<void> {
 		try {
 			const update = TagManager.buildRemoveTagUpdate(tag, userId, options);

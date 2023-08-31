@@ -72,6 +72,9 @@ test('[CRUD] Insert multiples and find with collation', async (t: Assertions) =>
 		undefined,
 		collationStrength1,
 	);
+	const findWithCollationStrengthOneWithN9FindCursor = mongoClient
+		.find({ field1String: 'test' })
+		.collation(collationStrength1);
 
 	const findWithCollationStrengthTwo = mongoClient.find(
 		{ field1String: 'test' },
@@ -82,9 +85,23 @@ test('[CRUD] Insert multiples and find with collation', async (t: Assertions) =>
 		collationStrength2,
 	);
 
+	const findWithCollationStrengthTwoWithN9FindCursor = mongoClient
+		.find({ field1String: 'test' })
+		.collation(collationStrength2);
+
 	t.is(sizeWithElementIn, 4, 'nb element in collection');
 	t.is(await findWithCollationStrengthOne.count(), 4, 'nb element collation strength 1');
+	t.is(
+		await findWithCollationStrengthOneWithN9FindCursor.count(),
+		4,
+		'nb element collation strength 1 with N9FindCursor',
+	);
 	t.is(await findWithCollationStrengthTwo.count(), 2, 'nb element collation strength 2');
+	t.is(
+		await findWithCollationStrengthTwoWithN9FindCursor.count(),
+		2,
+		'nb element collation strength 2 with N9FindCursor',
+	);
 	t.is(await findAllWithoutCollation.count(), 4, 'nb elements');
 	t.is(await findWithoutCollation.count(), 1, 'nb element without collation');
 
