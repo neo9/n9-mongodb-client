@@ -1,8 +1,8 @@
 import test from 'ava';
-import * as mongodb from 'mongodb';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 
 import { BaseMongoObject, MongoClient, MongoUtils, StringMap } from '../../src';
+import * as mongodb from '../../src/mongodb';
 
 export const print = true;
 

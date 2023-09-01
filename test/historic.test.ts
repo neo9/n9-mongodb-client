@@ -1,10 +1,9 @@
 import { N9Log } from '@neo9/n9-node-log';
 import test, { Assertions } from 'ava';
 import * as _ from 'lodash';
-import { Db } from 'mongodb';
 
-import { MongoClient, MongoUtils } from '../src';
-import { BaseMongoObject } from '../src/models';
+import { BaseMongoObject, MongoClient, MongoUtils } from '../src';
+import { Db } from '../src/mongodb';
 import { init } from './fixtures/utils';
 
 class SampleTypeListing extends BaseMongoObject {

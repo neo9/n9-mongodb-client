@@ -1,10 +1,10 @@
 import { N9Log } from '@neo9/n9-node-log';
 import test, { ExecutionContext } from 'ava';
 import * as _ from 'lodash';
-import { MongoClient as MongodbClient, ObjectId } from 'mongodb';
 
 import { BaseMongoObject, MongoClient } from '../src';
 import { N9AggregationCursor } from '../src/cursors/n9-aggregation-cursor';
+import { MongoClient as MongodbClient, ObjectId } from '../src/mongodb';
 import { init } from './fixtures/utils';
 
 class SampleType extends BaseMongoObject {

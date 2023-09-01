@@ -1,9 +1,7 @@
 import { N9Log } from '@neo9/n9-node-log';
 import test, { Assertions } from 'ava';
-import { CollationOptions } from 'mongodb';
 
-import { CollationDocument, MongoClient } from '../src';
-import { BaseMongoObject } from '../src/models';
+import { BaseMongoObject, CollationDocument, MongoClient, MongoDB } from '../src';
 import { init } from './fixtures/utils';
 
 class SampleTypeListing extends BaseMongoObject {
@@ -59,7 +57,7 @@ test('[CRUD] Insert multiples and find with collation', async (t: Assertions) =>
 	);
 
 	const collationStrength1: CollationDocument = { locale: 'fr', strength: 1 };
-	const collationStrength2: CollationOptions = { locale: 'fr', strength: 2 };
+	const collationStrength2: MongoDB.CollationOptions = { locale: 'fr', strength: 2 };
 
 	const sizeWithElementIn = await mongoClient.count();
 	const findWithoutCollation = mongoClient.find({ field1String: 'test' });

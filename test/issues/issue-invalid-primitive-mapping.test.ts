@@ -1,11 +1,10 @@
 import { N9Log } from '@neo9/n9-node-log';
 import test, { Assertions } from 'ava';
 import * as _ from 'lodash';
-import * as mongodb from 'mongodb';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 
-import { MongoClient, MongoUtils } from '../../src';
-import { BaseMongoObject } from '../../src/models';
+import { BaseMongoObject, MongoClient, MongoUtils } from '../../src';
+import * as mongodb from '../../src/mongodb';
 
 global.log = new N9Log('tests').module('issues');
 

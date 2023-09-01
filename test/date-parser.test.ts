@@ -3,8 +3,7 @@ import test, { Assertions } from 'ava';
 import { Transform } from 'class-transformer';
 import * as _ from 'lodash';
 
-import { MongoClient } from '../src';
-import { BaseMongoObject } from '../src/models';
+import { BaseMongoObject, MongoClient } from '../src';
 import * as DateParser from '../src/transformers/date-parser.transformer';
 import { init } from './fixtures/utils';
 

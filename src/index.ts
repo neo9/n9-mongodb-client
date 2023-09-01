@@ -1,4 +1,3 @@
-import { ObjectId } from 'bson';
 import {
 	AggregateOptions,
 	AnyBulkWriteOperation,
@@ -7,11 +6,12 @@ import {
 	CreateIndexesOptions,
 	Filter,
 	FindCursor,
+	ObjectId,
 	ReadPreferenceLike,
 	UpdateFilter,
 } from 'mongodb';
 
-export { ObjectId } from 'bson';
+export { ObjectId } from 'mongodb';
 
 export * from './client';
 export * from './lang-utils';
@@ -22,7 +22,7 @@ export * from './mongo-read-stream';
 export * from './mongo-utils';
 export * from './aggregation-utils';
 export * from './models';
-export { Filter, CollationOptions, IndexSpecification } from 'mongodb';
+export * as MongoDB from 'mongodb';
 
 /**
  * @deprecated : Replace with ObjectId

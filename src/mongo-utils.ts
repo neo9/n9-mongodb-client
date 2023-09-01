@@ -14,13 +14,23 @@ export class MongoUtils {
 	private static wasConnected: boolean = false;
 	private static isHeartbeatKO: boolean = true;
 
+	/**
+	 *
+	 * @param url
+	 * @param options Default heartbeatFrequencyMS at 3_000
+	 */
 	public static async connect(
 		url: string,
 		options: mongodb.MongoClientOptions = {},
 	): Promise<mongodb.Db> {
 		const log = global.log.module('mongo');
 
-		const mongoClient = new mongodb.MongoClient(url, options);
+		const optionsWithDefaultValuesApplied: mongodb.MongoClientOptions = {
+			heartbeatFrequencyMS: 3_000,
+			...options,
+		};
+
+		const mongoClient = new mongodb.MongoClient(url, optionsWithDefaultValuesApplied);
 		const safeUrl = MongoUtils.hidePasswordFromURI(url);
 		// See https://www.mongodb.com/community/forums/t/what-is-the-minimum-and-maximum-values-of-reconnecttries-and-reconnectinterval-of-mongodb-node-js-driver/155949
 		// NOW we have to use serverSelectionTimeoutMS, socketTimeoutMS instead of reconnectTries and reconnectInterval

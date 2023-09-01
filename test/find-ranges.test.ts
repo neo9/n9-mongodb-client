@@ -1,8 +1,7 @@
 import { N9Log } from '@neo9/n9-node-log';
 import test, { ExecutionContext } from 'ava';
 
-import { FilterQuery, MongoClient, StringMap } from '../src';
-import { BaseMongoObject } from '../src/models';
+import { BaseMongoObject, FilterQuery, MongoClient, StringMap } from '../src';
 import { init } from './fixtures/utils';
 
 class SampleType extends BaseMongoObject {

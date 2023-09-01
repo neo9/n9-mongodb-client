@@ -1,11 +1,15 @@
 import { N9Log } from '@neo9/n9-node-log';
 import test, { ExecutionContext } from 'ava';
 import * as _ from 'lodash';
-import { CURSOR_FLAGS, MongoClient as MongodbClient, MongoCursorExhaustedError } from 'mongodb';
 import { Transform } from 'stream';
 
 import { BaseMongoObject, MongoClient, MongoUtils } from '../src';
 import { N9FindCursor } from '../src/cursors/n9-find-cursor';
+import {
+	CURSOR_FLAGS,
+	MongoClient as MongodbClient,
+	MongoCursorExhaustedError,
+} from '../src/mongodb';
 import { init } from './fixtures/utils';
 
 class SampleType extends BaseMongoObject {
