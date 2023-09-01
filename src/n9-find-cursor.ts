@@ -62,7 +62,6 @@ export class N9FindCursor<E> extends Readable implements FindCursor<E> {
 	// Readable Overrides
 	// //////////////////
 
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	async _read(size: number): Promise<void> {
 		try {
 			this.pause();
@@ -103,7 +102,7 @@ export class N9FindCursor<E> extends Readable implements FindCursor<E> {
 	}
 
 	async hasNext(): Promise<boolean> {
-		return this.cursor.hasNext();
+		return await this.cursor.hasNext();
 	}
 
 	/**
@@ -155,9 +154,7 @@ export class N9FindCursor<E> extends Readable implements FindCursor<E> {
 	 * Not implemented
 	 */
 	addQueryModifier(name: string, value: string | boolean | number | Document): this {
-		throw new N9Error('unsupported-function-addQueryModifier', 501, {
-			argString: JSON.stringify({ name, value }),
-		});
+		throw new N9Error('unsupported-function-addQueryModifier', 501, { name, value });
 	}
 
 	allowDiskUse(allow: boolean | undefined): this {
@@ -257,7 +254,7 @@ export class N9FindCursor<E> extends Readable implements FindCursor<E> {
 	 * Not implemented
 	 */
 	max(max: Document): this {
-		throw new N9Error('unsupported-function-max', 501, { agrString: JSON.stringify({ max }) });
+		throw new N9Error('unsupported-function-max', 501, { max });
 	}
 
 	/**
@@ -265,7 +262,7 @@ export class N9FindCursor<E> extends Readable implements FindCursor<E> {
 	 * Not implemented
 	 */
 	min(min: Document): this {
-		throw new N9Error('unsupported-function-min', 501, { agrString: JSON.stringify({ min }) });
+		throw new N9Error('unsupported-function-min', 501, { min });
 	}
 
 	// eslint-disable-next-line @typescript-eslint/member-ordering

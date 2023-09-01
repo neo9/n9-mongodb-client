@@ -95,6 +95,7 @@ export function init(): void {
 				await MongoUtils.disconnect();
 			}
 			await mongod.stop();
+			delete global.dbClient;
 		}
 	});
 }
