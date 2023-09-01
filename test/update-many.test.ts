@@ -32,7 +32,7 @@ test('[UPDATE MANY] Should update only inserted document last modification date'
 		value: 'new entity',
 	};
 	const beforeUpdateManyTimestamp = Date.now();
-	await waitFor(1); // create at least 1ms difference in dates
+	await waitFor(10); // create at least 10ms difference in dates
 
 	const updateResult = await (
 		await mongoClient.updateMany(
