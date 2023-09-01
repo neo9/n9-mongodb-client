@@ -158,6 +158,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 	}
 
 	public async initTagsIndex(): Promise<void> {
+		// eslint-disable-next-line @typescript-eslint/naming-convention
 		await this.indexManager.createIndex({ 'objectInfos.tags': 1 }, { sparse: true });
 	}
 
@@ -567,6 +568,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 
 			updateQuery.$set = {
 				...updateQuery.$set,
+				// eslint-disable-next-line @typescript-eslint/naming-convention
 				'objectInfos.lastUpdate': {
 					date: now,
 					userId: formattedUserId,
@@ -582,6 +584,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			if (upsert) {
 				updateQuery.$setOnInsert = {
 					...updateQuery.$setOnInsert,
+					// eslint-disable-next-line @typescript-eslint/naming-convention
 					'objectInfos.creation': {
 						date: now,
 						userId: formattedUserId,
@@ -765,6 +768,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				query,
 				{
 					$pull: {
+						// eslint-disable-next-line @typescript-eslint/naming-convention
 						'objectInfos.lockFields': {
 							path,
 						},
@@ -855,6 +859,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 						}
 
 						updateQuery.$push = {
+							// eslint-disable-next-line @typescript-eslint/naming-convention
 							'objectInfos.lockFields': {
 								$each: lockFields,
 							},
@@ -1000,10 +1005,12 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 
 			updateQuery.$set = {
 				...updateQuery.$set,
+				// eslint-disable-next-line @typescript-eslint/naming-convention
 				'objectInfos.lastUpdate': {
 					date: now,
 					userId: ObjectId.isValid(userId) ? MongoUtils.oid(userId) : userId,
 				},
+				// eslint-disable-next-line @typescript-eslint/naming-convention
 				'objectInfos.lastModification': {
 					date: now,
 					userId: ObjectId.isValid(userId) ? MongoUtils.oid(userId) : userId,
@@ -1291,8 +1298,10 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 
 	/**
 	 * Function to run multiple updateOne queries as bulk.
-	 * Prefer usage of {@link updateManyAtOnce} that build queries for you.
 	 *
+	 * Prefer usage of updateManyAtOnce that build queries for you.
+	 *
+	 * @see updateManyAtOnce
 	 * @param newEntities information to run queries
 	 * @param userId userId that do the change
 	 * @param upsert upsert values or not
@@ -1320,6 +1329,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				const formattedUserId = ObjectId.isValid(userId) ? MongoUtils.oid(userId) : userId;
 				updateQuery.$set = {
 					...updateQuery.$set,
+					// eslint-disable-next-line @typescript-eslint/naming-convention
 					'objectInfos.lastUpdate': {
 						date: now,
 						userId: formattedUserId,
@@ -1342,6 +1352,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				if (upsert) {
 					updateQuery.$setOnInsert = {
 						...updateQuery.$setOnInsert,
+						// eslint-disable-next-line @typescript-eslint/naming-convention
 						'objectInfos.creation': {
 							userId,
 							date: now,
@@ -1741,6 +1752,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			{ _id: MongoUtils.oid(id) as any },
 			{
 				$set: {
+					// eslint-disable-next-line @typescript-eslint/naming-convention
 					'objectInfos.lastModification': {
 						date: modificationDate,
 						userId: (ObjectId.isValid(userId) ? MongoUtils.oid(userId) : userId) as string,
@@ -1765,6 +1777,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			{ _id: { $in: MongoUtils.oids(idsToUpdate) as any[] } },
 			{
 				$set: {
+					// eslint-disable-next-line @typescript-eslint/naming-convention
 					'objectInfos.lastModification': {
 						date: updateDate,
 						userId: (ObjectId.isValid(userId) ? MongoUtils.oid(userId) : userId) as string,

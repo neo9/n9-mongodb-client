@@ -11,13 +11,16 @@ import { MongoUtils } from './mongo-utils';
  */
 export class TagManager<U> {
 	private static buildAddTagUpdate(userId: string, options: AddTagOptions): object {
+		// eslint-disable-next-line @typescript-eslint/naming-convention
 		const update: UpdateQuery<any> = { $addToSet: { 'objectInfos.tags': options.tag } as any };
 		const updateLastUpdate = LodashReplacerUtils.IS_BOOLEAN(options.updateLastUpdate)
 			? options.updateLastUpdate
 			: true;
 		if (updateLastUpdate) {
 			update.$set = {
+				// eslint-disable-next-line @typescript-eslint/naming-convention
 				'objectInfos.lastUpdate.date': new Date(),
+				// eslint-disable-next-line @typescript-eslint/naming-convention
 				'objectInfos.lastUpdate.userId': ObjectId.isValid(userId) ? MongoUtils.oid(userId) : userId,
 			};
 		}
@@ -29,13 +32,16 @@ export class TagManager<U> {
 		userId: string,
 		options: RemoveTagOptions,
 	): object {
+		// eslint-disable-next-line @typescript-eslint/naming-convention
 		const update: UpdateQuery<any> = { $pull: { 'objectInfos.tags': tag } as any };
 		const updateLastUpdate = LodashReplacerUtils.IS_BOOLEAN(options.updateLastUpdate)
 			? options.updateLastUpdate
 			: true;
 		if (updateLastUpdate) {
 			update.$set = {
+				// eslint-disable-next-line @typescript-eslint/naming-convention
 				'objectInfos.lastUpdate.date': new Date(),
+				// eslint-disable-next-line @typescript-eslint/naming-convention
 				'objectInfos.lastUpdate.userId': ObjectId.isValid(userId) ? MongoUtils.oid(userId) : userId,
 			};
 		}
@@ -190,6 +196,7 @@ export class TagManager<U> {
 	 */
 	public async deleteManyWithTag(tag: string): Promise<void> {
 		try {
+			// eslint-disable-next-line @typescript-eslint/naming-convention
 			await this.collection.deleteMany({ 'objectInfos.tags': tag } as any);
 		} catch (e) {
 			LangUtils.throwN9ErrorFromError(e, { tag });

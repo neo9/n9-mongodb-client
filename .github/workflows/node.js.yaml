@@ -17,6 +17,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
+
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v2
         with:
@@ -28,11 +29,17 @@ jobs:
       - name: Setup Nodejs with yarn caching
         uses: actions/setup-node@v2
         with:
-          node-version: '16'
+          node-version: ${{ matrix.node-version }}
           cache: yarn
 
       - name: Install dependencies
         run: yarn
+
+      - name: Test
+        run: yarn lint
+
+      - name: Test
+        run: yarn build
 
       - name: Test
         run: yarn test
