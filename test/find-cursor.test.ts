@@ -5,7 +5,7 @@ import { CURSOR_FLAGS, MongoClient as MongodbClient, MongoCursorExhaustedError }
 import { Transform } from 'stream';
 
 import { BaseMongoObject, MongoClient, MongoUtils } from '../src';
-import { N9FindCursor } from '../src/n9-find-cursor';
+import { N9FindCursor } from '../src/cursors/n9-find-cursor';
 import { init } from './fixtures/utils';
 
 class SampleType extends BaseMongoObject {
@@ -26,11 +26,16 @@ test.beforeEach(async (t: ExecutionContext<ContextContent>) => {
 	const mongoClient = new MongoClient(collectionName, SampleType, SampleType);
 
 	// insert items not sorted to avoid case where we rely on the insert order
-	await mongoClient.insertOne({ field1String: 'string3' }, 'userId1');
-	await mongoClient.insertOne({ field1String: 'string1' }, 'userId1');
-	await mongoClient.insertOne({ field1String: 'string4' }, 'userId1');
-	await mongoClient.insertOne({ field1String: 'string2' }, 'userId1');
-	await mongoClient.insertOne({ field1String: 'string5' }, 'userId1');
+	await mongoClient.insertMany(
+		[
+			{ field1String: 'string3' },
+			{ field1String: 'string1' },
+			{ field1String: 'string4' },
+			{ field1String: 'string2' },
+			{ field1String: 'string5' },
+		],
+		'userId1',
+	);
 	t.context.mongoClient = mongoClient;
 	t.context.collectionName = collectionName;
 	t.context.dbClient = global.dbClient;
@@ -72,8 +77,6 @@ test('[Cursor] call hasNext before using in a for async', async (t: ExecutionCon
 		items.push(item);
 	}
 	t.is(items.length, 5, 'stream contains 5 items');
-
-	await t.context.mongoClient.dropCollection();
 });
 
 test('[Cursor] sort and call hasNext before using in a for async', async (t: ExecutionContext<ContextContent>) => {
@@ -257,6 +260,7 @@ test('[Cursor] Check cursor skip + limit function', async (t: ExecutionContext<C
 	const items = await getCursorContent(cursor);
 
 	t.is(items?.length, 2, 'check length of items');
+	t.is(await cursor.count(), 5, 'check count should not be limited by skip or limit');
 	t.is(items[0].field1String, 'string2', "item 1 is 'string2'");
 	t.is(items[1].field1String, 'string3', "item 2 is 'string3'");
 });

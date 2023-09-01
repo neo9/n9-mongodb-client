@@ -3,37 +3,27 @@ import * as _ from 'lodash';
 import {
 	AbstractCursor,
 	AbstractCursorEvents,
-	AggregationCursor,
-	CollationOptions,
 	Collection,
 	CommonEvents,
 	CursorFlag,
 	Document,
-	ExplainVerbosityLike,
-	Filter,
-	FindCursor,
-	FindOptions,
 	GenericListener,
-	Hint,
 	Long,
 	MongoDBNamespace,
 	ReadConcern,
 	ReadConcernLike,
 	ReadPreference,
 	ReadPreferenceLike,
-	Sort,
-	SortDirection,
 } from 'mongodb';
 import { Readable } from 'stream';
 
-import { AggregationBuilder } from './aggregation-utils';
-
-export class N9FindCursor<E> extends Readable implements FindCursor<E> {
-	public constructor(
-		private readonly collection: Collection<any>,
-		private readonly cursor: FindCursor<E>,
-		private filterQuery: Filter<E>, // can be edited with filter function
-		private readonly options: Pick<FindOptions, 'collation'> = {},
+export abstract class N9AbstractCursor<E>
+	extends Readable
+	implements AbstractCursor<E>, AsyncIterable<E>
+{
+	protected constructor(
+		protected readonly collection: Collection<any>,
+		protected readonly cursor: AbstractCursor<E>,
 	) {
 		super({
 			objectMode: true,
@@ -41,22 +31,7 @@ export class N9FindCursor<E> extends Readable implements FindCursor<E> {
 		});
 	}
 
-	public async count(): Promise<number> {
-		// EstimatedCount or CountDocuments don't handle collation options.
-		// It needs an aggregate function with the collation options to return a count value
-		if (this.options.collation) {
-			const cursor: AggregationCursor<Document> = this.collection.aggregate(
-				new AggregationBuilder(this.collection.collectionName)
-					.match(this.filterQuery)
-					.group({ _id: '1', count: { $sum: 1 } })
-					.build(),
-				{ collation: this.options.collation },
-			);
-			return (await cursor.toArray())[0].count;
-		}
-
-		return await this.collection.countDocuments(this.filterQuery);
-	}
+	abstract clone(): N9AbstractCursor<E>;
 
 	// //////////////////
 	// Readable Overrides
@@ -91,54 +66,13 @@ export class N9FindCursor<E> extends Readable implements FindCursor<E> {
 	}
 
 	// Surcharge all function that return a findcursor and return a N9FindCursor instead to keep cascading available.
-	// Src : https://github.com/mongodb/node-mongodb-native/blob/v5.7.0/src/cursor/find_cursor.ts
-
-	/**
-	 * @deprecated Use MongoClient.find parameter `sort` instead
-	 */
-	sort(sort: Sort | string, direction?: SortDirection): this {
-		this.cursor.sort(sort, direction);
-		return this;
-	}
+	// Src : https://github.com/mongodb/node-mongodb-native/blob/v6.0.0/src/cursor/find_cursor.ts
 
 	async hasNext(): Promise<boolean> {
 		return await this.cursor.hasNext();
 	}
 
-	/**
-	 * @deprecated Use MongoClient.find parameter `collation` instead
-	 */
-	collation(value: CollationOptions): this {
-		this.cursor.collation(value);
-		this.options.collation = value;
-		return this;
-	}
-
-	/**
-	 * @deprecated Use MongoClient.find parameter `page` and `pageSize` instead
-	 */
-	skip(value: number): this {
-		this.cursor.skip(value);
-		return this;
-	}
-
-	/**
-	 * @deprecated Use MongoClient.find parameter `page` and `pageSize` instead
-	 */
-	limit(value: number): this {
-		this.cursor.limit(value);
-		return this;
-	}
-
-	/**
-	 * @deprecated Use MongoClient.find parameter `project` instead
-	 */
-	project<T>(value: Document): N9FindCursor<T> {
-		this.cursor.project(value);
-		return this as any;
-	}
-
-	map<T>(transform: (doc: E) => T): N9FindCursor<T> {
+	map<T>(transform: (doc: E) => T): N9AbstractCursor<T> {
 		this.cursor.map(transform);
 		return this as any;
 	}
@@ -157,11 +91,6 @@ export class N9FindCursor<E> extends Readable implements FindCursor<E> {
 		throw new N9Error('unsupported-function-addQueryModifier', 501, { name, value });
 	}
 
-	allowDiskUse(allow: boolean | undefined): this {
-		this.cursor.allowDiskUse(allow);
-		return this;
-	}
-
 	batchSize(value: number): this {
 		this.cursor.batchSize(value);
 		return this;
@@ -169,15 +98,6 @@ export class N9FindCursor<E> extends Readable implements FindCursor<E> {
 
 	bufferedCount(): number {
 		return this.cursor.bufferedCount();
-	}
-
-	clone(): N9FindCursor<E> {
-		return new N9FindCursor<E>(
-			this.collection,
-			this.cursor.clone(),
-			this.filterQuery,
-			this.options,
-		);
 	}
 
 	async close(): Promise<void> {
@@ -189,31 +109,11 @@ export class N9FindCursor<E> extends Readable implements FindCursor<E> {
 		return this.cursor.closed;
 	}
 
-	comment(value: string): this {
-		this.cursor.comment(value);
-		return this;
-	}
-
-	async explain(verbosity?: ExplainVerbosityLike | undefined): Promise<Document> {
-		return this.cursor.explain(verbosity);
-	}
-
-	filter(filter: Filter<E>): this {
-		this.cursor.filter(filter);
-		this.filterQuery = filter;
-		return this;
-	}
-
 	/**
 	 * @deprecated Use for await ... of ... instead
 	 */
 	async forEach(iterator: (doc: any) => boolean | void): Promise<void> {
 		return await this.cursor.forEach(iterator);
-	}
-
-	hint(hint: Hint): this {
-		this.cursor.hint(hint);
-		return this;
 	}
 
 	// eslint-disable-next-line @typescript-eslint/member-ordering
@@ -237,11 +137,6 @@ export class N9FindCursor<E> extends Readable implements FindCursor<E> {
 	// eslint-disable-next-line @typescript-eslint/member-ordering
 	get loadBalanced(): boolean {
 		throw new N9Error('unsupported-function-loadBalanced', 501);
-	}
-
-	maxAwaitTimeMS(value: number): this {
-		this.cursor.maxAwaitTimeMS(value);
-		return this;
 	}
 
 	maxTimeMS(value: number): this {
@@ -288,23 +183,13 @@ export class N9FindCursor<E> extends Readable implements FindCursor<E> {
 		return this.cursor.readPreference;
 	}
 
-	returnKey(value: boolean): this {
-		this.cursor.returnKey(value);
-		return this;
-	}
-
 	rewind(): void {
 		this.cursor.rewind();
 	}
 
-	showRecordId(value: boolean): this {
-		this.cursor.showRecordId(value);
-		return this;
-	}
-
 	/**
 	 * @deprecated You use directly the cursor as a ReadableStream
-	 * Examples available in cursor.test.ts
+	 * Examples available in find-cursor.test.ts
 	 * Not implemented
 	 */
 	stream(): Readable & AsyncIterable<any> {

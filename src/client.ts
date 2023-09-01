@@ -4,7 +4,6 @@ import * as fastDeepEqual from 'fast-deep-equal/es6';
 import * as _ from 'lodash';
 import * as mingo from 'mingo-fork-no-hash';
 import {
-	AggregationCursor,
 	ClientSession,
 	Collection,
 	Db,
@@ -32,6 +31,8 @@ import {
 	UpdateQuery,
 } from '.';
 import { AggregationBuilder } from './aggregation-utils';
+import { N9AggregationCursor } from './cursors/n9-aggregation-cursor';
+import { N9FindCursor } from './cursors/n9-find-cursor';
 import { HistoricManager } from './historic-manager';
 import { IndexManager } from './index-manager';
 import { LangUtils } from './lang-utils';
@@ -52,7 +53,6 @@ import { MongoClientUpdateManyOptions } from './models/update-many-options.model
 import { UpdateManyToSameValueOptions } from './models/update-many-to-same-value-options.models';
 import { MongoReadStream } from './mongo-read-stream';
 import { MongoUtils } from './mongo-utils';
-import { N9FindCursor } from './n9-find-cursor';
 import { TagManager } from './tag-manager';
 
 const defaultConfiguration: MongoClientConfiguration = {
@@ -1045,18 +1045,20 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		aggregateSteps: object[],
 		options?: CollectionAggregationOptions,
 		readInOutputCollection: boolean = false,
-	): AggregationCursor<T> {
+	): N9AggregationCursor<T> {
 		if (readInOutputCollection) {
-			return this.collection.aggregate<T>(aggregateSteps, options);
+			const nativeCursor = this.collection.aggregate<T>(aggregateSteps, options);
+			return new N9AggregationCursor<T>(this.collection, nativeCursor);
 		}
-		return this.collectionSourceForAggregation.aggregate<T>(aggregateSteps, options);
+		const nativeCursor = this.collectionSourceForAggregation.aggregate<T>(aggregateSteps, options);
+		return new N9AggregationCursor<T>(this.collectionSourceForAggregation, nativeCursor);
 	}
 
 	public aggregateWithBuilder<T = void>(
 		aggregationBuilder: AggregationBuilder<U>,
 		options?: CollectionAggregationOptions,
 		readInOutputCollection: boolean = false,
-	): AggregationCursor<T> {
+	): N9AggregationCursor<T> {
 		return this.aggregate<T>(aggregationBuilder.build(), options, readInOutputCollection);
 	}
 

@@ -1,8 +1,8 @@
 import { N9Log } from '@neo9/n9-node-log';
 import test, { Assertions } from 'ava';
-import { AggregationCursor } from 'mongodb';
 
 import { MongoClient } from '../src';
+import { N9AggregationCursor } from '../src/cursors/n9-aggregation-cursor';
 import { BaseMongoObject } from '../src/models';
 import { init } from './fixtures/utils';
 
@@ -44,7 +44,7 @@ test('[AGG] Insert some and aggregate it 2', async (t: Assertions) => {
 			.sort({ count: -1 }),
 	);
 
-	t.truthy(aggResult instanceof AggregationCursor, 'return  AggregationCursor');
+	t.truthy(aggResult instanceof N9AggregationCursor, 'return  AggregationCursor');
 	const aggResultAsArray = await aggResult.toArray();
 
 	t.is(aggResultAsArray.length, 2, 'nb element aggregated is 2');
@@ -96,10 +96,8 @@ test('[AGG] Insert some and aggregate with output', async (t: Assertions) => {
 
 	const aggResult = mongoClientOut.aggregate<AggregationResult>(query);
 
-	t.truthy(aggResult instanceof AggregationCursor, 'return  AggregationCursor');
-	const aggResultAsArray = await aggResult.toArray();
-
-	t.is(aggResultAsArray.length, 0, 'no output');
+	t.truthy(aggResult instanceof N9AggregationCursor, 'return  AggregationCursor');
+	await aggResult.launch();
 
 	const outputContent = await mongoClientOut
 		.find({}, 0, 0, undefined, { _id: 0, field1String: 1 })

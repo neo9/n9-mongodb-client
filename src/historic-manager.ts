@@ -3,12 +3,12 @@ import { diff as deepDiff } from 'deep-diff';
 import { Collection, Db, IndexSpecification, ObjectId, WithId } from 'mongodb';
 
 import { FilterQuery, IndexOptions } from '.';
+import { N9FindCursor } from './cursors/n9-find-cursor';
 import { IndexManager } from './index-manager';
 import { LangUtils } from './lang-utils';
 import { LodashReplacerUtils } from './lodash-replacer.utils';
 import { BaseMongoObject, EntityHistoric, EntityHistoricStored, StringMap } from './models';
 import { MongoUtils } from './mongo-utils';
-import { N9FindCursor } from './n9-find-cursor';
 
 /**
  * Class that handles the historisation of entity changes
