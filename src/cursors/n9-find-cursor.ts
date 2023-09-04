@@ -130,9 +130,9 @@ export class N9FindCursor<E> extends N9AbstractCursor<E> implements FindCursor<E
 		return this.findCursor.explain(verbosity);
 	}
 
-	filter(filter: Filter<E>): this {
+	filter(filter: Filter<E> | Document): this {
 		this.findCursor.filter(filter);
-		this.filterQuery = filter;
+		this.filterQuery = filter as Filter<E>;
 		return this;
 	}
 
