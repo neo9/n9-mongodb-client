@@ -64,7 +64,7 @@
   "devDependencies": {
     "@ava/typescript": "^4.1.0",
     "@commitlint/cli": "^17.7.1",
-    "@neo9/n9-coding-style": "^5.1.0",
+    "@neo9/n9-coding-style": "^5.1.1",
     "@release-it/conventional-changelog": "^7.0.1",
     "@tsconfig/node16": "^16.1.1",
     "@types/deep-diff": "^1.0.2",
