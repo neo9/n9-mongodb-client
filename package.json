@@ -69,7 +69,7 @@
     "@tsconfig/node16": "^16.1.1",
     "@types/deep-diff": "^1.0.2",
     "@types/lodash": "^4.14.197",
-    "@types/node": "~16.18.48",
+    "@types/node": "~20.5.9",
     "@types/std-mocks": "^1.0.1",
     "ava": "^5.3.1",
     "benny": "^3.7.1",
