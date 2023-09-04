@@ -1,5 +1,24 @@
 
 
+# [1.0.0-rc.0](https://github.com/neo9/n9-mongo-client/compare/0.33.0...1.0.0-rc.0) (2023-09-04)
+
+
+### doc
+
+* Add upgrade documentation ([ced48bb](https://github.com/neo9/n9-mongo-client/commit/ced48bbc3ce108064f4e583bfd8481e227839402))
+
+### github
+
+* Create dependabot.yml ([354fef9](https://github.com/neo9/n9-mongo-client/commit/354fef944a3cdaa8a9192093dcbb17dd4483a2c3))
+* Remove dependabot configuration not needed for security updates ([a477097](https://github.com/neo9/n9-mongo-client/commit/a4770972ae6fd4623382037b5cdb8bb62cbba943))
+
+### yarn
+
+* Upgrade all dependencies ([5654a86](https://github.com/neo9/n9-mongo-client/commit/5654a860e976f59c394c225b03560b1c4fc60d32))
+* Upgrade dependencies #72 ([bb908ef](https://github.com/neo9/n9-mongo-client/commit/bb908ef309a2f0a7429e24a0197cb381ab96fc7d)), closes [#72](https://github.com/neo9/n9-mongo-client/issues/72)
+* Upgrade mongodb native client from V 3.6.6 to V 6.0.0 keeping old types (#71) ([190dd53](https://github.com/neo9/n9-mongo-client/commit/190dd532c29b49f27fbab76c657d28fff728af46)), closes [#71](https://github.com/neo9/n9-mongo-client/issues/71)
+* Upgrade transitive dependencies and fix peer dependencies requirement #74) ([8864427](https://github.com/neo9/n9-mongo-client/commit/88644277dbef8529926975cf5b4ea2a3117928c8)), closes [#74](https://github.com/neo9/n9-mongo-client/issues/74)
+
 # [0.33.0](https://github.com/neo9/n9-mongo-client/compare/0.32.1...0.33.0) (2023-08-07)
 
 
