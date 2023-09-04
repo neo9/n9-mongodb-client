@@ -268,7 +268,7 @@ export abstract class N9AbstractCursor<E>
 	}
 
 	listenerCount<EventKey extends keyof AbstractCursorEvents>(
-		type: CommonEvents | symbol | string | EventKey,
+		type: CommonEvents | symbol | EventKey,
 	): number;
 	// eslint-disable-next-line no-dupe-class-members
 	listenerCount(eventName: string | symbol): number;
@@ -278,7 +278,7 @@ export abstract class N9AbstractCursor<E>
 	}
 
 	listeners<EventKey extends keyof AbstractCursorEvents>(
-		event: CommonEvents | symbol | string | EventKey,
+		event: CommonEvents | EventKey,
 	): AbstractCursorEvents[EventKey][];
 	// eslint-disable-next-line no-dupe-class-members,@typescript-eslint/ban-types
 	listeners(eventName: string | symbol): Function[];
@@ -402,7 +402,7 @@ export abstract class N9AbstractCursor<E>
 	}
 
 	rawListeners<EventKey extends keyof AbstractCursorEvents>(
-		event: CommonEvents | symbol | string | EventKey,
+		event: CommonEvents | symbol | EventKey,
 	): AbstractCursorEvents[EventKey][];
 	// eslint-disable-next-line no-dupe-class-members,@typescript-eslint/ban-types
 	rawListeners(eventName: string | symbol): Function[];
@@ -413,7 +413,7 @@ export abstract class N9AbstractCursor<E>
 	}
 
 	removeAllListeners<EventKey extends keyof AbstractCursorEvents>(
-		event?: CommonEvents | symbol | string | EventKey,
+		event?: CommonEvents | symbol | EventKey,
 	): this;
 	// eslint-disable-next-line no-dupe-class-members
 	removeAllListeners(event?: string | symbol): this;

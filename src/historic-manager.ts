@@ -34,12 +34,15 @@ export class HistoricManager<U extends BaseMongoObject> {
 		await this.createIndex('entityId');
 	}
 
-	public async createIndex(fieldOrSpec: string | any, options?: IndexOptions): Promise<void> {
+	public async createIndex(
+		fieldOrSpec: string | IndexSpecification,
+		options?: IndexOptions,
+	): Promise<void> {
 		await this.indexManager.createIndex(fieldOrSpec, options);
 	}
 
 	public async createUniqueIndex(
-		fieldOrSpec: string | any = 'code',
+		fieldOrSpec: string | IndexSpecification = 'code',
 		options?: IndexOptions,
 	): Promise<void> {
 		await this.indexManager.createUniqueIndex(fieldOrSpec, options);

@@ -134,7 +134,10 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		return await this.indexManager.findAllIndexes();
 	}
 
-	public async createIndex(fieldOrSpec: string | any, options?: IndexOptions): Promise<void> {
+	public async createIndex(
+		fieldOrSpec: string | IndexSpecification,
+		options?: IndexOptions,
+	): Promise<void> {
 		await this.indexManager.createIndex(fieldOrSpec, options);
 	}
 
@@ -143,7 +146,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 	}
 
 	public async createUniqueIndex(
-		fieldOrSpec: string | any = 'code',
+		fieldOrSpec: string | IndexSpecification = 'code',
 		options?: IndexOptions,
 	): Promise<void> {
 		await this.indexManager.createUniqueIndex(fieldOrSpec, options);
@@ -167,14 +170,14 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 	}
 
 	public async createHistoricIndex(
-		fieldOrSpec: string | any,
+		fieldOrSpec: string | IndexSpecification,
 		options?: IndexOptions,
 	): Promise<void> {
 		await this.historicManager.createIndex(fieldOrSpec, options);
 	}
 
 	public async createHistoricUniqueIndex(
-		fieldOrSpec: string | any = 'code',
+		fieldOrSpec: string | IndexSpecification = 'code',
 		options?: IndexOptions,
 	): Promise<void> {
 		await this.historicManager.createUniqueIndex(fieldOrSpec, options);
@@ -1368,7 +1371,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 					}
 				}
 
-				let filter: FilterQuery<any | BaseMongoObject> = {};
+				let filter: FilterQuery<any> = {};
 
 				if (newEnt.id) {
 					filter._id = MongoUtils.oid(newEnt.id) as any;

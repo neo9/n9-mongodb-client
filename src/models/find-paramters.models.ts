@@ -26,4 +26,4 @@ export interface ProjectionOperators {
 	$meta?: MetaProjectionOperators | undefined;
 }
 
-export type ProjectionQuery<T> = SchemaMember<T, ProjectionOperators | number | boolean | any>;
+export type ProjectionQuery<T> = SchemaMember<T, ProjectionOperators | number | boolean>;

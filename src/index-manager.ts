@@ -29,7 +29,10 @@ export class IndexManager<U> {
 	 * @param fieldOrSpec name / spec of the indexed field(s)
 	 * @param options extra mongodb index creation options
 	 */
-	public async createIndex(fieldOrSpec: string | any, options?: IndexOptions): Promise<void> {
+	public async createIndex(
+		fieldOrSpec: string | IndexSpecification,
+		options?: IndexOptions,
+	): Promise<void> {
 		try {
 			await this.collection.createIndex(fieldOrSpec, options);
 		} catch (e) {
@@ -43,7 +46,10 @@ export class IndexManager<U> {
 	 * @param fieldOrSpec name / spec of the indexed field(s)
 	 * @param options extra mongodb index creation options
 	 */
-	public async createUniqueIndex(fieldOrSpec: string | any, options?: IndexOptions): Promise<void> {
+	public async createUniqueIndex(
+		fieldOrSpec: string | IndexSpecification,
+		options?: IndexOptions,
+	): Promise<void> {
 		await this.createIndex(fieldOrSpec, { ...options, unique: true });
 	}
 

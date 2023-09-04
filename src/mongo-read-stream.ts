@@ -18,7 +18,10 @@ export type ItemConsumer<T> = ((data: T) => Promise<void>) | ((data: T) => void)
 export class PageConsumerWritable<T> extends Writable {
 	private buffer: T[] = [];
 
-	constructor(private pageSize: number, private consumerFn: PageConsumer<T>) {
+	constructor(
+		private pageSize: number,
+		private consumerFn: PageConsumer<T>,
+	) {
 		super({ objectMode: true });
 	}
 
