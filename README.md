@@ -6,12 +6,28 @@
 
 A client to use easily MongoDB official driver.
 
+## Upgrade to V1 (from v 0.33)
+
+### First, upgrade to V 1.0.0-rc.0
+
+Breaking changes (due to [mongodb driver](https://github.com/mongodb/node-mongodb-native) upgrade) :
+
+- Index creation/update/deletion now use parameter of type `IndexSpecification`
+- Sort param is no more an `object`, it is a proper type `Sort`
+- `global.dbClient.isConnected` should now be replaced by `MongoUtils.isConnected`
+
+Notable Changes
+
+- `Cursor` are now `N9FindCursor` or `N9AggregationCursor`
+
 ## To build
 
-Use node 12+ to build and yarn.
+Use node 16.20.2+ to build and yarn.
 
-```
-yarn build
+```bash
+git clone https://github.com/neo9/n9-mongo-client.git
+cd n9-mongo-client
+yarn && yarn build
 ```
 
 ## Sample of usages
