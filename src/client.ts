@@ -4,27 +4,35 @@ import * as fastDeepEqual from 'fast-deep-equal/es6';
 import * as _ from 'lodash';
 import * as mingo from 'mingo-fork-no-hash';
 import {
-	AggregationCursor,
-	BulkWriteOperation,
 	ClientSession,
-	CollationDocument,
 	Collection,
-	CollectionAggregationOptions,
-	CollectionInsertManyOptions,
-	Cursor,
 	Db,
-	FilterQuery,
-	IndexOptions,
+	Document,
+	FindCursor,
+	IndexDescription,
 	IndexSpecification,
 	MatchKeysAndValues,
 	MongoClient as MongodbClient,
 	ObjectId,
-	OptionalId,
-	UpdateQuery,
+	OptionalUnlessRequiredId,
+	ReturnDocument,
+	Sort,
+	WithId,
 } from 'mongodb';
 import { PromisePoolExecutor } from 'promise-pool-executor';
 
+import {
+	BulkWriteOperation,
+	CollationDocument,
+	CollectionAggregationOptions,
+	CollectionInsertManyOptions,
+	FilterQuery,
+	IndexOptions,
+	UpdateQuery,
+} from '.';
 import { AggregationBuilder } from './aggregation-utils';
+import { N9AggregationCursor } from './cursors/n9-aggregation-cursor';
+import { N9FindCursor } from './cursors/n9-find-cursor';
 import { HistoricManager } from './historic-manager';
 import { IndexManager } from './index-manager';
 import { LangUtils } from './lang-utils';
@@ -62,9 +70,9 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 	private readonly typeList: ClassType<L>;
 	private readonly conf: MongoClientConfiguration;
 	private readonly lockFieldsManager: LockFieldsManager<U>;
-	private readonly indexManager: IndexManager;
+	private readonly indexManager: IndexManager<U>;
 	private readonly historicManager: HistoricManager<U>;
-	private readonly tagManager: TagManager;
+	private readonly tagManager: TagManager<U>;
 
 	constructor(
 		collection: Collection<U> | string,
@@ -95,13 +103,13 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		this.typeList = typeList;
 
 		if (typeof collection === 'string') {
-			this.collection = this.db.collection(collection);
+			this.collection = this.db.collection<U>(collection);
 		} else {
 			this.collection = collection;
 		}
-		this.indexManager = new IndexManager(this.collection);
+		this.indexManager = new IndexManager<U>(this.collection);
 		this.historicManager = new HistoricManager(this.collection);
-		this.tagManager = new TagManager(this.collection);
+		this.tagManager = new TagManager<U>(this.collection);
 
 		if (this.conf.aggregationCollectionSource) {
 			this.collectionSourceForAggregation = this.db.collection(
@@ -121,7 +129,8 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		return new MongoClient<U, L>(newName, this.type, this.typeList, this.conf);
 	}
 
-	public async findAllIndexes(): Promise<IndexSpecification[]> {
+	public async findAllIndexes(): Promise<IndexDescription[]> {
+		// TODO: add test on this function
 		return await this.indexManager.findAllIndexes();
 	}
 
@@ -142,13 +151,14 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 
 	public async createExpirationIndex(
 		ttlInDays: number,
-		fieldOrSpec: string | object = 'objectInfos.creation.date',
+		fieldOrSpec: IndexSpecification = 'objectInfos.creation.date',
 		options: IndexOptions = {},
 	): Promise<void> {
 		await this.indexManager.ensureExpirationIndex(fieldOrSpec, ttlInDays, options);
 	}
 
 	public async initTagsIndex(): Promise<void> {
+		// eslint-disable-next-line @typescript-eslint/naming-convention
 		await this.indexManager.createIndex({ 'objectInfos.tags': 1 }, { sparse: true });
 	}
 
@@ -172,7 +182,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 
 	public async createHistoricExpirationIndex(
 		ttlInDays: number,
-		fieldOrSpec: string | object = 'date',
+		fieldOrSpec: IndexSpecification = 'date',
 		options: IndexOptions = {},
 	): Promise<void> {
 		await this.historicManager.ensureExpirationIndex(ttlInDays, fieldOrSpec, options);
@@ -233,7 +243,9 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				undefined,
 				!!this.conf.lockFields,
 			);
-			await this.collection.insertOne(newEntityWithoutForbiddenCharacters as OptionalId<U>);
+			await this.collection.insertOne(
+				newEntityWithoutForbiddenCharacters as OptionalUnlessRequiredId<U>,
+			);
 			if (returnNewValue) {
 				return MongoUtils.mapObjectToClass(
 					this.type,
@@ -264,7 +276,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			if (LodashReplacerUtils.IS_ARRAY_EMPTY(newEntities)) return;
 
 			const date = new Date();
-			const entitiesToInsert: any = newEntities.map((newEntity) => {
+			const entitiesToInsert: OptionalUnlessRequiredId<U>[] = newEntities.map((newEntity) => {
 				newEntity.objectInfos = {
 					creation: {
 						date,
@@ -289,13 +301,16 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			});
 
 			const insertResult = await this.collection.insertMany(entitiesToInsert, options);
+			// Cannot anymore return the new object values inserted
 			if (returnNewValue) {
-				return (insertResult.ops || []).map((newEntity) =>
-					MongoUtils.mapObjectToClass(
-						this.type,
-						MongoUtils.unRemoveSpecialCharactersInKeys(newEntity),
-					),
-				);
+				return await this.findWithType(
+					{
+						_id: { $in: Object.values(insertResult.insertedIds) },
+					},
+					this.type,
+					0,
+					0,
+				).toArray();
 			}
 		} catch (e) {
 			LangUtils.throwN9ErrorFromError(e, { count: newEntities?.length });
@@ -307,11 +322,11 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		type: ClassType<T>,
 		page: number = 0,
 		size: number = 10,
-		sort: object = {},
+		sort: Sort = {},
 		projection: object = {},
 		collation?: CollationDocument,
-	): Cursor<T> {
-		let findCursor: Cursor<U> = this.collection.find(query);
+	): N9FindCursor<T> {
+		let findCursor: FindCursor<WithId<U>> = this.collection.find(query);
 
 		if (collation) {
 			findCursor = findCursor.collation(collation);
@@ -335,12 +350,13 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			});
 		}
 
-		return findCursor
+		const listCursor = findCursor
 			.sort(sort)
 			.skip(page * size)
 			.limit(size)
 			.project(projection)
 			.map<T>(transformFunction);
+		return new N9FindCursor<T>(this.collection, listCursor, query, { collation });
 	}
 
 	public stream(
@@ -348,7 +364,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		pageSize: number,
 		projection: object = {},
 		hint?: string | object,
-		sort?: object,
+		sort?: Sort,
 		limit?: number,
 	): MongoReadStream<Partial<U>, Partial<L>> | MongoReadStream<U, L> {
 		return new MongoReadStream<U, L>(
@@ -369,7 +385,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		pageSize: number,
 		projection: object = {},
 		hint?: string | object,
-		sort?: object,
+		sort?: Sort,
 		limit?: number,
 	): MongoReadStream<Partial<U>, Partial<L>> | MongoReadStream<U, L> {
 		return new MongoReadStream<U, L>(this, query, pageSize, projection, type, hint, sort, limit);
@@ -379,10 +395,10 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		query: object,
 		page: number = 0,
 		size: number = 10,
-		sort: object = {},
+		sort: Sort = {},
 		projection: object = {},
 		collation?: CollationDocument,
-	): Cursor<L> {
+	): N9FindCursor<L> {
 		return this.findWithType<L>(query, this.typeList, page, size, sort, projection, collation);
 	}
 
@@ -545,10 +561,6 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				this.ifHasLockFieldsThrow();
 			}
 
-			if (!updateQuery.$set) {
-				updateQuery.$set = {};
-			}
-
 			const now = new Date();
 			const formattedUserId = (
 				ObjectId.isValid(userId) ? MongoUtils.oid(userId) : userId
@@ -556,11 +568,12 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 
 			updateQuery.$set = {
 				...updateQuery.$set,
+				// eslint-disable-next-line @typescript-eslint/naming-convention
 				'objectInfos.lastUpdate': {
 					date: now,
 					userId: formattedUserId,
 				},
-			} as any;
+			};
 			if (!this.conf.updateOnlyOnChange) {
 				(updateQuery.$set as any)['objectInfos.lastModification'] = {
 					date: now,
@@ -571,11 +584,12 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			if (upsert) {
 				updateQuery.$setOnInsert = {
 					...updateQuery.$setOnInsert,
+					// eslint-disable-next-line @typescript-eslint/naming-convention
 					'objectInfos.creation': {
 						date: now,
 						userId: formattedUserId,
 					},
-				} as any;
+				};
 
 				if (updateQuery.$set._id) {
 					this.logger.warn(
@@ -597,13 +611,11 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				snapshot = await this.findOne(query);
 			}
 
-			let newEntity = (
-				await this.collection.findOneAndUpdate(query, updateQuery, {
-					upsert,
-					arrayFilters,
-					returnOriginal: false,
-				})
-			).value;
+			let newEntity: U = (await this.collection.findOneAndUpdate(query, updateQuery, {
+				upsert,
+				arrayFilters,
+				returnDocument: ReturnDocument.AFTER,
+			})) as U; // WithId<U>
 			if (returnNewValue || this.conf.keepHistoric || this.conf.updateOnlyOnChange) {
 				newEntity = MongoUtils.mapObjectToClass(
 					this.type,
@@ -756,6 +768,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				query,
 				{
 					$pull: {
+						// eslint-disable-next-line @typescript-eslint/naming-convention
 						'objectInfos.lockFields': {
 							path,
 						},
@@ -846,6 +859,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 						}
 
 						updateQuery.$push = {
+							// eslint-disable-next-line @typescript-eslint/naming-convention
 							'objectInfos.lockFields': {
 								$each: lockFields,
 							},
@@ -926,13 +940,13 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 	 * @param entities list of entities to update
 	 * @param userId id of the user that is performing the operation. Will be stored in objectInfos.
 	 * @param options see UpdateManyAtOnceOptions for more details
-	 * @returns Cursor<U>
+	 * @returns N9FindCursor<U>
 	 */
 	public async updateManyAtOnce(
 		entities: Partial<U>[],
 		userId: string,
 		options: UpdateManyAtOnceOptions<U> = {},
-	): Promise<Cursor<U>> {
+	): Promise<N9FindCursor<U>> {
 		try {
 			options.upsert = LodashReplacerUtils.IS_BOOLEAN(options.upsert) ? options.upsert : false;
 			options.lockNewFields = LodashReplacerUtils.IS_BOOLEAN(options.lockNewFields)
@@ -987,23 +1001,21 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				});
 			}
 
-			if (!updateQuery.$set) {
-				updateQuery.$set = {};
-			}
-
 			const now = new Date();
 
 			updateQuery.$set = {
 				...updateQuery.$set,
+				// eslint-disable-next-line @typescript-eslint/naming-convention
 				'objectInfos.lastUpdate': {
 					date: now,
 					userId: ObjectId.isValid(userId) ? MongoUtils.oid(userId) : userId,
 				},
+				// eslint-disable-next-line @typescript-eslint/naming-convention
 				'objectInfos.lastModification': {
 					date: now,
 					userId: ObjectId.isValid(userId) ? MongoUtils.oid(userId) : userId,
 				},
-			} as any;
+			};
 
 			const updateResult = await this.collection.updateMany(query, updateQuery);
 
@@ -1033,18 +1045,20 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		aggregateSteps: object[],
 		options?: CollectionAggregationOptions,
 		readInOutputCollection: boolean = false,
-	): AggregationCursor<T> {
+	): N9AggregationCursor<T> {
 		if (readInOutputCollection) {
-			return this.collection.aggregate<T>(aggregateSteps, options);
+			const nativeCursor = this.collection.aggregate<T>(aggregateSteps, options);
+			return new N9AggregationCursor<T>(this.collection, nativeCursor);
 		}
-		return this.collectionSourceForAggregation.aggregate<T>(aggregateSteps, options);
+		const nativeCursor = this.collectionSourceForAggregation.aggregate<T>(aggregateSteps, options);
+		return new N9AggregationCursor<T>(this.collectionSourceForAggregation, nativeCursor);
 	}
 
 	public aggregateWithBuilder<T = void>(
 		aggregationBuilder: AggregationBuilder<U>,
 		options?: CollectionAggregationOptions,
 		readInOutputCollection: boolean = false,
-	): AggregationCursor<T> {
+	): N9AggregationCursor<T> {
 		return this.aggregate<T>(aggregationBuilder.build(), options, readInOutputCollection);
 	}
 
@@ -1076,7 +1090,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			const results: { _id: string; value?: number }[] = [];
 
 			do {
-				let cursor: Cursor<BaseMongoObject>;
+				let cursor: FindCursor<Document>;
 				if (!lastId) {
 					cursor = this.collection.find(query).project({ _id: 1 }).sort({ _id: 1 }).limit(1);
 				} else {
@@ -1116,7 +1130,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		entityId: string,
 		page: number = 0,
 		size: number = 10,
-	): Promise<Cursor<EntityHistoric<U>>> {
+	): Promise<N9FindCursor<EntityHistoric<U>>> {
 		const latestEntityVersion: U = await this.findOneById(entityId);
 		return this.historicManager.findByEntityId(entityId, latestEntityVersion, page, size);
 	}
@@ -1286,8 +1300,10 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 
 	/**
 	 * Function to run multiple updateOne queries as bulk.
-	 * Prefer usage of {@link updateManyAtOnce} that build queries for you.
 	 *
+	 * Prefer usage of updateManyAtOnce that build queries for you.
+	 *
+	 * @see updateManyAtOnce
 	 * @param newEntities information to run queries
 	 * @param userId userId that do the change
 	 * @param upsert upsert values or not
@@ -1301,7 +1317,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		upsert?: boolean,
 		returnNewEntities: boolean = true,
 		options: MongoClientUpdateManyOptions = {},
-	): Promise<Cursor<U>> {
+	): Promise<N9FindCursor<U>> {
 		try {
 			if (LodashReplacerUtils.IS_ARRAY_EMPTY(newEntities)) {
 				return this.getEmptyCursor<U>(this.type);
@@ -1311,13 +1327,11 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			const now = new Date();
 			for (const newEnt of newEntities) {
 				const updateQuery = newEnt.updateQuery;
-				if (!updateQuery.$set) {
-					updateQuery.$set = {};
-				}
 
 				const formattedUserId = ObjectId.isValid(userId) ? MongoUtils.oid(userId) : userId;
 				updateQuery.$set = {
 					...updateQuery.$set,
+					// eslint-disable-next-line @typescript-eslint/naming-convention
 					'objectInfos.lastUpdate': {
 						date: now,
 						userId: formattedUserId,
@@ -1340,6 +1354,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				if (upsert) {
 					updateQuery.$setOnInsert = {
 						...updateQuery.$setOnInsert,
+						// eslint-disable-next-line @typescript-eslint/naming-convention
 						'objectInfos.creation': {
 							userId,
 							date: now,
@@ -1618,7 +1633,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			}
 
 			if (options.hooks?.mapAfterLockFieldsApplied) {
-				const mappedEntity = await options.hooks.mapAfterLockFieldsApplied({
+				const mappedEntity: Partial<U> = await options.hooks.mapAfterLockFieldsApplied({
 					...updateEntity,
 					_id: currentValue._id,
 				});
@@ -1726,7 +1741,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		}
 	}
 
-	private getEmptyCursor<X extends U>(type: ClassType<X>): Cursor<X> {
+	private getEmptyCursor<X extends U>(type: ClassType<X>): N9FindCursor<X> {
 		return this.findWithType<X>({ $and: [{ _id: false }, { _id: true }] }, type, -1, 0);
 	}
 
@@ -1734,11 +1749,12 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		id: string,
 		modificationDate: Date,
 		userId: string,
-	): Promise<U> {
+	): Promise<WithId<U>> {
 		const updateResult = await this.collection.findOneAndUpdate(
 			{ _id: MongoUtils.oid(id) as any },
 			{
 				$set: {
+					// eslint-disable-next-line @typescript-eslint/naming-convention
 					'objectInfos.lastModification': {
 						date: modificationDate,
 						userId: (ObjectId.isValid(userId) ? MongoUtils.oid(userId) : userId) as string,
@@ -1746,10 +1762,10 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				} as any,
 			},
 			{
-				returnOriginal: false,
+				returnDocument: ReturnDocument.AFTER,
 			},
 		);
-		return updateResult.value;
+		return updateResult;
 	}
 
 	private async updateLastModificationDateBulk(
@@ -1763,6 +1779,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			{ _id: { $in: MongoUtils.oids(idsToUpdate) as any[] } },
 			{
 				$set: {
+					// eslint-disable-next-line @typescript-eslint/naming-convention
 					'objectInfos.lastModification': {
 						date: updateDate,
 						userId: (ObjectId.isValid(userId) ? MongoUtils.oid(userId) : userId) as string,
@@ -1811,7 +1828,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			newEntityFiltered = newEntityOmitted;
 		}
 
-		return fastDeepEqual(snapshotFiltered, newEntityFiltered);
+		return fastDeepEqual.default(snapshotFiltered, newEntityFiltered);
 	}
 
 	// Method is not static to use U and L

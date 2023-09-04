@@ -1,5 +1,5 @@
 import { N9Log } from '@neo9/n9-node-log';
-import ava, { Assertions } from 'ava';
+import test, { Assertions } from 'ava';
 import * as _ from 'lodash';
 
 import { generateMongoClient, init, SampleEntityWithArray } from './fixtures/utils';
@@ -44,7 +44,7 @@ const d = {
  * Import de C =>  aucun verrou => [a,b,c]
  * Import de C' => c disparait => [a,b]
  */
-ava('[LOCK-FIELDS-ARRAY C] Import twice should remove element', async (t: Assertions) => {
+test('[LOCK-FIELDS-ARRAY C] Import twice should remove element', async (t: Assertions) => {
 	const vC: SampleEntityWithArray = {
 		code: 'c',
 		parameters: {
@@ -97,7 +97,7 @@ ava('[LOCK-FIELDS-ARRAY C] Import twice should remove element', async (t: Assert
  * Creation of D by an operator (human) =>  all is locked => [a🔒,b🔒,c🔒]
  * Import D' => order preserved, addition of d => [a🔒,b🔒,c🔒,d]
  */
-ava('[LOCK-FIELDS-ARRAY D] Lock fields order should be keept', async (t: Assertions) => {
+test('[LOCK-FIELDS-ARRAY D] Lock fields order should be keept', async (t: Assertions) => {
 	const vD: SampleEntityWithArray = {
 		code: 'd',
 		parameters: {

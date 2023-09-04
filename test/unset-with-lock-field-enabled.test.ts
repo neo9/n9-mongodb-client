@@ -1,9 +1,8 @@
 import { N9Log } from '@neo9/n9-node-log';
-import ava, { Assertions } from 'ava';
+import test, { Assertions } from 'ava';
 import * as _ from 'lodash';
 
-import { MongoClient, MongoUtils } from '../src';
-import { BaseMongoObject } from '../src/models';
+import { BaseMongoObject, MongoClient, MongoUtils } from '../src';
 import { init } from './fixtures/utils';
 
 class SampleComplexType extends BaseMongoObject {
@@ -25,7 +24,7 @@ global.log = new N9Log('tests').module('lock-fields');
 
 init();
 
-ava('[LOCK-FIELDS] Update one field with value to null', async (t: Assertions) => {
+test('[LOCK-FIELDS] Update one field with value to null', async (t: Assertions) => {
 	const mongoClient = getLockFieldsMongoClient();
 
 	const locksDataSample: SampleComplexType = {
@@ -49,7 +48,7 @@ ava('[LOCK-FIELDS] Update one field with value to null', async (t: Assertions) =
 	t.deepEqual(entity.property, { value: null }, 'value is deleted');
 });
 
-ava('[LOCK-FIELDS] Insert one field with value null', async (t: Assertions) => {
+test('[LOCK-FIELDS] Insert one field with value null', async (t: Assertions) => {
 	const mongoClient = getLockFieldsMongoClient();
 
 	const locksDataSample: SampleComplexType = {
@@ -101,7 +100,7 @@ ava('[LOCK-FIELDS] Insert one field with value null', async (t: Assertions) => {
 	t.deepEqual(entity.property, { value: null }, 'value null again');
 });
 
-ava('[LOCK-FIELDS] Update multiple field with value to null', async (t: Assertions) => {
+test('[LOCK-FIELDS] Update multiple field with value to null', async (t: Assertions) => {
 	const mongoClient = getLockFieldsMongoClient();
 
 	const locksDataSample: SampleComplexType = {
@@ -130,84 +129,81 @@ ava('[LOCK-FIELDS] Update multiple field with value to null', async (t: Assertio
 	t.deepEqual((await entities.toArray())[0].property, { value: null }, 'value is deleted');
 });
 
-ava(
-	'[LOCK-FIELDS] Insert multiple entities with one field with value null',
-	async (t: Assertions) => {
-		const mongoClient = getLockFieldsMongoClient();
+test('[LOCK-FIELDS] Insert multiple entities with one field with value null', async (t: Assertions) => {
+	const mongoClient = getLockFieldsMongoClient();
 
-		const locksDataSample: SampleComplexType = {
-			property: {
-				value: null,
-			},
-		};
-		const insertedEntities = await mongoClient.updateManyAtOnce(
-			[_.cloneDeep(locksDataSample)],
-			'TEST',
+	const locksDataSample: SampleComplexType = {
+		property: {
+			value: null,
+		},
+	};
+	const insertedEntities = await mongoClient.updateManyAtOnce(
+		[_.cloneDeep(locksDataSample)],
+		'TEST',
+		{
+			lockNewFields: false,
+			upsert: true,
+		},
+	);
+
+	const insertedEntity = (await insertedEntities.toArray())[0];
+
+	t.deepEqual(insertedEntity.property, { value: null }, 'value is null');
+	let entities = await mongoClient.updateManyAtOnce(
+		[
 			{
-				lockNewFields: false,
-				upsert: true,
-			},
-		);
-
-		const insertedEntity = (await insertedEntities.toArray())[0];
-
-		t.deepEqual(insertedEntity.property, { value: null }, 'value is null');
-		let entities = await mongoClient.updateManyAtOnce(
-			[
-				{
-					_id: MongoUtils.oid(insertedEntity._id) as any,
-					property: {
-						value: null,
-					},
+				_id: MongoUtils.oid(insertedEntity._id) as any,
+				property: {
+					value: null,
 				},
-			],
-			'TEST',
-			{
-				lockNewFields: false,
-				query: '_id',
 			},
-		);
+		],
+		'TEST',
+		{
+			lockNewFields: false,
+			query: '_id',
+		},
+	);
 
-		t.deepEqual((await entities.toArray())[0].property, { value: null }, 'value still null');
+	t.deepEqual((await entities.toArray())[0].property, { value: null }, 'value still null');
 
-		entities = await mongoClient.updateManyAtOnce(
-			[
-				{
-					_id: MongoUtils.oid(insertedEntity._id) as any,
-					property: {
-						value: 'a value not null',
-					},
+	entities = await mongoClient.updateManyAtOnce(
+		[
+			{
+				_id: MongoUtils.oid(insertedEntity._id) as any,
+				property: {
+					value: 'a value not null',
 				},
-			],
-			'TEST',
-			{
-				lockNewFields: false,
-				query: '_id',
 			},
-		);
+		],
+		'TEST',
+		{
+			lockNewFields: false,
+			query: '_id',
+		},
+	);
 
-		t.deepEqual(
-			(await entities.toArray())[0].property,
-			{ value: 'a value not null' },
-			'value no more null',
-		);
+	t.deepEqual(
+		(await entities.toArray())[0].property,
+		{ value: 'a value not null' },
+		'value no more null',
+	);
 
-		entities = await mongoClient.updateManyAtOnce(
-			[
-				{
-					_id: MongoUtils.oid(insertedEntity._id) as any,
-					property: {
-						value: null,
-					},
+	entities = await mongoClient.updateManyAtOnce(
+		[
+			{
+				_id: MongoUtils.oid(insertedEntity._id) as any,
+				property: {
+					value: null,
 				},
-			],
-			'TEST',
-			{
-				lockNewFields: false,
-				query: '_id',
 			},
-		);
+		],
+		'TEST',
+		{
+			lockNewFields: false,
+			query: '_id',
+		},
+	);
 
-		t.deepEqual((await entities.toArray())[0].property, { value: null }, 'value null again');
-	},
-);
+	t.deepEqual((await entities.toArray())[0].property, { value: null }, 'value null again');
+});

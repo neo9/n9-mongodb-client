@@ -1,12 +1,12 @@
 import { N9Log } from '@neo9/n9-node-log';
 import { waitFor } from '@neo9/n9-node-utils';
-import ava, { Assertions } from 'ava';
+import test, { Assertions } from 'ava';
 import * as _ from 'lodash';
-import { ObjectID } from 'mongodb';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import * as stdMocks from 'std-mocks';
 
-import { BaseMongoObject, MongoClient, MongoUtils } from '../src';
+import { BaseMongoObject, MongoClient, MongoUtils, ObjectID } from '../src';
+import { print } from './fixtures/utils';
 
 class SampleType extends BaseMongoObject {
 	public test: string;
@@ -16,19 +16,19 @@ global.log = new N9Log('tests').module('mongo-utils');
 
 let mongod: MongoMemoryServer;
 
-ava.beforeEach('Enable log output mock', () => {
-	stdMocks.use();
+test.beforeEach('Enable log output mock', () => {
+	stdMocks.use({ print });
 });
 
-ava.afterEach('Disable log output mock', () => {
+test.afterEach('Disable log output mock', () => {
 	stdMocks.restore();
 });
 
-ava('[MONGO-UTILS] disconnect without connect', async (t: Assertions) => {
+test('[MONGO-UTILS] disconnect without connect', async (t: Assertions) => {
 	t.deepEqual(await MongoUtils.disconnect(), undefined, 'should not block disconnect');
 });
 
-ava('[MONGO-UTILS] oid & oids', (t: Assertions) => {
+test('[MONGO-UTILS] oid & oids', (t: Assertions) => {
 	const id = '01234567890123456789abcd';
 	const objectID = new ObjectID(id);
 	t.deepEqual(MongoUtils.oid(id), objectID, 'oid equals from string');
@@ -39,14 +39,14 @@ ava('[MONGO-UTILS] oid & oids', (t: Assertions) => {
 	t.is(MongoUtils.oids(undefined), undefined, 'oids of null is undefined');
 });
 
-ava('[MONGO-UTILS] mapObjectToClass null', (t: Assertions) => {
+test('[MONGO-UTILS] mapObjectToClass null', (t: Assertions) => {
 	t.deepEqual(MongoUtils.mapObjectToClass<null, null>(null, null), null, 'should return null');
 	t.deepEqual(MongoUtils.mapObjectToClass(null, undefined), undefined, 'should return undefined');
 	t.deepEqual(MongoUtils.mapObjectToClass(null, 0), 0 as any, 'should return 0');
 	t.deepEqual(MongoUtils.mapObjectToClass(null, ''), '' as any, 'should return ""');
 });
 
-ava('[MONGO-UTILS] URI connection log', async (t: Assertions) => {
+test('[MONGO-UTILS] URI connection log', async (t: Assertions) => {
 	mongod = await MongoMemoryServer.create();
 	const mongoURI = mongod.getUri();
 	const mongoURIregex = new RegExp(_.escapeRegExp(mongoURI));
@@ -71,76 +71,75 @@ ava('[MONGO-UTILS] URI connection log', async (t: Assertions) => {
 	await mongod.stop();
 });
 
-ava('[MONGO-UTILS] Ensure event logs', async (t: Assertions) => {
+test('[MONGO-UTILS] Ensure event logs', async (t: Assertions) => {
 	mongod = await MongoMemoryServer.create();
 	const mongoURI = mongod.getUri();
 
 	await MongoUtils.connect(mongoURI, {
-		autoReconnect: true,
-		reconnectTries: 100,
-		reconnectInterval: 50,
+		// view https://mongodb.github.io/node-mongodb-native/3.6/reference/unified-topology/
+		heartbeatFrequencyMS: 1, // high frequency for tests
+		minHeartbeatFrequencyMS: 1,
+		serverSelectionTimeoutMS: 20, // make tests run faster
 	});
 	await waitFor(100);
 	let output = stdMocks.flush();
-
 	t.regex(output.stdout.pop(), /Client connected to/, 'Should have connection log');
-	t.truthy(global.dbClient.isConnected());
+	t.truthy(MongoUtils.isConnected());
+	await waitFor(500);
+	stdMocks.flush();
 
-	await mongod.stop(false);
-	await waitFor(100);
-	output = stdMocks.flush();
-
-	t.regex(output.stdout.pop(), /Client disconnected from/, 'Should have close event log');
-	t.falsy(global.dbClient.isConnected());
-
-	await mongod.start(true);
-	await waitFor(200);
-	output = stdMocks.flush();
-
-	t.regex(output.stdout.pop(), /Client reconnected to/, 'Should have reconnect event log');
-	t.truthy(global.dbClient.isConnected());
-
-	await MongoUtils.disconnect();
-	await MongoUtils.connect(mongoURI, {
-		socketTimeoutMS: 1,
+	await mongod.stop({
+		force: true,
+		doCleanup: false,
 	});
-
-	await MongoUtils.listCollectionsNames();
-	await waitFor(10);
+	await waitFor(500);
 	output = stdMocks.flush();
 
-	t.regex(
-		output.stdout.pop(),
-		/Client connection or operation timed out/,
-		'Should have timeout event log',
+	t.truthy(
+		output.stdout.find((line) => /Ping KO/.test(line)),
+		'Should have a ping KO log',
 	);
-
-	await MongoUtils.disconnect();
-	await MongoUtils.connect(
-		mongoURI,
-		{
-			autoReconnect: true,
-			reconnectTries: 1,
-			reconnectInterval: 50,
-		},
-		{ killProcessOnReconnectFailed: false },
+	t.truthy(
+		output.stdout.find((line) => /Topology description changed/.test(line)),
+		'Should have a Topology description changed event',
 	);
+	stdMocks.flush();
 
-	await mongod.stop(false);
-	await waitFor(100);
+	t.false(MongoUtils.isConnected(), 'Check server is not writable');
+	const logs = stdMocks.flush();
+	t.true(
+		_.isEmpty(logs.stdout),
+		'No log printed when calling isConnected, avoid to flood app logs',
+	);
+	stdMocks.flush();
+	await mongod.start(true);
+	await waitFor(500);
 	output = stdMocks.flush();
+	// With new client version v5, connected and reconnected logs are the same :/
+	t.regex(output.stdout.pop(), /Client reconnected to/, 'Should have reconnect event log');
+	t.true(MongoUtils.isConnected(), 'Check server is writable');
 
-	t.regex(
-		output.stdout.pop(),
-		/Client reconnection failed/,
-		'Should have reconnect failed event log',
-	);
-	t.falsy(global.dbClient.isConnected());
-
+	// Reconnect failed event doesn't exist with mongodb native driver 5
 	await MongoUtils.disconnect();
 });
 
-ava('[MONGO-UTILS] List collection names', async (t: Assertions) => {
+test('[MONGO-UTILS] IsConnected', async (t: Assertions) => {
+	t.false(MongoUtils.isConnected(), 'is not yet connected, check read only');
+
+	mongod = await MongoMemoryServer.create();
+	const mongoURI = mongod.getUri();
+	await MongoUtils.connect(mongoURI, {
+		// autoReconnect: true,
+		// reconnectTries: 100,
+		// reconnectInterval: 50,
+		// TODO: view https://mongodb.github.io/node-mongodb-native/3.6/reference/unified-topology/
+	});
+	await waitFor(100);
+
+	t.true(MongoUtils.isConnected(), 'is connected, check read only');
+});
+
+test('[MONGO-UTILS] List collection names', async (t: Assertions) => {
 	mongod = await MongoMemoryServer.create();
 	const mongoURI = mongod.getUri();
 

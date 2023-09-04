@@ -1,4 +1,4 @@
-import { FilterQuery, UpdateQuery } from 'mongodb';
+import { FilterQuery, UpdateQuery } from '..';
 
 /**
  * Queries to run bulk of update one

@@ -1,9 +1,8 @@
 import { N9Log } from '@neo9/n9-node-log';
-import ava, { Assertions } from 'ava';
-import { Db } from 'mongodb';
+import test, { Assertions } from 'ava';
 
-import { MongoClient } from '../src';
-import { BaseMongoObject } from '../src/models';
+import { BaseMongoObject, MongoClient } from '../src';
+import { Db } from '../src/mongodb';
 import { init } from './fixtures/utils';
 
 class SampleTypeListing extends BaseMongoObject {
@@ -34,8 +33,8 @@ global.log = new N9Log('tests');
 
 init();
 
-ava('[CRUD] Insert one and find it', async (t: Assertions) => {
-	const collection = (global.db as Db).collection(`test-${Date.now()}`);
+test('[CRUD] Insert one and find it', async (t: Assertions) => {
+	const collection = (global.db as Db).collection<SampleType>(`test-${Date.now()}`);
 	const mongoClient = new MongoClient(collection, SampleType, SampleTypeListing);
 	const size = await mongoClient.count();
 
@@ -61,9 +60,9 @@ ava('[CRUD] Insert one and find it', async (t: Assertions) => {
 	t.truthy(foundObject, 'found by query');
 	t.is(sizeWithElementIn, 1, 'nb element in collection');
 	t.is(foundObject.field2Number, intValue, 'found right element');
-	t.is(typeof foundObject._id, 'string', 'ID is a string and not ObjectID');
-	t.is(foundObject._id.constructor.name, 'String', 'ID is a string and not ObjectID');
-	t.is(foundWithNativeClient._id.constructor.name, 'ObjectID', 'ID is an ObjectID on MongoDB');
+	t.is(typeof foundObject._id, 'string', 'ID is a string and not ObjectId');
+	t.is(foundObject._id.constructor.name, 'String', 'ID is a string and not ObjectId');
+	t.is(foundWithNativeClient._id.constructor.name, 'ObjectId', 'ID is an ObjectId on MongoDB');
 	t.truthy(foundObjectById, 'found by ID');
 	t.truthy(foundObjectByKey, 'found by key');
 	t.true(existsById, 'exists by ID');
@@ -71,7 +70,7 @@ ava('[CRUD] Insert one and find it', async (t: Assertions) => {
 	await mongoClient.dropCollection();
 });
 
-ava('[CRUD] Find one and update', async (t: Assertions) => {
+test('[CRUD] Find one and update', async (t: Assertions) => {
 	const mongoClient = new MongoClient(
 		global.db.collection(`test-${Date.now()}`),
 		SampleType,
@@ -129,7 +128,7 @@ ava('[CRUD] Find one and update', async (t: Assertions) => {
 	await mongoClient.dropCollection();
 });
 
-ava('[CRUD] Find one and update with filter', async (t: Assertions) => {
+test('[CRUD] Find one and update with filter', async (t: Assertions) => {
 	const mongoClient = new MongoClient(
 		global.db.collection(`test-${Date.now()}`),
 		SampleArrayType,
@@ -201,7 +200,7 @@ ava('[CRUD] Find one and update with filter', async (t: Assertions) => {
 	await mongoClient.dropCollection();
 });
 
-ava('[CRUD] Find one and upsert', async (t: Assertions) => {
+test('[CRUD] Find one and upsert', async (t: Assertions) => {
 	const mongoClient = new MongoClient(`test-${Date.now()}`, SampleType, SampleTypeListing);
 	const size = await mongoClient.count();
 

@@ -1,29 +1,28 @@
 import { N9Log } from '@neo9/n9-node-log';
-import ava, { Assertions } from 'ava';
-import * as mongodb from 'mongodb';
+import test, { Assertions } from 'ava';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 
-import { MongoClient, MongoUtils } from '../../src';
-import { BaseMongoObject } from '../../src/models';
+import { BaseMongoObject, MongoClient, MongoUtils } from '../../src';
+import * as mongodb from '../../src/mongodb';
 
 global.log = new N9Log('tests').module('issues');
 
 let mongod: MongoMemoryServer;
 
-ava.before(async () => {
+test.before(async () => {
 	mongod = await MongoMemoryServer.create();
 	const uri = mongod.getUri();
 	await MongoUtils.connect(uri);
 });
 
-ava.after(async () => {
+test.after(async () => {
 	global.log.info(`DROP DB after tests OK`);
 	await (global.db as mongodb.Db).dropDatabase();
 	await MongoUtils.disconnect();
 	await mongod.stop();
 });
 
-ava('[ISSUE-OBJECT-ID] Object ID should be well compared', async (t: Assertions) => {
+test('[ISSUE-OBJECT-ID] Object ID should be well compared', async (t: Assertions) => {
 	const mongoClient = new MongoClient(`test-${Date.now()}`, BaseMongoObject, BaseMongoObject, {
 		lockFields: {
 			excludedFields: ['sku', 'externalReferences'],
@@ -52,7 +51,7 @@ ava('[ISSUE-OBJECT-ID] Object ID should be well compared', async (t: Assertions)
 				value: {},
 			},
 		],
-		otherId: new mongodb.ObjectID('5cb7397c1a9299f144b71ac6'),
+		otherId: new mongodb.ObjectId('5cb7397c1a9299f144b71ac6'),
 		label: {
 			'fr-FR': 'produit à surcharger',
 			'en-GB': 'english label',
@@ -80,7 +79,7 @@ ava('[ISSUE-OBJECT-ID] Object ID should be well compared', async (t: Assertions)
 				value: 'new value',
 			},
 		],
-		otherId: new mongodb.ObjectID('5cb7397c1a9299f144b71ac6'),
+		otherId: new mongodb.ObjectId('5cb7397c1a9299f144b71ac6'),
 		label: {
 			'en-GB': 'english label',
 			'fr-FR': 'produit surchargé',

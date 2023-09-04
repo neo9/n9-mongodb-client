@@ -1,9 +1,8 @@
 import { N9Log } from '@neo9/n9-node-log';
 import { waitFor } from '@neo9/n9-node-utils';
-import ava, { Assertions } from 'ava';
+import test, { Assertions } from 'ava';
 
-import { MongoClient, MongoClientConfiguration, MongoUtils } from '../src';
-import { BaseMongoObject } from '../src/models';
+import { BaseMongoObject, MongoClient, MongoClientConfiguration, MongoUtils } from '../src';
 import { init } from './fixtures/utils';
 
 class SampleType extends BaseMongoObject {
@@ -330,7 +329,7 @@ const fakeUserIdNotValidObjectId = 'TEST';
 
 for (const userId of [fakeUserIdValidObjectId, fakeUserIdNotValidObjectId]) {
 	// updateOnlyOnChange enabled
-	ava.serial(
+	test.serial(
 		testPrefix,
 		insertThenUpdateOneFieldToNewValue,
 		{
@@ -342,7 +341,7 @@ for (const userId of [fakeUserIdValidObjectId, fakeUserIdNotValidObjectId]) {
 		},
 	);
 
-	ava.serial(
+	test.serial(
 		testPrefix,
 		insertThenUpdateOneFieldToNewValueWithoutReturningNewValue,
 		{
@@ -354,7 +353,7 @@ for (const userId of [fakeUserIdValidObjectId, fakeUserIdNotValidObjectId]) {
 		},
 	);
 
-	ava.serial(
+	test.serial(
 		testPrefix,
 		insertThenUpdateOneFieldToSameValue,
 		{
@@ -367,7 +366,7 @@ for (const userId of [fakeUserIdValidObjectId, fakeUserIdNotValidObjectId]) {
 	);
 
 	// updateOnlyOnChange enabled by historic
-	ava.serial(
+	test.serial(
 		testPrefix,
 		insertThenUpdateOneFieldToNewValue,
 		{
@@ -379,7 +378,7 @@ for (const userId of [fakeUserIdValidObjectId, fakeUserIdNotValidObjectId]) {
 		},
 	);
 
-	ava.serial(
+	test.serial(
 		testPrefix,
 		insertThenUpdateOneFieldToNewValueWithoutReturningNewValue,
 		{
@@ -391,7 +390,7 @@ for (const userId of [fakeUserIdValidObjectId, fakeUserIdNotValidObjectId]) {
 		},
 	);
 
-	ava.serial(
+	test.serial(
 		testPrefix,
 		insertThenUpdateOneFieldToSameValue,
 		{
@@ -405,7 +404,7 @@ for (const userId of [fakeUserIdValidObjectId, fakeUserIdNotValidObjectId]) {
 
 	for (const keepHistoric of [undefined, true, false]) {
 		// updateOnlyOnChange enabled and field not picked
-		ava.serial(
+		test.serial(
 			testPrefix,
 			insertThenUpdateOneFieldToNewValue,
 			{
@@ -422,7 +421,7 @@ for (const userId of [fakeUserIdValidObjectId, fakeUserIdNotValidObjectId]) {
 			},
 		);
 
-		ava.serial(
+		test.serial(
 			testPrefix,
 			insertThenUpdateOneFieldToNewValueWithoutReturningNewValue,
 			{
@@ -440,7 +439,7 @@ for (const userId of [fakeUserIdValidObjectId, fakeUserIdNotValidObjectId]) {
 		);
 
 		// updateOnlyOnChange enabled and field picked
-		ava.serial(
+		test.serial(
 			testPrefix,
 			insertThenUpdateOneFieldToNewValue,
 			{
@@ -457,7 +456,7 @@ for (const userId of [fakeUserIdValidObjectId, fakeUserIdNotValidObjectId]) {
 			},
 		);
 
-		ava.serial(
+		test.serial(
 			testPrefix,
 			insertThenUpdateOneFieldToNewValueWithoutReturningNewValue,
 			{
@@ -475,7 +474,7 @@ for (const userId of [fakeUserIdValidObjectId, fakeUserIdNotValidObjectId]) {
 		);
 
 		// updateOnlyOnChange enabled and field omitted
-		ava.serial(
+		test.serial(
 			testPrefix,
 			insertThenUpdateOneFieldToNewValue,
 			{
@@ -492,7 +491,7 @@ for (const userId of [fakeUserIdValidObjectId, fakeUserIdNotValidObjectId]) {
 			},
 		);
 
-		ava.serial(
+		test.serial(
 			testPrefix,
 			insertThenUpdateOneFieldToNewValueWithoutReturningNewValue,
 			{
@@ -510,7 +509,7 @@ for (const userId of [fakeUserIdValidObjectId, fakeUserIdNotValidObjectId]) {
 		);
 
 		// updateOnlyOnChange enabled and field picked and omitted
-		ava.serial(
+		test.serial(
 			testPrefix,
 			insertThenUpdateOneFieldToNewValue,
 			{
@@ -528,7 +527,7 @@ for (const userId of [fakeUserIdValidObjectId, fakeUserIdNotValidObjectId]) {
 			},
 		);
 
-		ava.serial(
+		test.serial(
 			testPrefix,
 			insertThenUpdateOneFieldToNewValueWithoutReturningNewValue,
 			{
@@ -548,7 +547,7 @@ for (const userId of [fakeUserIdValidObjectId, fakeUserIdNotValidObjectId]) {
 	}
 
 	// updateOnlyOnChange disabled
-	ava.serial(
+	test.serial(
 		testPrefix,
 		insertThenUpdateOneFieldToNewValue,
 		{
@@ -560,7 +559,7 @@ for (const userId of [fakeUserIdValidObjectId, fakeUserIdNotValidObjectId]) {
 		},
 	);
 
-	ava.serial(
+	test.serial(
 		testPrefix,
 		insertThenUpdateOneFieldToNewValueWithoutReturningNewValue,
 		{
@@ -572,7 +571,7 @@ for (const userId of [fakeUserIdValidObjectId, fakeUserIdNotValidObjectId]) {
 		},
 	);
 
-	ava.serial(
+	test.serial(
 		testPrefix,
 		insertThenUpdateOneFieldToSameValue,
 		{

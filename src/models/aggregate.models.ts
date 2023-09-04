@@ -1,5 +1,4 @@
-import { FilterQuery } from 'mongodb';
-
+import { FilterQuery } from '..';
 import { StringMap } from './maps.models';
 
 /* eslint-disable no-use-before-define */
@@ -10,8 +9,11 @@ export enum AggregationPipelineStageOperator {
 	BUCKET_AUTO = '$bucketAuto',
 	COLL_STATS = '$collStats',
 	CURRENT_OP = '$currentOp',
+	DENSIFY = '$densify',
+	DOCUMENTS = '$documents',
 	COUNT = '$count',
 	FACET = '$facet',
+	FILL = '$fill',
 	GEO_NEAR = '$geoNear',
 	GRAPH_LOOKUP = '$graphLookup',
 	GROUP = '$group',
@@ -23,6 +25,7 @@ export enum AggregationPipelineStageOperator {
 	OUT = '$out',
 	MATCH = '$match',
 	MERGE = '$merge',
+	PLAN_CACHE_STATS = '$planCacheStats',
 	PROJECT = '$project',
 	REDACT = '$redact',
 	REPLACE_ROOT = '$replaceRoot',
@@ -149,6 +152,10 @@ export interface CollStatsPipelineStageValue {
 	 * Adds the total number of documents in the collection to the return document.
 	 */
 	count?: object;
+	/**
+	 * Adds query execution statistics to the return document.
+	 */
+	queryExecStats?: object;
 }
 
 export interface CollStatsPipelineStage {
@@ -164,6 +171,18 @@ export interface CountPipelineStage {
 // todo: add models
 export interface CurrentOpPipelineStage {
 	[AggregationPipelineStageOperator.CURRENT_OP]: object;
+}
+
+/* DENSIFY */
+// todo: add models
+export interface DensifyPipelineStage {
+	[AggregationPipelineStageOperator.DENSIFY]: object;
+}
+
+/* DOCUMENTS */
+// todo: add models
+export interface DocumentsPipelineStage {
+	[AggregationPipelineStageOperator.DOCUMENTS]: object[];
 }
 
 /* FACET */
@@ -197,6 +216,11 @@ export interface FacetPipelineStageValue {
 
 export interface FacetPipelineStage {
 	[AggregationPipelineStageOperator.FACET]: FacetPipelineStageValue;
+}
+
+// todo: add models
+export interface FillPipelineStage {
+	[AggregationPipelineStageOperator.FILL]: object;
 }
 
 /* GEO NEAR */
@@ -359,18 +383,18 @@ export interface GraphLookupPipelineStageValue<T = any> {
 	/**
 	 * Optional. Non-negative integral number specifying the maximum recursion depth.
 	 */
-	maxDepth: number;
+	maxDepth?: number;
 	/**
 	 * Optional. Name of the field to add to each traversed document in the search path.
 	 * The value of this field is the recursion depth for the document, represented as a NumberLong.
 	 * Recursion depth value starts at zero, so the first lookup corresponds to zero depth.
 	 */
-	depthField: string;
+	depthField?: string;
 	/**
 	 * Optional. A document specifying additional conditions for the recursive search. The syntax is identical to query filter syntax.
 	 * You cannot use any aggregation expression in this filter.
 	 */
-	restrictSearchWithMatch: FilterQuery<T>;
+	restrictSearchWithMatch?: FilterQuery<T>;
 }
 
 export interface GraphLookupPipelineStage {
@@ -388,7 +412,7 @@ export interface GroupPipelineStage {
 
 /* INDEX STATS */
 export interface IndexStatsPipelineStage {
-	[AggregationPipelineStageOperator.INDEX_STATS]: object;
+	[AggregationPipelineStageOperator.INDEX_STATS]: Record<string, never>;
 }
 
 /* LIMIT */
@@ -518,6 +542,11 @@ export interface OutPipelineStage {
 	[AggregationPipelineStageOperator.OUT]: string;
 }
 
+/* PLAN_CACHE_STATS */
+export interface PlanCacheStatsPipelineStage {
+	[AggregationPipelineStageOperator.PLAN_CACHE_STATS]: Record<string, never>;
+}
+
 /* PROJECT */
 export interface ProjectPipelineStage {
 	[AggregationPipelineStageOperator.PROJECT]: object;
@@ -606,7 +635,10 @@ export type AggregationPipelineStage =
 	| CollStatsPipelineStage
 	| CountPipelineStage
 	| CurrentOpPipelineStage
+	| DensifyPipelineStage
+	| DocumentsPipelineStage
 	| FacetPipelineStage
+	| FillPipelineStage
 	| GeoNearPipelineStage
 	| GraphLookupPipelineStage
 	| GroupPipelineStage
@@ -618,6 +650,7 @@ export type AggregationPipelineStage =
 	| MatchPipelineStage
 	| MergePipelineStage
 	| OutPipelineStage
+	| PlanCacheStatsPipelineStage
 	| ProjectPipelineStage
 	| RedactPipelineStage
 	| ReplaceRootPipelineStage

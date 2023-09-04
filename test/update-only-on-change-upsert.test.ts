@@ -1,5 +1,5 @@
 import { N9Log } from '@neo9/n9-node-log';
-import ava, { Assertions } from 'ava';
+import test, { Assertions } from 'ava';
 
 import { BaseMongoObject, MongoClient, MongoUtils } from '../src';
 import { init } from './fixtures/utils';
@@ -17,7 +17,7 @@ global.log = new N9Log('tests').module('update-only-on-change-deep');
 
 init();
 
-ava('[CRUD] Find one and update with omit', async (t: Assertions) => {
+test('[CRUD] Find one and update with omit', async (t: Assertions) => {
 	const mongoClient = new MongoClient(
 		global.db.collection(`test-${Date.now()}`),
 		SampleType,
@@ -52,7 +52,7 @@ ava('[CRUD] Find one and update with omit', async (t: Assertions) => {
 	await mongoClient.dropCollection();
 });
 
-ava('[CRUD] Find one and update with pick', async (t: Assertions) => {
+test('[CRUD] Find one and update with pick', async (t: Assertions) => {
 	const mongoClient = new MongoClient(
 		global.db.collection(`test-${Date.now()}`),
 		SampleTypeWithKey,

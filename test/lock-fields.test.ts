@@ -1,10 +1,15 @@
 import { N9Log } from '@neo9/n9-node-log';
-import ava, { Assertions } from 'ava';
+import test, { Assertions } from 'ava';
 import * as _ from 'lodash';
-import { ObjectID } from 'mongodb';
 
-import { MongoClient, MongoClientConfiguration } from '../src';
-import { BaseMongoObject, EntityHistoric, StringMap } from '../src/models';
+import {
+	BaseMongoObject,
+	EntityHistoric,
+	MongoClient,
+	MongoClientConfiguration,
+	ObjectID,
+	StringMap,
+} from '../src';
 import { init } from './fixtures/utils';
 
 export class AttributeEntity extends BaseMongoObject {
@@ -110,7 +115,7 @@ global.log = new N9Log('tests').module('lock-fields');
 
 init();
 
-ava('[LOCK-FIELDS] Insert one and check locks', async (t: Assertions) => {
+test('[LOCK-FIELDS] Insert one and check locks', async (t: Assertions) => {
 	const mongoClient = getLockFieldsMongoClient();
 
 	const lockDataEntity: SampleComplexType = {
@@ -150,7 +155,7 @@ ava('[LOCK-FIELDS] Insert one and check locks', async (t: Assertions) => {
 	);
 });
 
-ava('[LOCK-FIELDS] Insert one and check locks with regex excluded field', async (t: Assertions) => {
+test('[LOCK-FIELDS] Insert one and check locks with regex excluded field', async (t: Assertions) => {
 	const mongoClient = getLockFieldsMongoClient(false, true, [
 		/^objects\[code=k2\]/,
 		/^stringMap\.[0-9a-f]{6}\.((?!value))/,
@@ -196,93 +201,90 @@ ava('[LOCK-FIELDS] Insert one and check locks with regex excluded field', async 
 	);
 });
 
-ava(
-	'[LOCK-FIELDS] Insert&Update one with mongoID and Date and check locks',
-	async (t: Assertions) => {
-		const mongoClient = getLockFieldsMongoClient();
-		const date = new Date('2020-01-01');
-		const newDate = new Date('2020-01-01');
+test('[LOCK-FIELDS] Insert&Update one with mongoID and Date and check locks', async (t: Assertions) => {
+	const mongoClient = getLockFieldsMongoClient();
+	const date = new Date('2020-01-01');
+	const newDate = new Date('2020-01-01');
 
-		const dataWithDate = {
-			..._.cloneDeep(locksDataSample),
-			date,
-			id: new ObjectID(),
-		};
-		const dataWithNewDate = {
-			..._.cloneDeep(dataWithDate),
-			date: newDate,
-		};
+	const dataWithDate = {
+		..._.cloneDeep(locksDataSample),
+		date,
+		id: new ObjectID(),
+	};
+	const dataWithNewDate = {
+		..._.cloneDeep(dataWithDate),
+		date: newDate,
+	};
 
-		const insertedEntity = await mongoClient.insertOne(dataWithDate, '');
+	const insertedEntity = await mongoClient.insertOne(dataWithDate, '');
 
-		const entity = await mongoClient.findOneById(insertedEntity._id);
+	const entity = await mongoClient.findOneById(insertedEntity._id);
 
-		t.true(!_.isEmpty(entity.objectInfos.lockFields), 'is there some lock fields');
-		t.deepEqual(
-			_.map(entity.objectInfos.lockFields, 'path'),
-			[
-				'text',
-				'property.value',
-				'strings["a"]',
-				'strings["b"]',
-				'objects[code=k1].value',
-				'objects[code=k2].value',
-				'objects[code=k3].value',
-				'date',
-				'id',
-			],
-			'all lock fields are present',
-		);
-
-		const newEntity = await mongoClient.findOneByIdAndRemoveLock(
-			insertedEntity._id,
+	t.true(!_.isEmpty(entity.objectInfos.lockFields), 'is there some lock fields');
+	t.deepEqual(
+		_.map(entity.objectInfos.lockFields, 'path'),
+		[
+			'text',
+			'property.value',
+			'strings["a"]',
+			'strings["b"]',
+			'objects[code=k1].value',
+			'objects[code=k2].value',
+			'objects[code=k3].value',
 			'date',
-			'userId',
-		);
+			'id',
+		],
+		'all lock fields are present',
+	);
 
-		t.is(newEntity.objectInfos.lockFields.length, 8, 'Number of lock fields');
-		t.deepEqual(
-			_.map(newEntity.objectInfos.lockFields, 'path'),
-			[
-				'text',
-				'property.value',
-				'strings["a"]',
-				'strings["b"]',
-				'objects[code=k1].value',
-				'objects[code=k2].value',
-				'objects[code=k3].value',
-				'id',
-			],
-			'date lock fields has been removed',
-		);
+	const newEntity = await mongoClient.findOneByIdAndRemoveLock(
+		insertedEntity._id,
+		'date',
+		'userId',
+	);
 
-		const updatedData = await mongoClient.findOneAndUpdateByIdWithLocks(
-			insertedEntity._id,
-			_.cloneDeep(dataWithNewDate),
-			'userId',
-			true,
-			true,
-		);
+	t.is(newEntity.objectInfos.lockFields.length, 8, 'Number of lock fields');
+	t.deepEqual(
+		_.map(newEntity.objectInfos.lockFields, 'path'),
+		[
+			'text',
+			'property.value',
+			'strings["a"]',
+			'strings["b"]',
+			'objects[code=k1].value',
+			'objects[code=k2].value',
+			'objects[code=k3].value',
+			'id',
+		],
+		'date lock fields has been removed',
+	);
 
-		t.is(updatedData.objectInfos.lockFields.length, 8, 'Number of lock fields');
-		t.deepEqual(
-			_.map(updatedData.objectInfos.lockFields, 'path'),
-			[
-				'text',
-				'property.value',
-				'strings["a"]',
-				'strings["b"]',
-				'objects[code=k1].value',
-				'objects[code=k2].value',
-				'objects[code=k3].value',
-				'id',
-			],
-			"date hasn't changed, so no new lock field has been added",
-		);
-	},
-);
+	const updatedData = await mongoClient.findOneAndUpdateByIdWithLocks(
+		insertedEntity._id,
+		_.cloneDeep(dataWithNewDate),
+		'userId',
+		true,
+		true,
+	);
 
-ava('[LOCK-FIELDS] Insert&Update one with simple array', async (t: Assertions) => {
+	t.is(updatedData.objectInfos.lockFields.length, 8, 'Number of lock fields');
+	t.deepEqual(
+		_.map(updatedData.objectInfos.lockFields, 'path'),
+		[
+			'text',
+			'property.value',
+			'strings["a"]',
+			'strings["b"]',
+			'objects[code=k1].value',
+			'objects[code=k2].value',
+			'objects[code=k3].value',
+			'id',
+		],
+		"date hasn't changed, so no new lock field has been added",
+	);
+});
+
+test('[LOCK-FIELDS] Insert&Update one with simple array', async (t: Assertions) => {
 	const mongoClient = getLockFieldsMongoClient(false, false);
 
 	const data = {
@@ -333,7 +335,7 @@ ava('[LOCK-FIELDS] Insert&Update one with simple array', async (t: Assertions) =
 	t.deepEqual(updatedData.strings, ['a', 'b', 'c'], 'c is stored');
 });
 
-ava('[LOCK-FIELDS] Insert&Update one with Date and change to String', async (t: Assertions) => {
+test('[LOCK-FIELDS] Insert&Update one with Date and change to String', async (t: Assertions) => {
 	const mongoClient = getLockFieldsMongoClient();
 	const date = new Date('2020-01-01');
 	const dateString = date.toUTCString();
@@ -417,7 +419,7 @@ ava('[LOCK-FIELDS] Insert&Update one with Date and change to String', async (t: 
 	);
 });
 
-ava('[LOCK-FIELDS] Insert&Update one with String and change to Date', async (t: Assertions) => {
+test('[LOCK-FIELDS] Insert&Update one with String and change to Date', async (t: Assertions) => {
 	const mongoClient = getLockFieldsMongoClient();
 	const date = new Date('2020-01-01');
 	const dateString = date.toUTCString();
@@ -501,7 +503,7 @@ ava('[LOCK-FIELDS] Insert&Update one with String and change to Date', async (t: 
 	);
 });
 
-ava('[LOCK-FIELDS] Insert&Update one and check locks', async (t: Assertions) => {
+test('[LOCK-FIELDS] Insert&Update one and check locks', async (t: Assertions) => {
 	const mongoClient = getLockFieldsMongoClient();
 
 	const insertedEntity = await mongoClient.insertOne(_.cloneDeep(locksDataSample), '');
@@ -562,7 +564,7 @@ ava('[LOCK-FIELDS] Insert&Update one and check locks', async (t: Assertions) => 
 	);
 });
 
-ava('[LOCK-FIELDS] Insert&update one without saving locks', async (t: Assertions) => {
+test('[LOCK-FIELDS] Insert&update one without saving locks', async (t: Assertions) => {
 	const mongoClient = getLockFieldsMongoClient();
 
 	const insertedEntity = await mongoClient.insertOne(_.cloneDeep(locksDataSample), 'userId', false);
@@ -604,7 +606,7 @@ ava('[LOCK-FIELDS] Insert&update one without saving locks', async (t: Assertions
 	t.is(updatedData.objectInfos.lockFields.length, 5, 'Number of lock fields');
 });
 
-ava('[LOCK-FIELDS] Forbide usage of some methods', async (t: Assertions) => {
+test('[LOCK-FIELDS] Forbide usage of some methods', async (t: Assertions) => {
 	const mongoClient = getLockFieldsMongoClient();
 
 	await t.throwsAsync(async () => {
@@ -624,7 +626,7 @@ ava('[LOCK-FIELDS] Forbide usage of some methods', async (t: Assertions) => {
 	});
 });
 
-ava('[LOCK-FIELDS] Update many with locks', async (t: Assertions) => {
+test('[LOCK-FIELDS] Update many with locks', async (t: Assertions) => {
 	const mongoClient = getLockFieldsMongoClient();
 
 	const locksDataSample1: SampleComplexType = {
@@ -672,87 +674,84 @@ ava('[LOCK-FIELDS] Update many with locks', async (t: Assertions) => {
 	t.is(listing[0].excludedField, locksDataSample1.excludedField);
 });
 
-ava(
-	'[LOCK-FIELDS] Update many with locks with excluded lock field as ObjectId',
-	async (t: Assertions) => {
-		const mongoClient = getLockFieldsMongoClient();
+test('[LOCK-FIELDS] Update many with locks with excluded lock field as ObjectId', async (t: Assertions) => {
+	const mongoClient = getLockFieldsMongoClient();
 
-		const objectIDSample = new ObjectID();
-		const locksDataSample1: SampleComplexType = {
-			...locksDataSample,
+	const objectIDSample = new ObjectID();
+	const locksDataSample1: SampleComplexType = {
+		...locksDataSample,
+		text: 'id1',
+		excludedField: objectIDSample as any,
+		excludedArray: [objectIDSample as any],
+	};
+	const locksDataSample2: SampleComplexType = {
+		...locksDataSample1,
+		text: 'id2',
+	};
+	await mongoClient.insertOne(_.cloneDeep(locksDataSample1), 'userId', true);
+	await mongoClient.insertOne(_.cloneDeep(locksDataSample2), 'userId', true);
+
+	t.deepEqual(
+		((await (mongoClient as any).collection.findOne({ text: 'id1' })) as SampleComplexType)
+			.excludedField as any,
+		objectIDSample,
+		'objectId is well saved',
+	);
+
+	t.deepEqual(
+		((await (mongoClient as any).collection.findOne({ text: 'id1' })) as SampleComplexType)
+			.excludedArray as any,
+		[objectIDSample],
+		'objectId is well saved for array',
+	);
+
+	const newValues: Partial<SampleComplexType>[] = [
+		{
 			text: 'id1',
-			excludedField: objectIDSample as any,
-			excludedArray: [objectIDSample as any],
-		};
-		const locksDataSample2: SampleComplexType = {
-			...locksDataSample1,
+			property: {
+				value: 'new value 1',
+			},
+		},
+		{
 			text: 'id2',
-		};
-		await mongoClient.insertOne(_.cloneDeep(locksDataSample1), 'userId', true);
-		await mongoClient.insertOne(_.cloneDeep(locksDataSample2), 'userId', true);
-
-		t.deepEqual(
-			((await (mongoClient as any).collection.findOne({ text: 'id1' })) as SampleComplexType)
-				.excludedField as any,
-			objectIDSample,
-			'objectId is well saved',
-		);
-
-		t.deepEqual(
-			((await (mongoClient as any).collection.findOne({ text: 'id1' })) as SampleComplexType)
-				.excludedArray as any,
-			[objectIDSample],
-			'objectId is well saved for array',
-		);
-
-		const newValues: Partial<SampleComplexType>[] = [
-			{
-				text: 'id1',
-				property: {
-					value: 'new value 1',
-				},
+			property: {
+				value: 'new value 2',
 			},
-			{
-				text: 'id2',
-				property: {
-					value: 'new value 2',
-				},
-			},
-		];
+		},
+	];
 
-		await mongoClient.updateManyAtOnce(newValues, 'userId', { query: 'text' });
-		const listing: Partial<SampleComplexType>[] = await mongoClient.find({}, 0, 0).toArray();
+	await mongoClient.updateManyAtOnce(newValues, 'userId', { query: 'text' });
+	const listing: Partial<SampleComplexType>[] = await mongoClient.find({}, 0, 0).toArray();
 
-		t.is(listing.length, 2, 'found 2 elements');
-		for (const i of listing) {
-			_.unset(i, '_id');
-			_.unset(i, 'text');
-			_.unset(i, 'objectInfos.creation.date');
-			_.unset(i, 'objectInfos.lastModification.date');
-			for (const lockField of i.objectInfos.lockFields) {
-				_.unset(lockField, 'metaDatas.date');
-			}
+	t.is(listing.length, 2, 'found 2 elements');
+	for (const i of listing) {
+		_.unset(i, '_id');
+		_.unset(i, 'text');
+		_.unset(i, 'objectInfos.creation.date');
+		_.unset(i, 'objectInfos.lastModification.date');
+		for (const lockField of i.objectInfos.lockFields) {
+			_.unset(lockField, 'metaDatas.date');
 		}
-		t.deepEqual(listing[0], listing[1]);
-		t.is(typeof listing[0].excludedField, 'string', 'In listing ObjectId is returned as string');
+	}
+	t.deepEqual(listing[0], listing[1]);
+	t.is(typeof listing[0].excludedField, 'string', 'In listing ObjectId is returned as string');
 
-		t.deepEqual(
-			((await (mongoClient as any).collection.findOne({ text: 'id1' })) as SampleComplexType)
-				.excludedField as any,
-			objectIDSample,
-			'excludedFields are still ObjectId',
-		);
+	t.deepEqual(
+		((await (mongoClient as any).collection.findOne({ text: 'id1' })) as SampleComplexType)
+			.excludedField as any,
+		objectIDSample,
+		'excludedFields are still ObjectId',
+	);
 
-		t.deepEqual(
-			((await (mongoClient as any).collection.findOne({ text: 'id1' })) as SampleComplexType)
-				.excludedArray as any,
-			[objectIDSample],
-			'excludedFields are still ObjectId for array',
-		);
-	},
-);
+	t.deepEqual(
+		((await (mongoClient as any).collection.findOne({ text: 'id1' })) as SampleComplexType)
+			.excludedArray as any,
+		[objectIDSample],
+		'excludedFields are still ObjectId for array',
+	);
+});
 
-ava('[LOCK-FIELDS] Remove lock field', async (t: Assertions) => {
+test('[LOCK-FIELDS] Remove lock field', async (t: Assertions) => {
 	const mongoClient = getLockFieldsMongoClient(true);
 	const insertedEntity = await mongoClient.insertOne(_.cloneDeep(locksDataSample), 'userId', true);
 
@@ -787,7 +786,7 @@ ava('[LOCK-FIELDS] Remove lock field', async (t: Assertions) => {
 	t.is(allHistoric.length, 2, '2 historic entries');
 });
 
-ava('[LOCK-FIELDS] Remove lock field subparts', async (t: Assertions) => {
+test('[LOCK-FIELDS] Remove lock field subparts', async (t: Assertions) => {
 	const mongoClient = getLockFieldsMongoClient(true);
 
 	const dataWithNestedObject = {
@@ -848,79 +847,72 @@ ava('[LOCK-FIELDS] Remove lock field subparts', async (t: Assertions) => {
 	t.is(allHistoric.length, 2, '2 historic entries');
 });
 
-ava(
-	'[LOCK-FIELDS] Insert&update one without saving locks clear all locks and update only one field',
-	async (t: Assertions) => {
-		const mongoClient = getLockFieldsMongoClient();
+test('[LOCK-FIELDS] Insert&update one without saving locks clear all locks and update only one field', async (t: Assertions) => {
+	const mongoClient = getLockFieldsMongoClient();
 
-		const insertedEntity = await mongoClient.insertOne(
-			_.cloneDeep(locksDataSample),
-			'userId',
-			false,
-		);
-		const entity = await mongoClient.findOneById(insertedEntity._id);
-		t.true(_.isEmpty(entity.objectInfos.lockFields));
+	const insertedEntity = await mongoClient.insertOne(_.cloneDeep(locksDataSample), 'userId', false);
+	const entity = await mongoClient.findOneById(insertedEntity._id);
+	t.true(_.isEmpty(entity.objectInfos.lockFields));
 
-		const newValue: SampleComplexType = {
-			text: 'new value',
-			objects: [
-				{
-					code: 'k1',
-					value: 'new value for k1',
-				},
-				{
-					code: 'kNew',
-					value: 'new value for new key',
-				},
-			],
-			strings: ['a', 'c'],
-			excludedField: 'new excluded fields value',
-			property: {
-				value: 'new property.value value',
+	const newValue: SampleComplexType = {
+		text: 'new value',
+		objects: [
+			{
+				code: 'k1',
+				value: 'new value for k1',
 			},
-		};
-
-		const updatedData = await mongoClient.findOneAndUpdateByIdWithLocks(
-			insertedEntity._id,
-			newValue,
-			'userId',
-			true,
-		);
-
-		t.is(updatedData.objectInfos.lockFields.length, 5, 'Number of lock fields');
-
-		let i = 1;
-		for (const lockField of updatedData.objectInfos.lockFields) {
-			const newEntityValue = await mongoClient.findOneByIdAndRemoveLock(
-				updatedData._id,
-				lockField.path,
-				'userId',
-			);
-			t.is(newEntityValue.objectInfos.lockFields.length, 5 - i, 'Number of fields decreased');
-			i += 1;
-		}
-		const lastNewEntityValue = await mongoClient.findOneById(updatedData._id);
-		t.is(lastNewEntityValue.objectInfos.lockFields.length, 0, 'Number of lock fields === 0');
-
-		const newValue2: Partial<SampleComplexType> = {
-			text: newValue.text, // should not be in lock fields
-			property: {
-				value: 'new property.value value 2',
+			{
+				code: 'kNew',
+				value: 'new value for new key',
 			},
-		};
+		],
+		strings: ['a', 'c'],
+		excludedField: 'new excluded fields value',
+		property: {
+			value: 'new property.value value',
+		},
+	};
 
-		const updatedData2 = await mongoClient.findOneAndUpdateByIdWithLocks(
+	const updatedData = await mongoClient.findOneAndUpdateByIdWithLocks(
+		insertedEntity._id,
+		newValue,
+		'userId',
+		true,
+	);
+
+	t.is(updatedData.objectInfos.lockFields.length, 5, 'Number of lock fields');
+
+	let i = 1;
+	for (const lockField of updatedData.objectInfos.lockFields) {
+		const newEntityValue = await mongoClient.findOneByIdAndRemoveLock(
 			updatedData._id,
-			newValue2,
+			lockField.path,
 			'userId',
 		);
+		t.is(newEntityValue.objectInfos.lockFields.length, 5 - i, 'Number of fields decreased');
+		i += 1;
+	}
+	const lastNewEntityValue = await mongoClient.findOneById(updatedData._id);
+	t.is(lastNewEntityValue.objectInfos.lockFields.length, 0, 'Number of lock fields === 0');
 
-		t.is(updatedData2.objectInfos.lockFields.length, 1, `One field locked`);
-		t.is(updatedData2.property.value, newValue2.property.value, `Update one field OK`);
-	},
-);
+	const newValue2: Partial<SampleComplexType> = {
+		text: newValue.text, // should not be in lock fields
+		property: {
+			value: 'new property.value value 2',
+		},
+	};
 
-ava('[LOCK-FIELDS] Insert&update boolean', async (t: Assertions) => {
+	const updatedData2 = await mongoClient.findOneAndUpdateByIdWithLocks(
+		updatedData._id,
+		newValue2,
+		'userId',
+	);
+
+	t.is(updatedData2.objectInfos.lockFields.length, 1, `One field locked`);
+	t.is(updatedData2.property.value, newValue2.property.value, `Update one field OK`);
+});
+
+test('[LOCK-FIELDS] Insert&update boolean', async (t: Assertions) => {
 	const attribute: AttributeEntity = {
 		code: 'caracteristique_dimension_jeton',
 		defaultLanguageCode: 'fr-FR',
@@ -974,7 +966,7 @@ ava('[LOCK-FIELDS] Insert&update boolean', async (t: Assertions) => {
 	);
 });
 
-ava('[LOCK-FIELDS] Insert&update array sub object element', async (t: Assertions) => {
+test('[LOCK-FIELDS] Insert&update array sub object element', async (t: Assertions) => {
 	const attribute: AttributeEntity = {
 		code: 'caracteristique_dimension_jeton',
 		defaultLanguageCode: 'fr-FR',
@@ -1045,7 +1037,7 @@ ava('[LOCK-FIELDS] Insert&update array sub object element', async (t: Assertions
 	);
 });
 
-ava('[LOCK-FIELDS] Insert object with array and code with no value', async (t: Assertions) => {
+test('[LOCK-FIELDS] Insert object with array and code with no value', async (t: Assertions) => {
 	const objectWithArray: ObjectWithArray = {
 		parameters: {
 			items: [
@@ -1106,7 +1098,7 @@ ava('[LOCK-FIELDS] Insert object with array and code with no value', async (t: A
 	t.is(objectUpdated.parameters.items.length, 2, 'Should kee element locked');
 });
 
-ava('[LOCK-FIELDS] Insert&update attribute', async (t: Assertions) => {
+test('[LOCK-FIELDS] Insert&update attribute', async (t: Assertions) => {
 	const attribute: AttributeEntity = {
 		code: 'caracteristique_dimension_jeton',
 		defaultLanguageCode: 'fr-FR',
@@ -1194,7 +1186,7 @@ ava('[LOCK-FIELDS] Insert&update attribute', async (t: Assertions) => {
 	);
 });
 
-ava('[LOCK-FIELDS] Insert&update entity with date property', async (t: Assertions) => {
+test('[LOCK-FIELDS] Insert&update entity with date property', async (t: Assertions) => {
 	const entity: ObjectWithDateProperty = {
 		code: 'test_case',
 		props: {
@@ -1338,7 +1330,7 @@ ava('[LOCK-FIELDS] Insert&update entity with date property', async (t: Assertion
 	);
 });
 
-ava('[LOCK-FIELDS] Forbidden actions', async (t: Assertions) => {
+test('[LOCK-FIELDS] Forbidden actions', async (t: Assertions) => {
 	const mongoClient = new MongoClient(`test-${Date.now()}`, AttributeEntity, null, {
 		lockFields: {},
 	});
@@ -1353,7 +1345,7 @@ ava('[LOCK-FIELDS] Forbidden actions', async (t: Assertions) => {
 	t.is(notFoundElement, undefined, 'element is null is not found');
 });
 
-ava('[LOCK-FIELDS] Forbidden actions without locks', async (t: Assertions) => {
+test('[LOCK-FIELDS] Forbidden actions without locks', async (t: Assertions) => {
 	const mongoClient = new MongoClient(`test-${Date.now()}`, AttributeEntity, null);
 
 	await t.throwsAsync(

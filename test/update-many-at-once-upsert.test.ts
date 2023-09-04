@@ -1,11 +1,10 @@
 import { N9Log } from '@neo9/n9-node-log';
-import ava, { Assertions } from 'ava';
+import test, { Assertions } from 'ava';
 import * as _ from 'lodash';
-import { Db } from 'mongodb';
 import { PromisePoolExecutor } from 'promise-pool-executor';
 
-import { MongoClient, MongoUtils } from '../src';
-import { BaseMongoObject } from '../src/models';
+import { BaseMongoObject, MongoClient, MongoUtils } from '../src';
+import { Db } from '../src/mongodb';
 import { init } from './fixtures/utils';
 
 class SampleType extends BaseMongoObject {
@@ -65,7 +64,7 @@ function mapSampleTypeCreateToSampleType(
 	return sampleType1;
 }
 
-ava('[UPDATE MANY AT ONCE] Should update one document', async (t: Assertions) => {
+test('[UPDATE MANY AT ONCE] Should update one document', async (t: Assertions) => {
 	const collectionName = `test-${Date.now()}`;
 	const mongoClient = new MongoClient(collectionName, SampleType, SampleType, {});
 
@@ -147,7 +146,7 @@ ava('[UPDATE MANY AT ONCE] Should update one document', async (t: Assertions) =>
 	t.is(typeof sampleTypeFoundWithNativeClient._id, 'object', '_id is still an object');
 });
 
-ava('[UPDATE MANY AT ONCE] Should update one document by _id ObjectID', async (t: Assertions) => {
+test('[UPDATE MANY AT ONCE] Should update one document by _id ObjectID', async (t: Assertions) => {
 	const collectionName = `test-${Date.now()}`;
 	const mongoClient = new MongoClient(collectionName, DataSample, DataSample, {});
 
@@ -174,262 +173,250 @@ ava('[UPDATE MANY AT ONCE] Should update one document by _id ObjectID', async (t
 	t.deepEqual(dataUpdatedArray[0].value, 'update', 'value is updated');
 });
 
-ava(
-	'[UPDATE MANY AT ONCE] Should call mapAfterLockFieldsApplied with merged entity on update',
-	async (t: Assertions) => {
-		const collectionName = `test-${Date.now()}`;
-		const mongoClient = new MongoClient(collectionName, SampleType, SampleType, {
-			lockFields: {
-				arrayWithReferences: {
-					externalReferences: 'value',
-				},
-				excludedFields: ['sku', 'status'],
+test('[UPDATE MANY AT ONCE] Should call mapAfterLockFieldsApplied with merged entity on update', async (t: Assertions) => {
+	const collectionName = `test-${Date.now()}`;
+	const mongoClient = new MongoClient(collectionName, SampleType, SampleType, {
+		lockFields: {
+			arrayWithReferences: {
+				externalReferences: 'value',
 			},
-		});
+			excludedFields: ['sku', 'status'],
+		},
+	});
 
-		const insertedValue = await mongoClient.insertOne(
+	const insertedValue = await mongoClient.insertOne(
+		{
+			externalReferences: [
+				{
+					value: 'ext1',
+				},
+			],
+			sku: 'sku-1',
+			value: '0',
+		},
+		'test',
+	);
+	t.is(insertedValue.value, '0', 'value inserted');
+	t.is(insertedValue.status, undefined, 'status is undefined');
+	t.is(insertedValue.objectInfos.lockFields.length, 2, 'should lock new fields');
+
+	const newEntity: SampleType = {
+		sku: 'sku-1',
+		externalReferences: [
 			{
-				externalReferences: [
-					{
-						value: 'ext1',
-					},
-				],
-				sku: 'sku-1',
-				value: '0',
+				value: 'ext1',
 			},
-			'test',
-		);
-		t.is(insertedValue.value, '0', 'value inserted');
-		t.is(insertedValue.status, undefined, 'status is undefined');
-		t.is(insertedValue.objectInfos.lockFields.length, 2, 'should lock new fields');
+		],
+		value: '1',
+	};
 
-		const newEntity: SampleType = {
+	const updateResult = await (
+		await mongoClient.updateManyAtOnce([newEntity], 'userId', {
+			query: (e) => ({ sku: e.sku }),
+			upsert: true,
+			lockNewFields: false,
+			forceEditLockFields: false,
+			mapFunction: (entity: SampleType, existingEntity) =>
+				mapSampleTypeCreateToSampleType(entity, existingEntity),
+			hooks: {
+				mapAfterLockFieldsApplied: (entity) => {
+					t.is(entity.value, '0', 'entity merged with existing value should have locked value');
+					return {
+						...entity,
+						status: 'OK',
+					};
+				},
+			},
+		})
+	).toArray();
+
+	t.is(updateResult.length, 1, '1 entity updated');
+	t.is(updateResult[0].value, '0', 'value not updated');
+	t.is(updateResult[0].status, 'OK', 'status updated');
+});
+
+test('[UPDATE MANY AT ONCE] Should not update entity if mapAfterLockFieldsApplied returns undefined', async (t: Assertions) => {
+	const collectionName = `test-${Date.now()}`;
+	const mongoClient = new MongoClient(collectionName, SampleType, SampleType, {
+		lockFields: {
+			arrayWithReferences: {
+				externalReferences: 'value',
+			},
+			excludedFields: ['sku', 'status'],
+		},
+	});
+
+	const insertedValue = await mongoClient.insertOne(
+		{
 			sku: 'sku-1',
 			externalReferences: [
 				{
 					value: 'ext1',
 				},
 			],
-			value: '1',
-		};
+			value: '0',
+		},
+		'test',
+	);
+	t.is(insertedValue.value, '0', 'value inserted');
+	t.is(insertedValue.status, undefined, 'status is undefined');
+	t.is(insertedValue.objectInfos.lockFields.length, 2, 'should lock new fields');
 
-		const updateResult = await (
-			await mongoClient.updateManyAtOnce([newEntity], 'userId', {
-				query: (e) => ({ sku: e.sku }),
-				upsert: true,
-				lockNewFields: false,
-				forceEditLockFields: false,
-				mapFunction: (entity: SampleType, existingEntity) =>
-					mapSampleTypeCreateToSampleType(entity, existingEntity),
-				hooks: {
-					mapAfterLockFieldsApplied: (entity) => {
-						t.is(entity.value, '0', 'entity merged with existing value should have locked value');
-						return {
-							...entity,
-							status: 'OK',
-						};
-					},
-				},
-			})
-		).toArray();
-
-		t.is(updateResult.length, 1, '1 entity updated');
-		t.is(updateResult[0].value, '0', 'value not updated');
-		t.is(updateResult[0].status, 'OK', 'status updated');
-	},
-);
-
-ava(
-	'[UPDATE MANY AT ONCE] Should not update entity if mapAfterLockFieldsApplied returns undefined',
-	async (t: Assertions) => {
-		const collectionName = `test-${Date.now()}`;
-		const mongoClient = new MongoClient(collectionName, SampleType, SampleType, {
-			lockFields: {
-				arrayWithReferences: {
-					externalReferences: 'value',
-				},
-				excludedFields: ['sku', 'status'],
-			},
-		});
-
-		const insertedValue = await mongoClient.insertOne(
+	const newEntity1: SampleType = {
+		sku: 'sku-1',
+		externalReferences: [
 			{
-				sku: 'sku-1',
-				externalReferences: [
-					{
-						value: 'ext1',
-					},
-				],
-				value: '0',
+				value: 'ext1',
 			},
-			'test',
-		);
-		t.is(insertedValue.value, '0', 'value inserted');
-		t.is(insertedValue.status, undefined, 'status is undefined');
-		t.is(insertedValue.objectInfos.lockFields.length, 2, 'should lock new fields');
+		],
+		value: '1',
+	};
+	const newEntity2: SampleType = {
+		sku: 'sku-2',
+		externalReferences: [
+			{
+				value: 'ext2',
+			},
+		],
+		value: '2',
+	};
+	const newEntity3: SampleType = {
+		sku: 'ABCD',
+		externalReferences: [
+			{
+				value: 'ext3',
+			},
+		],
+		value: '3',
+	};
 
-		const newEntity1: SampleType = {
-			sku: 'sku-1',
-			externalReferences: [
-				{
-					value: 'ext1',
+	const updateResult = await (
+		await mongoClient.updateManyAtOnce([newEntity1, newEntity2, newEntity3], 'userId', {
+			query: (e) => ({ sku: e.sku }),
+			upsert: true,
+			lockNewFields: false,
+			forceEditLockFields: false,
+			mapFunction: (entity: SampleType, existingEntity) =>
+				mapSampleTypeCreateToSampleType(entity, existingEntity),
+			hooks: {
+				mapAfterLockFieldsApplied: (entity) => {
+					if (entity.sku.includes('sku')) {
+						return;
+					}
+					return entity;
 				},
-			],
-			value: '1',
-		};
-		const newEntity2: SampleType = {
-			sku: 'sku-2',
-			externalReferences: [
-				{
-					value: 'ext2',
+			},
+			pool: {
+				nbMaxConcurency: 3,
+			},
+		})
+	).toArray();
+
+	t.is(updateResult.length, 1, '1 entity updated');
+	t.is(updateResult[0].sku, 'ABCD', 'Correct entity should be updated');
+});
+
+test('[UPDATE MANY AT ONCE] Should use options pool promise exectuor if defined', async (t: Assertions) => {
+	const collectionName = `test-${Date.now()}`;
+	const mongoClient = new MongoClient(collectionName, SampleType, SampleType);
+
+	const newEntity1: SampleType = {
+		sku: 'sku-1',
+		externalReferences: [
+			{
+				value: 'ext1',
+			},
+		],
+		value: '1',
+	};
+	const newEntity2: SampleType = {
+		sku: 'sku-2',
+		externalReferences: [
+			{
+				value: 'ext2',
+			},
+		],
+		value: '2',
+	};
+	const newEntity3: SampleType = {
+		sku: 'sku-3',
+		externalReferences: [
+			{
+				value: 'ext3',
+			},
+		],
+		value: '3',
+	};
+
+	const customPoolExecutor = new PromisePoolExecutor({
+		concurrencyLimit: 1,
+	});
+	t.is(customPoolExecutor.activePromiseCount, 0, 'no active promises yet in custom executor');
+	t.is(customPoolExecutor.freeSlots, 1, '1 remaining slot for promise concurrency');
+
+	const updateResult = await (
+		await mongoClient.updateManyAtOnce([newEntity1, newEntity2, newEntity3], 'userId', {
+			query: (e) => ({ sku: e.sku }),
+			upsert: true,
+			mapFunction: (entity: SampleType, existingEntity) =>
+				mapSampleTypeCreateToSampleType(entity, existingEntity),
+			hooks: {
+				mapAfterLockFieldsApplied: (entity) => {
+					t.is(customPoolExecutor.activePromiseCount, 1, 'hook called from custom executor');
+					t.is(customPoolExecutor.freeSlots, 0, 'max concurrency reached');
+					return entity;
 				},
-			],
-			value: '2',
-		};
-		const newEntity3: SampleType = {
-			sku: 'ABCD',
-			externalReferences: [
-				{
-					value: 'ext3',
+			},
+			pool: {
+				nbMaxConcurency: 3,
+				executor: customPoolExecutor,
+			},
+		})
+	).toArray();
+
+	t.is(customPoolExecutor.activePromiseCount, 0, 'no more active promises in custom executor');
+	t.is(updateResult.length, 3, '3 entity updated');
+});
+
+test('[UPDATE MANY AT ONCE] Should call mapAfterLockFieldsApplied with new entity on insert', async (t: Assertions) => {
+	const collectionName = `test-${Date.now()}`;
+	const mongoClient = new MongoClient(collectionName, SampleType, SampleType, {});
+
+	const newEntity: SampleType = {
+		sku: 'sku-1',
+		externalReferences: [
+			{
+				value: 'ext1',
+			},
+		],
+		value: '1',
+	};
+
+	const updateResult = await (
+		await mongoClient.updateManyAtOnce([newEntity], 'userId', {
+			upsert: true,
+			lockNewFields: false,
+			forceEditLockFields: false,
+			mapFunction: (entity: SampleType, existingEntity) =>
+				mapSampleTypeCreateToSampleType(entity, existingEntity),
+			hooks: {
+				mapAfterLockFieldsApplied: (entity) => {
+					t.is(entity.value, '1', 'entity value should be the same');
+					return {
+						...entity,
+						status: 'OK',
+					};
 				},
-			],
-			value: '3',
-		};
+			},
+		})
+	).toArray();
 
-		const updateResult = await (
-			await mongoClient.updateManyAtOnce([newEntity1, newEntity2, newEntity3], 'userId', {
-				query: (e) => ({ sku: e.sku }),
-				upsert: true,
-				lockNewFields: false,
-				forceEditLockFields: false,
-				mapFunction: (entity: SampleType, existingEntity) =>
-					mapSampleTypeCreateToSampleType(entity, existingEntity),
-				hooks: {
-					mapAfterLockFieldsApplied: (entity) => {
-						if (entity.sku.includes('sku')) {
-							return;
-						}
-						return entity;
-					},
-				},
-				pool: {
-					nbMaxConcurency: 3,
-				},
-			})
-		).toArray();
+	t.is(updateResult.length, 1, '1 entity updated');
+	t.is(updateResult[0].value, '1', 'value not updated');
+	t.is(updateResult[0].status, 'OK', 'status updated');
+});
 
-		t.is(updateResult.length, 1, '1 entity updated');
-		t.is(updateResult[0].sku, 'ABCD', 'Correct entity should be updated');
-	},
-);
-
-ava(
-	'[UPDATE MANY AT ONCE] Should use options pool promise exectuor if defined',
-	async (t: Assertions) => {
-		const collectionName = `test-${Date.now()}`;
-		const mongoClient = new MongoClient(collectionName, SampleType, SampleType);
-
-		const newEntity1: SampleType = {
-			sku: 'sku-1',
-			externalReferences: [
-				{
-					value: 'ext1',
-				},
-			],
-			value: '1',
-		};
-		const newEntity2: SampleType = {
-			sku: 'sku-2',
-			externalReferences: [
-				{
-					value: 'ext2',
-				},
-			],
-			value: '2',
-		};
-		const newEntity3: SampleType = {
-			sku: 'sku-3',
-			externalReferences: [
-				{
-					value: 'ext3',
-				},
-			],
-			value: '3',
-		};
-
-		const customPoolExecutor = new PromisePoolExecutor({
-			concurrencyLimit: 1,
-		});
-		t.is(customPoolExecutor.activePromiseCount, 0, 'no active promises yet in custom executor');
-		t.is(customPoolExecutor.freeSlots, 1, '1 remaining slot for promise concurrency');
-
-		const updateResult = await (
-			await mongoClient.updateManyAtOnce([newEntity1, newEntity2, newEntity3], 'userId', {
-				query: (e) => ({ sku: e.sku }),
-				upsert: true,
-				mapFunction: (entity: SampleType, existingEntity) =>
-					mapSampleTypeCreateToSampleType(entity, existingEntity),
-				hooks: {
-					mapAfterLockFieldsApplied: (entity) => {
-						t.is(customPoolExecutor.activePromiseCount, 1, 'hook called from custom executor');
-						t.is(customPoolExecutor.freeSlots, 0, 'max concurrency reached');
-						return entity;
-					},
-				},
-				pool: {
-					nbMaxConcurency: 3,
-					executor: customPoolExecutor,
-				},
-			})
-		).toArray();
-
-		t.is(customPoolExecutor.activePromiseCount, 0, 'no more active promises in custom executor');
-		t.is(updateResult.length, 3, '3 entity updated');
-	},
-);
-
-ava(
-	'[UPDATE MANY AT ONCE] Should call mapAfterLockFieldsApplied with new entity on insert',
-	async (t: Assertions) => {
-		const collectionName = `test-${Date.now()}`;
-		const mongoClient = new MongoClient(collectionName, SampleType, SampleType, {});
-
-		const newEntity: SampleType = {
-			sku: 'sku-1',
-			externalReferences: [
-				{
-					value: 'ext1',
-				},
-			],
-			value: '1',
-		};
-
-		const updateResult = await (
-			await mongoClient.updateManyAtOnce([newEntity], 'userId', {
-				upsert: true,
-				lockNewFields: false,
-				forceEditLockFields: false,
-				mapFunction: (entity: SampleType, existingEntity) =>
-					mapSampleTypeCreateToSampleType(entity, existingEntity),
-				hooks: {
-					mapAfterLockFieldsApplied: (entity) => {
-						t.is(entity.value, '1', 'entity value should be the same');
-						return {
-							...entity,
-							status: 'OK',
-						};
-					},
-				},
-			})
-		).toArray();
-
-		t.is(updateResult.length, 1, '1 entity updated');
-		t.is(updateResult[0].value, '1', 'value not updated');
-		t.is(updateResult[0].status, 'OK', 'status updated');
-	},
-);
-
-ava('[UPDATE MANY AT ONCE] Should update nothing with empty array', async (t: Assertions) => {
+test('[UPDATE MANY AT ONCE] Should update nothing with empty array', async (t: Assertions) => {
 	const collectionName = `test-${Date.now()}`;
 
 	const mongoClient = new MongoClient(collectionName, DataSample, DataSample, {});
@@ -447,39 +434,36 @@ ava('[UPDATE MANY AT ONCE] Should update nothing with empty array', async (t: As
 	t.is(dataUpdatedArray.length, 0, '0 value updated');
 });
 
-ava(
-	'[UPDATE MANY AT ONCE] Update entity by query on attribut type number',
-	async (t: Assertions) => {
-		const collectionName = `test-${Date.now()}`;
-		const mongoClient = new MongoClient(collectionName, DataSampleWithCode, DataSampleWithCode, {});
+test('[UPDATE MANY AT ONCE] Update entity by query on attribut type number', async (t: Assertions) => {
+	const collectionName = `test-${Date.now()}`;
+	const mongoClient = new MongoClient(collectionName, DataSampleWithCode, DataSampleWithCode, {});
 
-		const dataSample: DataSampleWithCode = {
-			code: 1,
-			value: 'init',
-		};
-		await mongoClient.insertOne(_.cloneDeep(dataSample), '', false, false);
+	const dataSample: DataSampleWithCode = {
+		code: 1,
+		value: 'init',
+	};
+	await mongoClient.insertOne(_.cloneDeep(dataSample), '', false, false);
 
-		const entities = await mongoClient.updateManyAtOnce(
-			[
-				{
-					code: 1,
-					value: 'update',
-				},
-			],
-			'TEST',
+	const entities = await mongoClient.updateManyAtOnce(
+		[
 			{
-				query: 'code',
+				code: 1,
+				value: 'update',
 			},
-		);
+		],
+		'TEST',
+		{
+			query: 'code',
+		},
+	);
 
-		t.deepEqual((await entities.toArray())[0].value, 'update', 'value is updated');
-	},
-);
+	t.deepEqual((await entities.toArray())[0].value, 'update', 'value is updated');
+});
 
 /**
  * This test fail due to a hash computed in `mingo`. This hash is the same for `KNE_OC42-midas` and `KNE_OCS3-midas`.
  */
-ava('[UPDATE MANY AT ONCE] Update with mingo hash collision ', async (t: Assertions) => {
+test('[UPDATE MANY AT ONCE] Update with mingo hash collision ', async (t: Assertions) => {
 	const collectionName = `test-${Date.now()}`;
 	const mongoClient = new MongoClient(collectionName, DataSampleWithCodes, DataSampleWithCodes, {});
 	await mongoClient.createUniqueIndex('codes');
@@ -541,36 +525,33 @@ ava('[UPDATE MANY AT ONCE] Update with mingo hash collision ', async (t: Asserti
 	await mongoClient.dropCollection();
 });
 
-ava(
-	'[UPDATE MANY AT ONCE] Update entity by query on attribut type boolean',
-	async (t: Assertions) => {
-		const collectionName = `test-${Date.now()}`;
-		const mongoClient = new MongoClient(collectionName, DataSampleWithCode, DataSampleWithCode, {});
+test('[UPDATE MANY AT ONCE] Update entity by query on attribut type boolean', async (t: Assertions) => {
+	const collectionName = `test-${Date.now()}`;
+	const mongoClient = new MongoClient(collectionName, DataSampleWithCode, DataSampleWithCode, {});
 
-		const dataSample: DataSampleWithCode = {
-			code: true,
-			value: 'init',
-		};
-		await mongoClient.insertOne(_.cloneDeep(dataSample), '', false);
+	const dataSample: DataSampleWithCode = {
+		code: true,
+		value: 'init',
+	};
+	await mongoClient.insertOne(_.cloneDeep(dataSample), '', false);
 
-		const entities = await mongoClient.updateManyAtOnce(
-			[
-				{
-					code: true,
-					value: 'update',
-				},
-			],
-			'TEST',
+	const entities = await mongoClient.updateManyAtOnce(
+		[
 			{
-				query: 'code',
+				code: true,
+				value: 'update',
 			},
-		);
+		],
+		'TEST',
+		{
+			query: 'code',
+		},
+	);
 
-		t.deepEqual((await entities.toArray())[0].value, 'update', 'value is updated');
-	},
-);
+	t.deepEqual((await entities.toArray())[0].value, 'update', 'value is updated');
+});
 
-ava('[UPDATE MANY AT ONCE] Throw on missing value', async (t: Assertions) => {
+test('[UPDATE MANY AT ONCE] Throw on missing value', async (t: Assertions) => {
 	const collectionName = `test-${Date.now()}`;
 	const mongoClient = new MongoClient(collectionName, DataSample, DataSample, {});
 

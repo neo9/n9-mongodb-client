@@ -1,5 +1,6 @@
-import { FilterQuery } from 'mongodb';
 import { PromisePoolExecutor } from 'promise-pool-executor';
+
+import { FilterQuery } from '..';
 
 export interface UpdateManyAtOnceOptions<U> {
 	/**

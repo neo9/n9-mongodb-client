@@ -1,20 +1,21 @@
-import { Collection, IndexOptions, IndexSpecification } from 'mongodb';
+import { Collection, IndexDescription, IndexSpecification } from 'mongodb';
 
+import { IndexOptions } from '.';
 import { LangUtils } from './lang-utils';
 
 /**
  * Class that handlez the creation, update and deletion of mongodb indexes
  */
-export class IndexManager {
+export class IndexManager<U> {
 	/**
 	 * @param collection the mongodb collection in which the indexes will be managed
 	 */
-	constructor(private readonly collection: Collection) {}
+	constructor(private readonly collection: Collection<U>) {}
 
 	/**
 	 * Returns a list of all indexes.
 	 */
-	public async findAllIndexes(): Promise<IndexSpecification[]> {
+	public async findAllIndexes(): Promise<IndexDescription[]> {
 		try {
 			return await this.collection.listIndexes().toArray();
 		} catch (e) {
@@ -55,7 +56,7 @@ export class IndexManager {
 	 * @param options extra mongodb index creation options
 	 */
 	public async ensureExpirationIndex(
-		fieldOrSpec: string | object,
+		fieldOrSpec: IndexSpecification,
 		ttlInDays: number,
 		options: IndexOptions = {},
 	): Promise<void> {

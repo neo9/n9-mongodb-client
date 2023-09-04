@@ -1,5 +1,4 @@
-import { FilterQuery } from 'mongodb';
-
+import { FilterQuery } from '.';
 import {
 	AggregationPipeline,
 	AggregationPipelineStage,
@@ -7,7 +6,6 @@ import {
 	BucketAutoPipelineStageValue,
 	BucketPipelineStageValue,
 	CollStatsPipelineStageValue,
-	CurrentOpPipelineStage,
 	Expression,
 	FacetPipelineStageValue,
 	GeoNearPipelineStageValue,
@@ -49,12 +47,24 @@ export class AggregationBuilder<U> {
 		return this.doAddStage({ [AggregationPipelineStageOperator.COUNT]: stageValue });
 	}
 
-	public currentOp(stageValue: CurrentOpPipelineStage): AggregationBuilder<U> {
+	public currentOp(stageValue: object): AggregationBuilder<U> {
 		return this.doAddStage({ [AggregationPipelineStageOperator.CURRENT_OP]: stageValue });
+	}
+
+	public densify(stageValue: object): AggregationBuilder<U> {
+		return this.doAddStage({ [AggregationPipelineStageOperator.DENSIFY]: stageValue });
+	}
+
+	public documents(stageValue: object[]): AggregationBuilder<U> {
+		return this.doAddStage({ [AggregationPipelineStageOperator.DOCUMENTS]: stageValue });
 	}
 
 	public facet(stageValue: FacetPipelineStageValue): AggregationBuilder<U> {
 		return this.doAddStage({ [AggregationPipelineStageOperator.FACET]: stageValue });
+	}
+
+	public fill(stageValue: object): AggregationBuilder<U> {
+		return this.doAddStage({ [AggregationPipelineStageOperator.FILL]: stageValue });
 	}
 
 	public geoNear(stageValue: GeoNearPipelineStageValue): AggregationBuilder<U> {
@@ -69,8 +79,8 @@ export class AggregationBuilder<U> {
 		return this.doAddStage({ [AggregationPipelineStageOperator.GROUP]: stageValue });
 	}
 
-	public indexStats(stageValue: object): AggregationBuilder<U> {
-		return this.doAddStage({ [AggregationPipelineStageOperator.INDEX_STATS]: stageValue });
+	public indexStats(): AggregationBuilder<U> {
+		return this.doAddStage({ [AggregationPipelineStageOperator.INDEX_STATS]: {} });
 	}
 
 	public limit(stageValue: number): AggregationBuilder<U> {
@@ -80,6 +90,9 @@ export class AggregationBuilder<U> {
 	public listLocalSessions(stageValue: object): AggregationBuilder<U> {
 		return this.doAddStage({ [AggregationPipelineStageOperator.LIST_LOCAL_SESSIONS]: stageValue });
 	}
+
+	// TODO : add listSampledQueries
+	// TODO : add listSearchIndexes
 
 	public listSessions(stageValue: object): AggregationBuilder<U> {
 		return this.doAddStage({ [AggregationPipelineStageOperator.LIST_SESSIONS]: stageValue });
@@ -91,6 +104,10 @@ export class AggregationBuilder<U> {
 
 	public match<T = U>(stageValue: FilterQuery<T>): AggregationBuilder<U> {
 		return this.doAddStage({ [AggregationPipelineStageOperator.MATCH]: stageValue });
+	}
+
+	public planCacheStats(): AggregationBuilder<U> {
+		return this.doAddStage({ [AggregationPipelineStageOperator.PLAN_CACHE_STATS]: {} });
 	}
 
 	public merge(
@@ -118,6 +135,7 @@ export class AggregationBuilder<U> {
 	public replaceRoot(stageValue: ReplaceRootPipelineValue): AggregationBuilder<U> {
 		return this.doAddStage({ [AggregationPipelineStageOperator.REPLACE_ROOT]: stageValue });
 	}
+	// TODO : replaceWith
 
 	public sample(stageValue: SamplePipelineValue): AggregationBuilder<U> {
 		return this.doAddStage({ [AggregationPipelineStageOperator.SAMPLE]: stageValue });
@@ -127,6 +145,8 @@ export class AggregationBuilder<U> {
 		return this.doAddStage({ [AggregationPipelineStageOperator.SET]: stageValue });
 	}
 
+	// TODO : setWindowFields
+	// TODO : shardedDataDistribution
 	public skip(stageValue: number): AggregationBuilder<U> {
 		return this.doAddStage({ [AggregationPipelineStageOperator.SKIP]: stageValue });
 	}
@@ -139,6 +159,7 @@ export class AggregationBuilder<U> {
 		return this.doAddStage({ [AggregationPipelineStageOperator.SORT_BY_COUNT]: stageValue });
 	}
 
+	// TODO : unionWith
 	public unset(stageValue: string | string[]): AggregationBuilder<U> {
 		return this.doAddStage({ [AggregationPipelineStageOperator.UNSET]: stageValue });
 	}

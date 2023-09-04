@@ -1,5 +1,5 @@
 import { N9Log } from '@neo9/n9-node-log';
-import ava, { Assertions } from 'ava';
+import test, { Assertions } from 'ava';
 
 import { N9MongoLock } from '../src';
 import { init } from './fixtures/utils';
@@ -8,7 +8,7 @@ global.log = new N9Log('tests').module('lock-fields');
 
 init();
 
-ava('[LOCK] Test a simple lock', async (t: Assertions) => {
+test('[LOCK] Test a simple lock', async (t: Assertions) => {
 	const codeRegexp = /^[0-9a-f]{32}$/;
 	const n9MongoLock = new N9MongoLock();
 
@@ -27,7 +27,7 @@ ava('[LOCK] Test a simple lock', async (t: Assertions) => {
 	t.truthy(code3.match(codeRegexp), 'Get the lock another time');
 });
 
-ava('[LOCK] Test lock token and released later', async (t: Assertions) => {
+test('[LOCK] Test lock token and released later', async (t: Assertions) => {
 	const codeRegexp = /^[0-9a-f]{32}$/;
 	const n9MongoLock = new N9MongoLock(`another-collection${Date.now()}`);
 

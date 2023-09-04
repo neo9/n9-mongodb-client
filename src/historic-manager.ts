@@ -1,7 +1,9 @@
 import { N9Log } from '@neo9/n9-node-log';
 import { diff as deepDiff } from 'deep-diff';
-import { Collection, Cursor, Db, IndexOptions, ObjectId } from 'mongodb';
+import { Collection, Db, IndexSpecification, ObjectId, WithId } from 'mongodb';
 
+import { FilterQuery, IndexOptions } from '.';
+import { N9FindCursor } from './cursors/n9-find-cursor';
 import { IndexManager } from './index-manager';
 import { LangUtils } from './lang-utils';
 import { LodashReplacerUtils } from './lodash-replacer.utils';
@@ -15,15 +17,17 @@ export class HistoricManager<U extends BaseMongoObject> {
 	private readonly collection: Collection<EntityHistoricStored<U>>;
 	private readonly logger: N9Log;
 	private readonly db: Db;
-	private readonly indexManager: IndexManager;
+	private readonly indexManager: IndexManager<EntityHistoricStored<U>>;
 
 	constructor(collection: Collection<U>) {
 		this.logger = (global.log as N9Log).module('mongo-client-historic');
 		this.db = global.db as Db; // existence is checked in client.ts
 
-		this.collection = this.db.collection(`${collection.collectionName}Historic`);
+		this.collection = this.db.collection<EntityHistoricStored<U>>(
+			`${collection.collectionName}Historic`,
+		);
 
-		this.indexManager = new IndexManager(this.collection);
+		this.indexManager = new IndexManager<EntityHistoricStored<U>>(this.collection);
 	}
 
 	public async initIndexes(): Promise<void> {
@@ -43,7 +47,7 @@ export class HistoricManager<U extends BaseMongoObject> {
 
 	public async ensureExpirationIndex(
 		ttlInDays: number,
-		fieldOrSpec: string | object = 'date',
+		fieldOrSpec: IndexSpecification = 'date',
 		options: IndexOptions = {},
 	): Promise<void> {
 		await this.indexManager.ensureExpirationIndex(fieldOrSpec, ttlInDays, options);
@@ -114,15 +118,18 @@ export class HistoricManager<U extends BaseMongoObject> {
 		latestEntityVersion: U,
 		page: number = 0,
 		size: number = 10,
-	): Cursor<EntityHistoric<U>> {
+	): N9FindCursor<EntityHistoric<U>> {
 		try {
 			let previousEntityHistoricSnapshot: U = latestEntityVersion;
-			return this.collection
-				.find({ entityId: MongoUtils.oid(entityId) as any })
+			const filterQuery: FilterQuery<EntityHistoric<U>> = {
+				entityId: MongoUtils.oid(entityId) as any,
+			};
+			const findCursor = this.collection
+				.find(filterQuery)
 				.sort('_id', -1)
 				.skip(page * size)
 				.limit(size)
-				.map((a: EntityHistoric<U>) => {
+				.map((a: WithId<EntityHistoricStored<U>>) => {
 					const entityHistoric = MongoUtils.mapObjectToClass<EntityHistoric<U>, EntityHistoric<U>>(
 						EntityHistoric,
 						MongoUtils.unRemoveSpecialCharactersInKeys(a),
@@ -136,6 +143,8 @@ export class HistoricManager<U extends BaseMongoObject> {
 					previousEntityHistoricSnapshot = entityHistoric.snapshot;
 					return entityHistoric;
 				});
+
+			return new N9FindCursor<EntityHistoric<U>>(this.collection, findCursor, filterQuery);
 		} catch (e) {
 			LangUtils.throwN9ErrorFromError(e, {
 				entityId,
@@ -199,7 +208,7 @@ export class HistoricManager<U extends BaseMongoObject> {
 
 	public async countByEntityId(id: string): Promise<number> {
 		try {
-			return await this.collection.countDocuments({ entityId: MongoUtils.oid(id) as any });
+			return await this.collection.countDocuments({ entityId: MongoUtils.oid(id) });
 		} catch (e) {
 			LangUtils.throwN9ErrorFromError(e, { id });
 		}

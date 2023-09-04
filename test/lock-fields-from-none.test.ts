@@ -1,9 +1,8 @@
 import { N9Log } from '@neo9/n9-node-log';
-import ava, { Assertions } from 'ava';
+import test, { Assertions } from 'ava';
 import * as _ from 'lodash';
 
-import { MongoClient } from '../src';
-import { BaseMongoObject } from '../src/models';
+import { BaseMongoObject, MongoClient } from '../src';
 import { init } from './fixtures/utils';
 
 class SampleComplexType extends BaseMongoObject {
@@ -29,7 +28,7 @@ global.log = new N9Log('tests').module('lock-fields');
 
 init();
 
-ava('[LOCK-FIELDS] Update one from no value should be locked', async (t: Assertions) => {
+test('[LOCK-FIELDS] Update one from no value should be locked', async (t: Assertions) => {
 	const mongoClient = getLockFieldsMongoClient();
 
 	const locksDataSample = {};

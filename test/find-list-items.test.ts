@@ -1,9 +1,8 @@
 import { N9Log } from '@neo9/n9-node-log';
-import ava, { Assertions } from 'ava';
+import test, { Assertions } from 'ava';
 import { Exclude, Expose } from 'class-transformer';
 
-import { MongoClient } from '../src';
-import { BaseMongoObject } from '../src/models';
+import { BaseMongoObject, MongoClient } from '../src';
 import { init } from './fixtures/utils';
 
 @Exclude()
@@ -27,7 +26,7 @@ global.log = new N9Log('tests');
 
 init();
 
-ava('[Listing] List elements', async (t: Assertions) => {
+test('[Listing] List elements', async (t: Assertions) => {
 	const mongoClient = new MongoClient(`test-${Date.now()}`, SampleTypeEntity, SampleTypeListItem);
 	const size = await mongoClient.count();
 
@@ -57,7 +56,7 @@ ava('[Listing] List elements', async (t: Assertions) => {
 	await mongoClient.dropCollection();
 });
 
-ava('[Listing] List entities without class-transformer', async (t: Assertions) => {
+test('[Listing] List entities without class-transformer', async (t: Assertions) => {
 	const mongoClient = new MongoClient(`test-${Date.now()}`, SampleTypeEntity, SampleTypeListItem);
 	const size = await mongoClient.count();
 
@@ -77,7 +76,7 @@ ava('[Listing] List entities without class-transformer', async (t: Assertions) =
 	const listing = await mongoClient.findWithType({}, SampleTypeEntity2).toArray();
 
 	t.truthy(listing[0].fieldEntity, 'entity field is present');
-	t.falsy((listing[0] as any).fieldListing, 'listing field is missing');
+	t.falsy(listing[0].fieldListing, 'listing field is missing');
 
 	const listingWithDetails = await mongoClient
 		.findWithType<SampleTypeEntity2>(

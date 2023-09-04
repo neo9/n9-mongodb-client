@@ -1,6 +1,6 @@
 import { N9Error } from '@neo9/n9-node-utils';
 import * as _ from 'lodash';
-import { ObjectID } from 'mongodb';
+import { ObjectId } from 'mongodb';
 
 import { LangUtils } from './lang-utils';
 import { LodashReplacerUtils } from './lodash-replacer.utils';
@@ -404,15 +404,15 @@ export class LockFieldsManager<U extends BaseMongoObject> {
 
 				if (LodashReplacerUtils.IS_OBJECT_EMPTY(ret[key])) delete ret[key];
 			} else {
-				let existingEntityElementToCompare = existingEntityElement;
-				if (existingEntityElementToCompare instanceof ObjectID) {
+				let existingEntityElementToCompare: Date | ObjectId | string = existingEntityElement;
+				if (existingEntityElementToCompare instanceof ObjectId) {
 					existingEntityElementToCompare = existingEntityElementToCompare.toHexString();
 				} else if (existingEntityElementToCompare instanceof Date) {
 					existingEntityElementToCompare = existingEntityElementToCompare.toISOString();
 				}
 
-				let newEntityElementToCompare = newEntity[key];
-				if (newEntityElementToCompare instanceof ObjectID) {
+				let newEntityElementToCompare: Date | ObjectId | string = newEntity[key];
+				if (newEntityElementToCompare instanceof ObjectId) {
 					newEntityElementToCompare = newEntityElementToCompare.toHexString();
 				} else if (newEntityElementToCompare instanceof Date) {
 					newEntityElementToCompare = newEntityElementToCompare.toISOString();

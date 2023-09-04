@@ -1,5 +1,6 @@
-import { Collection, ObjectId, UpdateQuery } from 'mongodb';
+import { Collection, ObjectId, ReturnDocument } from 'mongodb';
 
+import { UpdateQuery } from '../src';
 import { LangUtils } from './lang-utils';
 import { LodashReplacerUtils } from './lodash-replacer.utils';
 import { AddTagOptions, RemoveTagOptions } from './models';
@@ -8,15 +9,18 @@ import { MongoUtils } from './mongo-utils';
 /**
  * Class that can add and remvoe tags to entities in a colection
  */
-export class TagManager {
+export class TagManager<U> {
 	private static buildAddTagUpdate(userId: string, options: AddTagOptions): object {
+		// eslint-disable-next-line @typescript-eslint/naming-convention
 		const update: UpdateQuery<any> = { $addToSet: { 'objectInfos.tags': options.tag } as any };
 		const updateLastUpdate = LodashReplacerUtils.IS_BOOLEAN(options.updateLastUpdate)
 			? options.updateLastUpdate
 			: true;
 		if (updateLastUpdate) {
 			update.$set = {
+				// eslint-disable-next-line @typescript-eslint/naming-convention
 				'objectInfos.lastUpdate.date': new Date(),
+				// eslint-disable-next-line @typescript-eslint/naming-convention
 				'objectInfos.lastUpdate.userId': ObjectId.isValid(userId) ? MongoUtils.oid(userId) : userId,
 			};
 		}
@@ -28,13 +32,16 @@ export class TagManager {
 		userId: string,
 		options: RemoveTagOptions,
 	): object {
+		// eslint-disable-next-line @typescript-eslint/naming-convention
 		const update: UpdateQuery<any> = { $pull: { 'objectInfos.tags': tag } as any };
 		const updateLastUpdate = LodashReplacerUtils.IS_BOOLEAN(options.updateLastUpdate)
 			? options.updateLastUpdate
 			: true;
 		if (updateLastUpdate) {
 			update.$set = {
+				// eslint-disable-next-line @typescript-eslint/naming-convention
 				'objectInfos.lastUpdate.date': new Date(),
+				// eslint-disable-next-line @typescript-eslint/naming-convention
 				'objectInfos.lastUpdate.userId': ObjectId.isValid(userId) ? MongoUtils.oid(userId) : userId,
 			};
 		}
@@ -44,7 +51,7 @@ export class TagManager {
 	/**
 	 * @param collection the mongodb collection in which the tags will be managed
 	 */
-	constructor(private collection: Collection) {}
+	constructor(private collection: Collection<U>) {}
 
 	/**
 	 * Add a tag to an entity.
@@ -55,15 +62,13 @@ export class TagManager {
 	 * @param options options to customize the tag
 	 * @returns New tag
 	 */
-	public async addTagToOne(
-		query: object,
-		userId: string,
-		options: AddTagOptions = {},
-	): Promise<string> {
+	public async addTagToOne(query: object, userId: string, options: AddTagOptions): Promise<string> {
 		try {
 			options.tag = options.tag || new ObjectId().toHexString();
 			const update = TagManager.buildAddTagUpdate(userId, options);
-			await this.collection.findOneAndUpdate(query, update, { returnOriginal: false });
+			await this.collection.findOneAndUpdate(query, update, {
+				returnDocument: ReturnDocument.AFTER,
+			});
 			return options.tag;
 		} catch (e) {
 			LangUtils.throwN9ErrorFromError(e, {
@@ -85,7 +90,7 @@ export class TagManager {
 	public async addTagToOneById(
 		id: string,
 		userId: string,
-		options: AddTagOptions = {},
+		options: AddTagOptions,
 	): Promise<string> {
 		return await this.addTagToOne({ _id: MongoUtils.oid(id) }, userId, options);
 	}
@@ -96,7 +101,7 @@ export class TagManager {
 	public async addTagToMany(
 		query: object,
 		userId: string,
-		options: AddTagOptions = {},
+		options: AddTagOptions,
 	): Promise<string> {
 		try {
 			options.tag = options.tag || new ObjectId().toHexString();
@@ -125,11 +130,13 @@ export class TagManager {
 		query: object,
 		tag: string,
 		userId: string,
-		options: RemoveTagOptions = {},
+		options: RemoveTagOptions,
 	): Promise<void> {
 		try {
 			const update = TagManager.buildRemoveTagUpdate(tag, userId, options);
-			await this.collection.findOneAndUpdate(query, update, { returnOriginal: false });
+			await this.collection.findOneAndUpdate(query, update, {
+				returnDocument: ReturnDocument.AFTER,
+			});
 		} catch (e) {
 			LangUtils.throwN9ErrorFromError(e, {
 				query,
@@ -152,7 +159,7 @@ export class TagManager {
 		id: string,
 		tag: string,
 		userId: string,
-		options: RemoveTagOptions = {},
+		options: RemoveTagOptions,
 	): Promise<void> {
 		await this.removeTagFromOne({ _id: MongoUtils.oid(id) }, tag, userId, options);
 	}
@@ -169,7 +176,7 @@ export class TagManager {
 		query: object,
 		tag: string,
 		userId: string,
-		options: RemoveTagOptions = {},
+		options: RemoveTagOptions,
 	): Promise<void> {
 		try {
 			const update = TagManager.buildRemoveTagUpdate(tag, userId, options);
@@ -189,7 +196,8 @@ export class TagManager {
 	 */
 	public async deleteManyWithTag(tag: string): Promise<void> {
 		try {
-			await this.collection.deleteMany({ 'objectInfos.tags': tag });
+			// eslint-disable-next-line @typescript-eslint/naming-convention
+			await this.collection.deleteMany({ 'objectInfos.tags': tag } as any);
 		} catch (e) {
 			LangUtils.throwN9ErrorFromError(e, { tag });
 		}

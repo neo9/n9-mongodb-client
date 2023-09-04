@@ -2,21 +2,22 @@ import { N9Error, waitFor } from '@neo9/n9-node-utils';
 import * as crypto from 'crypto';
 import * as _ from 'lodash';
 import * as mongodb from 'mongodb';
+import { CreateIndexesOptions, IndexSpecification } from 'mongodb';
 
 import { LangUtils } from './lang-utils';
 import { LockOptions } from './models/lock-options.models';
 
 export class N9MongoLock {
-	private options: LockOptions;
-	private defaultLock: string;
-	private collection: string;
+	private readonly options: LockOptions;
+	private readonly defaultLock: string;
+	private readonly collection: string;
 	private readonly waitDurationMsRandomPart: number;
 
 	/**
 	 *
 	 * @param collection Collection name to use to save lock, default : n9MongoLock
-	 * @param defaultLock : the default naem for this lock
-	 * @param options : timeout default to 30s and removeExpired default to true to avoid duplication keys on expiring
+	 * @param defaultLock the default naem for this lock
+	 * @param options timeout default to 30s and removeExpired default to true to avoid duplication keys on expiring
 	 */
 	constructor(
 		collection: string = 'n9MongoLock',
@@ -47,19 +48,17 @@ export class N9MongoLock {
 	 */
 	public async ensureIndexes(): Promise<void> {
 		const db = global.db as mongodb.Db;
-		const indexes = [
-			{
-				name: 'name',
-				key: {
-					name: 1,
-				},
-				unique: true,
-			},
-		];
+		const indexSpecification: IndexSpecification = {
+			name: 1,
+		};
+		const createIndexesOptions: CreateIndexesOptions = {
+			name: 'name',
+			unique: true,
+		};
 		try {
-			return await db.collection(this.collection).createIndexes(indexes);
+			await db.collection(this.collection).createIndex(indexSpecification, createIndexesOptions);
 		} catch (error) {
-			LangUtils.throwN9ErrorFromError(error, { indexes });
+			LangUtils.throwN9ErrorFromError(error, { indexSpecification, createIndexesOptions });
 		}
 	}
 
@@ -98,10 +97,8 @@ export class N9MongoLock {
 				inserted: now,
 			};
 			try {
-				const docs: mongodb.InsertOneWriteOpResult<mongodb.WithId<{ code: string }>> = await db
-					.collection(this.collection)
-					.insertOne(doc);
-				return docs.ops[0].code;
+				await db.collection(this.collection).insertOne(doc);
+				return code;
 			} catch (error) {
 				if (error.code === 11000) {
 					return null;

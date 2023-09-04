@@ -1,10 +1,8 @@
 import { N9Log } from '@neo9/n9-node-log';
 import { waitFor } from '@neo9/n9-node-utils';
-import ava, { Assertions } from 'ava';
-import { FilterQuery } from 'mongodb';
+import test, { Assertions } from 'ava';
 
-import { MongoClient, MongoUtils } from '../src';
-import { BaseMongoObject } from '../src/models';
+import { BaseMongoObject, FilterQuery, MongoClient, MongoUtils } from '../src';
 import { init } from './fixtures/utils';
 
 export class TestItem extends BaseMongoObject {
@@ -16,7 +14,7 @@ global.log = new N9Log('tests').module('mongo-read-stream');
 
 init();
 
-ava('[MONGO-READ-STREAM] Read page by page', async (t: Assertions) => {
+test('[MONGO-READ-STREAM] Read page by page', async (t: Assertions) => {
 	const mongoClient = new MongoClient(`test-${Date.now()}`, TestItem, TestItem);
 
 	const collectionSize = 38;
@@ -73,7 +71,7 @@ ava('[MONGO-READ-STREAM] Read page by page', async (t: Assertions) => {
 	await mongoClient.dropCollection();
 });
 
-ava('[MONGO-READ-STREAM] Create stream with no _id in projection', async (t: Assertions) => {
+test('[MONGO-READ-STREAM] Create stream with no _id in projection', async (t: Assertions) => {
 	const mongoClient = new MongoClient(`test-${Date.now()}`, TestItem, TestItem);
 	await mongoClient.insertOne({ key: `value-${Math.random()}` }, 'userId1', false);
 
@@ -81,7 +79,7 @@ ava('[MONGO-READ-STREAM] Create stream with no _id in projection', async (t: Ass
 	await mongoClient.dropCollection();
 });
 
-ava('[MONGO-READ-STREAM] Create stream with no or empty sort', async (t: Assertions) => {
+test('[MONGO-READ-STREAM] Create stream with no or empty sort', async (t: Assertions) => {
 	const mongoClient = new MongoClient(`test-${Date.now()}`, TestItem, TestItem);
 	await mongoClient.insertOne({ key: `value-${Math.random()}` }, 'userId1', false);
 
@@ -91,7 +89,7 @@ ava('[MONGO-READ-STREAM] Create stream with no or empty sort', async (t: Asserti
 	await mongoClient.dropCollection();
 });
 
-ava('[MONGO-READ-STREAM] Create stream with wrong hint', async (t: Assertions) => {
+test('[MONGO-READ-STREAM] Create stream with wrong hint', async (t: Assertions) => {
 	const mongoClient = new MongoClient(`test-${Date.now()}`, TestItem, TestItem);
 	await mongoClient.insertOne({ key: `value-${Math.random()}` }, 'userId1', false);
 
@@ -113,7 +111,7 @@ ava('[MONGO-READ-STREAM] Create stream with wrong hint', async (t: Assertions) =
 	);
 });
 
-ava('[MONGO-READ-STREAM] Create stream with hint OK', async (t: Assertions) => {
+test('[MONGO-READ-STREAM] Create stream with hint OK', async (t: Assertions) => {
 	const mongoClient = new MongoClient(`test-${Date.now()}`, TestItem, TestItem);
 	for (let i = 0; i < 50; i += 1) {
 		await mongoClient.insertOne({ key: `value-${Math.random()}` }, 'userId1', false);
@@ -130,7 +128,7 @@ ava('[MONGO-READ-STREAM] Create stream with hint OK', async (t: Assertions) => {
 	await mongoClient.dropCollection();
 });
 
-ava('[MONGO-READ-STREAM] Create stream with sort OK', async (t: Assertions) => {
+test('[MONGO-READ-STREAM] Create stream with sort OK', async (t: Assertions) => {
 	const mongoClient = new MongoClient(`test-${Date.now()}`, TestItem, TestItem);
 
 	for (let i = 0; i < 5; i += 1) {
@@ -205,7 +203,7 @@ ava('[MONGO-READ-STREAM] Create stream with sort OK', async (t: Assertions) => {
 	await mongoClient.dropCollection();
 });
 
-ava('[MONGO-READ-STREAM] Create stream with limit OK', async (t: Assertions) => {
+test('[MONGO-READ-STREAM] Create stream with limit OK', async (t: Assertions) => {
 	const mongoClient = new MongoClient(`test-${Date.now()}`, TestItem, TestItem);
 	for (let i = 0; i < 20; i += 1) {
 		await mongoClient.insertOne({ key: `value-${Math.random()}` }, 'userId1', false);
@@ -237,7 +235,7 @@ ava('[MONGO-READ-STREAM] Create stream with limit OK', async (t: Assertions) => 
 	await mongoClient.dropCollection();
 });
 
-ava('[MONGO-READ-STREAM] Read page by page on empty collection', async (t: Assertions) => {
+test('[MONGO-READ-STREAM] Read page by page on empty collection', async (t: Assertions) => {
 	const mongoClient = new MongoClient(`test-${Date.now()}`, TestItem, TestItem);
 
 	await mongoClient.stream({}, 10).forEachPage(() => {
@@ -247,7 +245,7 @@ ava('[MONGO-READ-STREAM] Read page by page on empty collection', async (t: Asser
 	t.pass('ok');
 });
 
-ava('[MONGO-READ-STREAM] Read item by item', async (t: Assertions) => {
+test('[MONGO-READ-STREAM] Read item by item', async (t: Assertions) => {
 	const mongoClient = new MongoClient(`test-${Date.now()}`, TestItem, TestItem);
 
 	const collectionSize = 38;
@@ -282,7 +280,7 @@ ava('[MONGO-READ-STREAM] Read item by item', async (t: Assertions) => {
 	await mongoClient.dropCollection();
 });
 
-ava('[MONGO-READ-STREAM] Read item by item on empty collection', async (t: Assertions) => {
+test('[MONGO-READ-STREAM] Read item by item on empty collection', async (t: Assertions) => {
 	const mongoClient = new MongoClient(`test-${Date.now()}`, TestItem, TestItem);
 
 	await mongoClient.stream({}, 10).forEach(() => {
@@ -292,7 +290,7 @@ ava('[MONGO-READ-STREAM] Read item by item on empty collection', async (t: Asser
 	t.pass('ok');
 });
 
-ava('[MONGO-READ-STREAM] Does not override conditions on _id', async (t: Assertions) => {
+test('[MONGO-READ-STREAM] Does not override conditions on _id', async (t: Assertions) => {
 	const mongoClient = new MongoClient(`test-${Date.now()}`, TestItem, TestItem);
 
 	const collectionSize = 38;
@@ -331,7 +329,7 @@ ava('[MONGO-READ-STREAM] Does not override conditions on _id', async (t: Asserti
 	await mongoClient.dropCollection();
 });
 
-ava('[MONGO-READ-STREAM] Handle errors during query', async (t: Assertions) => {
+test('[MONGO-READ-STREAM] Handle errors during query', async (t: Assertions) => {
 	const mongoClient = new MongoClient(`test-${Date.now()}`, TestItem, TestItem);
 	const pageSize = 10;
 
