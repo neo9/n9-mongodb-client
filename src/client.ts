@@ -1828,7 +1828,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			newEntityFiltered = newEntityOmitted;
 		}
 
-		return fastDeepEqual(snapshotFiltered, newEntityFiltered);
+		return fastDeepEqual.default(snapshotFiltered, newEntityFiltered);
 	}
 
 	// Method is not static to use U and L

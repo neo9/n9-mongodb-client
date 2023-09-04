@@ -1,17 +1,16 @@
 {
+  "extends": "@tsconfig/node16/tsconfig.json",
   "compileOnSave": true,
   "compilerOptions": {
+    "strict": false,
     "module": "commonjs",
-    "target": "es2018",
-    "outDir": "dist",
     "moduleResolution": "node",
-    "skipLibCheck": true,
+    "outDir": "dist",
     "emitDecoratorMetadata": true,
     "declaration": true,
     "experimentalDecorators": true,
     "noImplicitAny": false,
-    "sourceMap": true,
-    "lib": ["es2015", "es2016", "es2017", "es2018"]
+    "sourceMap": true
   },
   "exclude": ["node_modules", "dist"]
 }
