@@ -1,5 +1,12 @@
 
 
+# [1.0.0-rc.3](https://github.com/neo9/n9-mongodb-client/compare/1.0.0-rc.2...1.0.0-rc.3) (2023-09-05)
+
+
+### types
+
+* Export cursors ([4420933](https://github.com/neo9/n9-mongodb-client/commit/44209337f424bad7ec8d2048ccdc0be35a86a602))
+
 # [1.0.0-rc.2](https://github.com/neo9/n9-mongodb-client/compare/1.0.0-rc.1...1.0.0-rc.2) (2023-09-05)
 
 
