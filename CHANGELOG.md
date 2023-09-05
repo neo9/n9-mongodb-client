@@ -1,5 +1,16 @@
 
 
+# [1.0.0-rc.2](https://github.com/neo9/n9-mongodb-client/compare/1.0.0-rc.1...1.0.0-rc.2) (2023-09-05)
+
+
+### doc
+
+* Replace travis icon by github actions one ([62131d4](https://github.com/neo9/n9-mongodb-client/commit/62131d473d87d1b0540158e994541846e0476838))
+
+### yarn
+
+* Rename from n9-mongo-client to n9-mongodb-client ([822457e](https://github.com/neo9/n9-mongodb-client/commit/822457ecd0b0b236217de0b02514745ab3d80978))
+
 # [1.0.0-rc.1](https://github.com/neo9/n9-mongodb-client/compare/1.0.0-rc.0...1.0.0-rc.1) (2023-09-05)
 
 
