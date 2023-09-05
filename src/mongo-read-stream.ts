@@ -4,7 +4,7 @@ import { Sort } from 'mongodb';
 import { Readable, Writable } from 'stream';
 
 import { MongoClient } from './client';
-import { N9FindCursor } from './cursors/n9-find-cursor';
+import { N9FindCursor } from './cursors';
 import { FilterQuery } from './index';
 import { LangUtils } from './lang-utils';
 import { LodashReplacerUtils } from './lodash-replacer.utils';

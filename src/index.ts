@@ -14,6 +14,7 @@ import {
 export { ObjectId } from 'mongodb';
 
 export * from './client';
+export * from './cursors';
 export * from './lang-utils';
 export * from './lock-fields-manager';
 export * from './lock';

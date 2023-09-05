@@ -24,11 +24,19 @@ Notable Changes
 Upgrade main steps
 
 - `yarn remove @neo9/n9-mongo-client && yarn add @neo9/n9-mongodb-client@^1.0.0-rc.2` (this also upgrade all transitive dependencies)
-- `yarn remove @types/mongodb`
-- `yarn upgrade typescript @neo9/n9-coding-style prettier --latest`
+- Rename usage : `find src/ -type f -exec sed -i -e 's#@neo9/n9-mongo-client#@neo9/n9-mongodb-client#g' {} +`
+- Remove old mongodb types :
+
+  - `yarn remove @types/mongodb`
+  - `find src/ -type f -exec sed -i -e "s#from 'mongodb'# from '@neo9/n9-mongodb-client/mongodb'#g" {} +`
+  - :warning: `find src/ -type f -exec sed -i -e "s#Cursor<#N9FindCursor<#g" {} +` Can fix most of cases
+
+- Upgrade dependencies required : `yarn upgrade typescript @neo9/n9-coding-style prettier --latest`
   - Upgrade tsconfig for node 16+ :
     - `yarn add -D @tsconfig/node16`
+    - `yarn remove @tsconfig/node14`
     - Upgrade `tsconfig.json` file
+      - `sed -i 's#node14#node16#g' tsconfig.json`
 - Upgrade MongoDb used for tests to version 6.0+
 - Change MongoDB types imports from `import ... from 'mongodb';` to `import ... from '@neo9/n9-mongodb-client/mongodb';`
 

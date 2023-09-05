@@ -31,8 +31,7 @@ import {
 	UpdateQuery,
 } from '.';
 import { AggregationBuilder } from './aggregation-utils';
-import { N9AggregationCursor } from './cursors/n9-aggregation-cursor';
-import { N9FindCursor } from './cursors/n9-find-cursor';
+import { N9AggregationCursor, N9FindCursor } from './cursors';
 import { HistoricManager } from './historic-manager';
 import { IndexManager } from './index-manager';
 import { LangUtils } from './lang-utils';
