@@ -1,5 +1,12 @@
 
 
+# [1.0.0-rc.4](https://github.com/neo9/n9-mongodb-client/compare/1.0.0-rc.3...1.0.0-rc.4) (2023-09-05)
+
+
+### cursor
+
+* Fix aggregation cursor map return type ([19a2ff2](https://github.com/neo9/n9-mongodb-client/commit/19a2ff277c61cff3a1caba278833b9ab335612e3))
+
 # [1.0.0-rc.3](https://github.com/neo9/n9-mongodb-client/compare/1.0.0-rc.2...1.0.0-rc.3) (2023-09-05)
 
 
