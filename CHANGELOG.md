@@ -1,5 +1,12 @@
 
 
+# [1.0.0-rc.1](https://github.com/neo9/n9-mongo-client/compare/1.0.0-rc.0...1.0.0-rc.1) (2023-09-05)
+
+
+### yarn
+
+* Change build directory ([b3b4945](https://github.com/neo9/n9-mongo-client/commit/b3b49450c06a687d4d2e6378aa5781c119beb903))
+
 # [1.0.0-rc.0](https://github.com/neo9/n9-mongo-client/compare/0.33.0...1.0.0-rc.0) (2023-09-04)
 
 
