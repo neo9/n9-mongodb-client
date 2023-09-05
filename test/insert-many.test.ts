@@ -31,7 +31,7 @@ test('[INSERT-MANY] Insert many', async (t: Assertions) => {
 	);
 
 	t.is(insertedValues.length, 50, '50 elements inserted');
-	t.is(typeof insertedValues[0]._id, 'string', '_id inserted is a string throw n9-mongo-client');
+	t.is(typeof insertedValues[0]._id, 'string', '_id inserted is a string throw n9-mongodb-client');
 	const insertedValueFoundWithNativeClient = await (global.db as Db)
 		.collection(collectionName)
 		.findOne<any>({ key: 'value2' });

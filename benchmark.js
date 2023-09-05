@@ -33,7 +33,7 @@ async function runInsertBench(defaultCaseRunOptions, version) {
 			defaultCaseRunOptions,
 		),
 		add(
-			'Insert N9MongoClient',
+			'Insert N9MongodbClient',
 			async () => {
 				const mongoClient = new MongoClient('test-2', TestEntity, TestEntity);
 				return async () => {
@@ -91,7 +91,7 @@ async function runUpdateManyAtOnceBench(defaultCaseRunOptions, version) {
 			defaultCaseRunOptions,
 		),
 		add(
-			'Update many at once N9MongoClient with query a string',
+			'Update many at once N9MongodbClient with query a string',
 			async () => {
 				const mongoClient = new MongoClient('test-2', TestEntity, TestEntity);
 				return async () => {
@@ -109,7 +109,7 @@ async function runUpdateManyAtOnceBench(defaultCaseRunOptions, version) {
 			defaultCaseRunOptions,
 		),
 		add(
-			'Update many at once N9MongoClient with query a string without returning new values',
+			'Update many at once N9MongodbClient with query a string without returning new values',
 			async () => {
 				const mongoClient = new MongoClient('test-2', TestEntity, TestEntity);
 				return async () => {
@@ -127,7 +127,7 @@ async function runUpdateManyAtOnceBench(defaultCaseRunOptions, version) {
 			defaultCaseRunOptions,
 		),
 		add(
-			'Update many at once N9MongoClient with query as function',
+			'Update many at once N9MongodbClient with query as function',
 			async () => {
 				const mongoClient = new MongoClient('test-2', TestEntity, TestEntity);
 				return async () => {
@@ -143,7 +143,7 @@ async function runUpdateManyAtOnceBench(defaultCaseRunOptions, version) {
 			},
 			defaultCaseRunOptions,
 		),
-		add('Update many at once N9MongoClient with lock fields', async () => {
+		add('Update many at once N9MongodbClient with lock fields', async () => {
 			const mongoClient = new MongoClient('test-2', TestEntity, TestEntity);
 			return async () => {
 				await mongoClient.updateManyAtOnce(dataToInsert, 'userId', {
@@ -157,7 +157,7 @@ async function runUpdateManyAtOnceBench(defaultCaseRunOptions, version) {
 			};
 		}),
 		add(
-			'Update many at once N9MongoClient with no query',
+			'Update many at once N9MongodbClient with no query',
 			async () => {
 				const mongoClient = new MongoClient('test-2', TestEntity, TestEntity);
 				return async () => {
@@ -170,7 +170,7 @@ async function runUpdateManyAtOnceBench(defaultCaseRunOptions, version) {
 			defaultCaseRunOptions,
 		),
 		add(
-			'Update many at once N9MongoClient with async hooks and query',
+			'Update many at once N9MongodbClient with async hooks and query',
 			async () => {
 				const mongoClient = new MongoClient('test-2', TestEntity, TestEntity);
 				return async () => {
@@ -254,7 +254,7 @@ async function runUpdateManyAtOnceHistoricBench(defaultCaseRunOptions, version) 
 			defaultCaseRunOptions,
 		),
 		add(
-			'Update many at once N9MongoClient with historic',
+			'Update many at once N9MongodbClient with historic',
 			async () => {
 				const mongoClient = new MongoClient('test-2', TestEntity, TestEntity, {
 					keepHistoric: true,
@@ -279,7 +279,7 @@ async function runUpdateManyAtOnceHistoricBench(defaultCaseRunOptions, version) 
 			defaultCaseRunOptions,
 		),
 		add(
-			'Update many at once N9MongoClient with historic & update on change',
+			'Update many at once N9MongodbClient with historic & update on change',
 			async () => {
 				const mongoClient = new MongoClient('test-2', TestEntity, TestEntity, {
 					keepHistoric: true,
@@ -305,7 +305,7 @@ async function runUpdateManyAtOnceHistoricBench(defaultCaseRunOptions, version) 
 			defaultCaseRunOptions,
 		),
 		add(
-			'Update many at once N9MongoClient with update on change only',
+			'Update many at once N9MongodbClient with update on change only',
 			async () => {
 				const mongoClient = new MongoClient('test-2', TestEntity, TestEntity, {
 					keepHistoric: false,
@@ -331,7 +331,7 @@ async function runUpdateManyAtOnceHistoricBench(defaultCaseRunOptions, version) 
 			defaultCaseRunOptions,
 		),
 		add(
-			'Update many at once N9MongoClient with update on change omit',
+			'Update many at once N9MongodbClient with update on change omit',
 			async () => {
 				const mongoClient = new MongoClient('test-2', TestEntity, TestEntity, {
 					keepHistoric: false,
@@ -361,7 +361,7 @@ async function runUpdateManyAtOnceHistoricBench(defaultCaseRunOptions, version) 
 			defaultCaseRunOptions,
 		),
 		add(
-			'Update many at once N9MongoClient with update on change pick',
+			'Update many at once N9MongodbClient with update on change pick',
 			async () => {
 				const mongoClient = new MongoClient('test-2', TestEntity, TestEntity, {
 					keepHistoric: false,
@@ -430,7 +430,7 @@ async function runFindBench(defaultCaseRunOptions, version) {
 			defaultCaseRunOptions,
 		),
 		add(
-			'Read N9MongoClient',
+			'Read N9MongodbClient',
 			async () => {
 				const cursor2 = mongoClient.find({}, 0, 0);
 				// read all cursor2 one by one

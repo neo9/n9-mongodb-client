@@ -40,7 +40,7 @@ export interface UpdateOnlyOnChangeConfiguration {
 }
 
 /**
- * Options to pass to n9-mongo-client to configure its behaviour
+ * Options to pass to n9-mongodb-client to configure its behaviour
  */
 export interface MongoClientConfiguration {
 	/**

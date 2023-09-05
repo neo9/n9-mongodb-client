@@ -1,5 +1,5 @@
 {
-  "name": "@neo9/n9-mongo-client",
+  "name": "@neo9/n9-mongodb-client",
   "version": "1.0.0-rc.1",
   "description": "Library to easily start app with routing-controllers",
   "main": "dist/index.js",
@@ -38,9 +38,9 @@
   "author": "Benjamin DANIEL <benjamin.daniel@neo9.fr>",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/neo9/n9-mongo-client.git"
+    "url": "git+https://github.com/neo9/n9-mongodb-client.git"
   },
-  "homepage": "https://github.com/neo9/n9-mongo-client#n9-mongo-client",
+  "homepage": "https://github.com/neo9/n9-mongodb-client#n9-mongodb-client",
   "tags": [
     "mongodb",
     "driver"
@@ -85,7 +85,7 @@
     "typescript": "~5.2.2"
   },
   "bugs": {
-    "url": "https://github.com/neo9/n9-mongo-client/issues"
+    "url": "https://github.com/neo9/n9-mongodb-client/issues"
   },
   "directories": {
     "test": "test"

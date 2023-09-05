@@ -59,14 +59,14 @@ test('[MONGO-UTILS] URI connection log', async (t: Assertions) => {
 	t.regex(output.stdout[0], mongoURIregex, 'URI should be identic');
 
 	const mongoPassword = 'PaSsw0rD';
-	const mongoURIWithPassword = `mongodb://login:${mongoPassword}@localhost:27017/test-n9-mongo-client`;
+	const mongoURIWithPassword = `mongodb://login:${mongoPassword}@localhost:27017/test-n9-mongodb-client`;
 	const mongoURIPasswordRegex = new RegExp(_.escapeRegExp(mongoPassword));
 
 	await t.throwsAsync(MongoUtils.connect(mongoURIWithPassword));
 	output = stdMocks.flush();
 
 	t.notRegex(output.stdout[0], mongoURIPasswordRegex, 'Password should not be displayed in URI');
-	t.regex(output.stdout[0], /localhost:27017\/test-n9-mongo-client/, 'Log should contain URI');
+	t.regex(output.stdout[0], /localhost:27017\/test-n9-mongodb-client/, 'Log should contain URI');
 
 	await mongod.stop();
 });
