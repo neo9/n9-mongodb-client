@@ -120,7 +120,7 @@ test('[Cursor] Check cursor clone function', async (t: ExecutionContext<ContextC
 });
 
 test('[Cursor] Check cursor map function : should change data', async (t: ExecutionContext<ContextContent>) => {
-	const cursor = t.context.mongoClient
+	const cursor: N9AggregationCursor<{ _id: string; somethingElse: string }> = t.context.mongoClient
 		.aggregate<SampleType>([{ $sort: { field1String: 1 } }])
 		.map((sampleType: SampleType) => ({
 			_id: sampleType._id.toString(),

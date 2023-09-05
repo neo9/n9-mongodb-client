@@ -94,7 +94,7 @@ export class N9FindCursor<E> extends N9AbstractCursor<E> implements FindCursor<E
 	}
 
 	map<T>(transform: (doc: E) => T): N9FindCursor<T> {
-		this.findCursor.map(transform);
+		super.map(transform);
 		return this as any;
 	}
 

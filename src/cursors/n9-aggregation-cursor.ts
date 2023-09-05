@@ -31,6 +31,11 @@ export class N9AggregationCursor<E> extends N9AbstractCursor<E> {
 		await super.next();
 	}
 
+	map<T>(transform: (doc: E) => T): N9AggregationCursor<T> {
+		super.map(transform);
+		return this as any;
+	}
+
 	/**
 	 * Get the count of documents for this cursor using the filterQuery.
 	 *

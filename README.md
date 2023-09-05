@@ -1,7 +1,7 @@
 # n9-mongodb-client
 
 [![npm version](https://img.shields.io/npm/v/@neo9/n9-mongodb-client.svg)](https://www.npmjs.com/package/@neo9/n9-mongodb-client)
-[![Build Status](https://img.shields.io/endpoint.svg?url=https%3A%2F%2Factions-badge.atrox.dev%2Fneo9%2Fn9-mongodb-migration%2Fbadge&style=flat)](https://actions-badge.atrox.dev/neo9/n9-mongodb-migration/goto)
+[![Build Status](https://img.shields.io/endpoint.svg?url=https%3A%2F%2Factions-badge.atrox.dev%2Fneo9%2Fn9-mongodb-client%2Fbadge&style=flat)](https://actions-badge.atrox.dev/neo9/n9-mongodb-client/goto)
 [![Coverage](https://img.shields.io/codecov/c/github/neo9/n9-mongodb-client/master.svg)](https://codecov.io/gh/neo9/n9-mongodb-client)
 
 A client to use easily MongoDB official driver.
@@ -29,6 +29,7 @@ Upgrade main steps
 
   - `yarn remove @types/mongodb`
   - `find src/ -type f -exec sed -i -e "s#from 'mongodb'# from '@neo9/n9-mongodb-client/mongodb'#g" {} +`
+  - :warning: `find src/ -type f -exec sed -i -e "s#AggregationCursor<#N9AggregationCursor<#g" {} +` Can fix most of cases
   - :warning: `find src/ -type f -exec sed -i -e "s#Cursor<#N9FindCursor<#g" {} +` Can fix most of cases
 
 - Upgrade dependencies required : `yarn upgrade typescript @neo9/n9-coding-style prettier --latest`
