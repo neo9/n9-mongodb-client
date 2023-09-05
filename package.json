@@ -2,14 +2,12 @@
   "name": "@neo9/n9-mongo-client",
   "version": "1.0.0-rc.0",
   "description": "Library to easily start app with routing-controllers",
-  "main": "dist/src/index.js",
-  "types": "dist/src/index.d.ts",
-  "files": [
-    "dist/src"
-  ],
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": ["dist", "mongodb.d.ts"],
   "license": "MIT",
   "scripts": {
-    "build": "rimraf dist/ && tsc",
+    "build": "rimraf dist/ mongodb.d.ts && tsc && rm -rf dist/test && mv dist/src/* dist/ && rm -rf dist/src && cp dist/mongodb.d.ts ./",
     "dev": "rimraf dist/ && tsc --watch",
     "format": "prettier --write '{,@(src|test)/**/}*.*'",
     "lint": "eslint --config .eslintrc.yaml '{src,test}/**/*.ts'",
@@ -40,11 +38,7 @@
     "url": "git+https://github.com/neo9/n9-mongo-client.git"
   },
   "homepage": "https://github.com/neo9/n9-mongo-client#n9-mongo-client",
-  "tags": [
-    "express",
-    "typescript-express",
-    "routing-controllers"
-  ],
+  "tags": ["mongodb", "driver"],
   "engines": {
     "node": ">=16.20.2"
   },
@@ -90,24 +84,11 @@
   "directories": {
     "test": "test"
   },
-  "keywords": [
-    "mongo",
-    "mongodb",
-    "client",
-    "driver",
-    "Neo9",
-    "France"
-  ],
+  "keywords": ["mongo", "mongodb", "client", "driver", "Neo9", "France"],
   "ava": {
-    "files": [
-      "test/*"
-    ],
+    "files": ["test/*"],
     "timeout": "1m",
-    "extensions": [
-      "ts"
-    ],
-    "require": [
-      "ts-node/register"
-    ]
+    "extensions": ["ts"],
+    "require": ["ts-node/register"]
   }
 }

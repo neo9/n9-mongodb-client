@@ -20,6 +20,17 @@ Notable Changes
 
 - `Cursor` are now `N9FindCursor` or `N9AggregationCursor`
 
+Upgrade main steps
+
+- `yarn remove @neo9/n9-mongo-client && yarn add @neo9/n9-mongo-client@^1.0.0-rc.0` Upgrade all transitive dependencies
+- `yarn remove @types/mongodb`
+- `yarn upgrade typescript @neo9/n9-coding-style prettier --latest`
+  - Upgrade tsconfig for node 16+ :
+    - `yarn add -D @tsconfig/node16`
+    - Upgrade `tsconfig.json` file
+- Upgrade MongoDb used for tests to version 6.0+
+- Change MongoDB types imports from `import ... from 'mongodb';` to `import ... from '@neo9/n9-mongo-client/mongodb';`
+
 ## To build
 
 Use node 16.20.2+ to build and yarn.

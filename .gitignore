@@ -8,6 +8,7 @@ node_modules
 
 # Build directory
 dist
+/mongodb.d.ts
 
 # Editor's config directories
 .vscode
