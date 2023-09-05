@@ -1,7 +1,7 @@
 # n9-mongodb-client
 
 [![npm version](https://img.shields.io/npm/v/@neo9/n9-mongodb-client.svg)](https://www.npmjs.com/package/@neo9/n9-mongodb-client)
-[![Travis](https://app.travis-ci.com/neo9/n9-mongodb-client.svg?branch=master)](https://app.travis-ci.com/github/neo9/n9-mongodb-client)
+[![Build Status](https://img.shields.io/endpoint.svg?url=https%3A%2F%2Factions-badge.atrox.dev%2Fneo9%2Fn9-mongodb-migration%2Fbadge&style=flat)](https://actions-badge.atrox.dev/neo9/n9-mongodb-migration/goto)
 [![Coverage](https://img.shields.io/codecov/c/github/neo9/n9-mongodb-client/master.svg)](https://codecov.io/gh/neo9/n9-mongodb-client)
 
 A client to use easily MongoDB official driver.
