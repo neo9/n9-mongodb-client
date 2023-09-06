@@ -8,10 +8,10 @@ export class N9AggregationCursor<E> extends N9AbstractCursor<E> {
 	private _filterQuery: Filter<E>; // can be edited with filter function
 
 	public constructor(
-		collection: Collection<any>,
+		private readonly collection: Collection<any>,
 		private readonly aggregationCursor: AggregationCursor<E>,
 	) {
-		super(collection, aggregationCursor);
+		super(aggregationCursor);
 	}
 
 	/**
@@ -33,7 +33,7 @@ export class N9AggregationCursor<E> extends N9AbstractCursor<E> {
 
 	map<T>(transform: (doc: E) => T): N9AggregationCursor<T> {
 		super.map(transform);
-		return this as any;
+		return this as any; // N9AggregationCursor<T> instead of N9AggregationCursor<E>
 	}
 
 	/**

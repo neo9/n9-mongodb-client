@@ -61,6 +61,7 @@ test('[Cursor] iterate using while hasNext ... next', async (t: ExecutionContext
 	await cursor.hasNext();
 	while (await cursor.hasNext()) {
 		const item = await cursor.next();
+		_.first(item.field1String).charAt(5); // check next returned type : type of sampleType should be deduced automatically
 		items2.push(item);
 	}
 	t.is(items2.length, 5, 'cursor contains 5 items read with hasNext and next');
@@ -122,7 +123,8 @@ test('[Cursor] Check cursor clone function', async (t: ExecutionContext<ContextC
 test('[Cursor] Check cursor map function : should change data', async (t: ExecutionContext<ContextContent>) => {
 	const cursor: N9AggregationCursor<{ _id: string; somethingElse: string }> = t.context.mongoClient
 		.aggregate<SampleType>([{ $sort: { field1String: 1 } }])
-		.map((sampleType: SampleType) => ({
+		.map((sampleType) => ({
+			// type of sampleType should be deduced automatically
 			_id: sampleType._id.toString(),
 			somethingElse: sampleType.field1String,
 		}));

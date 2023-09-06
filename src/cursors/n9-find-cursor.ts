@@ -14,16 +14,24 @@ import {
 } from 'mongodb';
 
 import { AggregationBuilder } from '../aggregation-utils';
+import { AggregationPipelineStage } from '../models';
 import { N9AbstractCursor } from './n9-abstract-cursor';
 
 export class N9FindCursor<E> extends N9AbstractCursor<E> implements FindCursor<E> {
+	private readonly aggregateCountPipeline: AggregationPipelineStage[] = new AggregationBuilder(
+		this.collection.collectionName,
+	)
+		.match(this.filterQuery)
+		.group({ _id: '1', count: { $sum: 1 } })
+		.build();
+
 	public constructor(
-		collection: Collection<any>,
+		private readonly collection: Collection<any>,
 		private readonly findCursor: FindCursor<E>,
 		private filterQuery: Filter<E>, // can be edited with filter function
 		private readonly options: Pick<FindOptions, 'collation'> = {},
 	) {
-		super(collection, findCursor);
+		super(findCursor);
 	}
 
 	/**
@@ -34,10 +42,7 @@ export class N9FindCursor<E> extends N9AbstractCursor<E> implements FindCursor<E
 		// It needs an aggregate function with the collation options to return a count value
 		if (this.options.collation) {
 			const cursor: AggregationCursor<Document> = this.collection.aggregate(
-				new AggregationBuilder(this.collection.collectionName)
-					.match(this.filterQuery)
-					.group({ _id: '1', count: { $sum: 1 } })
-					.build(),
+				this.aggregateCountPipeline,
 				{ collation: this.options.collation },
 			);
 			return (await cursor.toArray())[0].count;
@@ -90,12 +95,12 @@ export class N9FindCursor<E> extends N9AbstractCursor<E> implements FindCursor<E
 	 */
 	project<T>(value: Document): N9FindCursor<T> {
 		this.findCursor.project(value);
-		return this as any;
+		return this as any; // N9FindCursor<T> instead of N9FindCursor<E>
 	}
 
 	map<T>(transform: (doc: E) => T): N9FindCursor<T> {
 		super.map(transform);
-		return this as any;
+		return this as any; // N9FindCursor<T> instead of N9FindCursor<E>
 	}
 
 	allowDiskUse(allow: boolean | undefined): this {

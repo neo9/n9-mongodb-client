@@ -3,7 +3,6 @@ import * as _ from 'lodash';
 import {
 	AbstractCursor,
 	AbstractCursorEvents,
-	Collection,
 	CommonEvents,
 	CursorFlag,
 	Document,
@@ -21,10 +20,7 @@ export abstract class N9AbstractCursor<E>
 	extends Readable
 	implements AbstractCursor<E>, AsyncIterable<E>
 {
-	protected constructor(
-		protected readonly collection: Collection<any>,
-		protected readonly cursor: AbstractCursor<E>,
-	) {
+	protected constructor(protected readonly cursor: AbstractCursor<E>) {
 		super({
 			objectMode: true,
 			highWaterMark: 1, // same as mongodb-native-client : https://github.com/mongodb/node-mongodb-native/blob/v5.7.0/src/cursor/abstract_cursor.ts#L339C19-L339C19
@@ -74,7 +70,7 @@ export abstract class N9AbstractCursor<E>
 
 	map<T>(transform: (doc: E) => T): N9AbstractCursor<T> {
 		this.cursor.map(transform);
-		return this as any;
+		return this as any; // N9AbstractCursor<T> instead of N9AbstractCursor<E>
 	}
 
 	addCursorFlag(flag: CursorFlag, value: boolean): this {
@@ -112,7 +108,7 @@ export abstract class N9AbstractCursor<E>
 	/**
 	 * @deprecated Use for await ... of ... instead
 	 */
-	async forEach(iterator: (doc: any) => boolean | void): Promise<void> {
+	async forEach(iterator: (doc: E) => boolean | void): Promise<void> {
 		return await this.cursor.forEach(iterator);
 	}
 
@@ -165,11 +161,11 @@ export abstract class N9AbstractCursor<E>
 		return this.cursor.namespace;
 	}
 
-	async next(): Promise<any> {
+	async next(): Promise<E> {
 		return await this.cursor.next();
 	}
 
-	readBufferedDocuments(number?: number | undefined): any[] {
+	readBufferedDocuments(number?: number | undefined): E[] {
 		return this.cursor.readBufferedDocuments(number);
 	}
 
@@ -192,7 +188,7 @@ export abstract class N9AbstractCursor<E>
 	 * Examples available in find-cursor.test.ts
 	 * Not implemented
 	 */
-	stream(): Readable & AsyncIterable<any> {
+	stream(): Readable & AsyncIterable<E> {
 		throw new N9Error('unsupported-function-stream', 501);
 	}
 
@@ -250,7 +246,7 @@ export abstract class N9AbstractCursor<E>
 	// eslint-disable-next-line no-dupe-class-members,@typescript-eslint/typedef,@typescript-eslint/no-unused-vars
 	emit(event, ...args: any[]): boolean {
 		if (event === AbstractCursor.CLOSE) {
-			return (this.cursor.emit as any)(event, ...args);
+			return this.cursor.emit(event, ...args);
 		}
 		return super.emit(event, ...args);
 	}

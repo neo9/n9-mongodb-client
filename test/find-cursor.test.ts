@@ -62,6 +62,7 @@ test('[Cursor] iterate using while hasNext ... next', async (t: ExecutionContext
 	await cursor.hasNext();
 	while (await cursor.hasNext()) {
 		const item = await cursor.next();
+		_.first(item.field1String).charAt(5); // check next returned type : type of sampleType should be deduced automatically
 		items.push(item);
 	}
 
