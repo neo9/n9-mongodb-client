@@ -1,5 +1,12 @@
 
 
+# [1.0.0-rc.5](https://github.com/neo9/n9-mongodb-client/compare/1.0.0-rc.4...1.0.0-rc.5) (2023-09-06)
+
+
+### types
+
+* Add missing types on cursors ([5a5493b](https://github.com/neo9/n9-mongodb-client/commit/5a5493b172335a38f1c177057cdbbec2253e63a8))
+
 # [1.0.0-rc.4](https://github.com/neo9/n9-mongodb-client/compare/1.0.0-rc.3...1.0.0-rc.4) (2023-09-05)
 
 
