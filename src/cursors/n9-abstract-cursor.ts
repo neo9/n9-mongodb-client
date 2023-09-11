@@ -229,10 +229,6 @@ export abstract class N9AbstractCursor<E>
 	addListener(eventName: string | symbol, listener: (...args: any[]) => void): this;
 	// eslint-disable-next-line no-dupe-class-members,@typescript-eslint/typedef
 	addListener(event, listener): this {
-		// Source : https://github.com/mongodb/node-mongodb-native/blob/v5.7.0/src/cursor/abstract_cursor.ts#L128
-		if (event === AbstractCursor.CLOSE) {
-			this.cursor.on(event, listener);
-		}
 		super.addListener(event, listener);
 		return this;
 	}
@@ -245,9 +241,6 @@ export abstract class N9AbstractCursor<E>
 	emit(eventName: string | symbol, ...args: any[]): boolean;
 	// eslint-disable-next-line no-dupe-class-members,@typescript-eslint/typedef,@typescript-eslint/no-unused-vars
 	emit(event, ...args: any[]): boolean {
-		if (event === AbstractCursor.CLOSE) {
-			return this.cursor.emit(event, ...args);
-		}
 		return super.emit(event, ...args);
 	}
 
@@ -256,11 +249,11 @@ export abstract class N9AbstractCursor<E>
 	eventNames(): (string | symbol)[];
 	// eslint-disable-next-line no-dupe-class-members
 	eventNames(): string[] | (string | symbol)[] {
-		return this.cursor.eventNames();
+		return super.eventNames();
 	}
 
 	getMaxListeners(): number {
-		return this.cursor.getMaxListeners();
+		return super.getMaxListeners();
 	}
 
 	listenerCount<EventKey extends keyof AbstractCursorEvents>(
@@ -270,7 +263,7 @@ export abstract class N9AbstractCursor<E>
 	listenerCount(eventName: string | symbol): number;
 	// eslint-disable-next-line no-dupe-class-members,@typescript-eslint/typedef
 	listenerCount(type): number {
-		return this.cursor.listenerCount(type);
+		return super.listenerCount(type);
 	}
 
 	listeners<EventKey extends keyof AbstractCursorEvents>(
@@ -280,7 +273,7 @@ export abstract class N9AbstractCursor<E>
 	listeners(eventName: string | symbol): Function[];
 	// eslint-disable-next-line no-dupe-class-members,@typescript-eslint/typedef
 	listeners(event): any {
-		return this.cursor.listeners(event);
+		return super.listeners(event);
 	}
 
 	off<EventKey extends keyof AbstractCursorEvents>(
@@ -299,7 +292,7 @@ export abstract class N9AbstractCursor<E>
 	// istanbul ignore next
 	// eslint-disable-next-line no-dupe-class-members,@typescript-eslint/typedef
 	off(event, listener): this {
-		this.cursor.off(event, listener);
+		super.off(event, listener);
 		return this;
 	}
 
@@ -318,10 +311,6 @@ export abstract class N9AbstractCursor<E>
 	on(eventName: string | symbol, listener: (...args: any[]) => void): this;
 	// eslint-disable-next-line no-dupe-class-members,@typescript-eslint/typedef
 	on(event, listener): this {
-		// Source : https://github.com/mongodb/node-mongodb-native/blob/v5.7.0/src/cursor/abstract_cursor.ts#L128
-		if (event === AbstractCursor.CLOSE) {
-			this.cursor.on(event, listener);
-		}
 		super.on(event, listener);
 		return this;
 	}
@@ -341,10 +330,6 @@ export abstract class N9AbstractCursor<E>
 	once(eventName: string | symbol, listener: (...args: any[]) => void): this;
 	// eslint-disable-next-line no-dupe-class-members,@typescript-eslint/typedef
 	once(event, listener): this {
-		// Source : https://github.com/mongodb/node-mongodb-native/blob/v5.7.0/src/cursor/abstract_cursor.ts#L128
-		if (event === AbstractCursor.CLOSE) {
-			this.cursor.once(event, listener);
-		}
 		super.once(event, listener);
 		return this;
 	}
@@ -365,10 +350,6 @@ export abstract class N9AbstractCursor<E>
 	// istanbul ignore next
 	// eslint-disable-next-line no-dupe-class-members,@typescript-eslint/typedef
 	prependListener(event, listener): this {
-		// Source : https://github.com/mongodb/node-mongodb-native/blob/v5.7.0/src/cursor/abstract_cursor.ts#L128
-		if (event === AbstractCursor.CLOSE) {
-			this.cursor.prependListener(event, listener);
-		}
 		super.prependListener(event, listener);
 		return this;
 	}
@@ -389,10 +370,6 @@ export abstract class N9AbstractCursor<E>
 	// istanbul ignore next
 	// eslint-disable-next-line no-dupe-class-members,@typescript-eslint/typedef
 	prependOnceListener(event, listener): this {
-		// Source : https://github.com/mongodb/node-mongodb-native/blob/v5.7.0/src/cursor/abstract_cursor.ts#L128
-		if (event === AbstractCursor.CLOSE) {
-			this.cursor.prependOnceListener(event, listener);
-		}
 		super.prependOnceListener(event, listener);
 		return this;
 	}
@@ -416,7 +393,6 @@ export abstract class N9AbstractCursor<E>
 	// istanbul ignore next
 	// eslint-disable-next-line no-dupe-class-members,@typescript-eslint/typedef
 	removeAllListeners(event?): this {
-		this.cursor.removeAllListeners(event);
 		super.removeAllListeners(event);
 		return this;
 	}
@@ -437,7 +413,6 @@ export abstract class N9AbstractCursor<E>
 	// istanbul ignore next
 	// eslint-disable-next-line no-dupe-class-members,@typescript-eslint/typedef
 	removeListener(event, listener): this {
-		this.cursor.removeListener(event, listener);
 		super.removeListener(event, listener);
 		return this;
 	}
@@ -448,7 +423,6 @@ export abstract class N9AbstractCursor<E>
 	// istanbul ignore next
 	// eslint-disable-next-line no-dupe-class-members
 	setMaxListeners(n: number): this {
-		this.cursor.setMaxListeners(n);
 		super.setMaxListeners(n);
 		return this;
 	}

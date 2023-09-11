@@ -1,7 +1,8 @@
 import { N9Log } from '@neo9/n9-node-log';
+import { N9JSONStream, N9JSONStreamResponse } from '@neo9/n9-node-utils';
 import test, { ExecutionContext } from 'ava';
 import * as _ from 'lodash';
-import { Transform } from 'stream';
+import { pipeline, Transform } from 'stream';
 
 import { BaseMongoObject, MongoClient, MongoUtils, N9FindCursor } from '../src';
 import {
@@ -121,6 +122,106 @@ test('[Cursor] hasNext before piping into a stream ', async (t: ExecutionContext
 	});
 
 	t.is(items.length, 5, 'stream contains 5 items');
+});
+
+test('[Cursor] directly piping into a stream ', async (t: ExecutionContext<ContextContent>) => {
+	const cursor = t.context.mongoClient.find({}, 0, 0);
+
+	const items: SampleType[] = [];
+	await new Promise<void>((resolve, reject) => {
+		cursor
+			.once('close', () => resolve())
+			.on('error', (e) => reject(e))
+			.pipe(
+				new Transform({
+					writableObjectMode: true,
+					transform: (chunk: any, encoding: string, next: any): void => {
+						items.push(chunk);
+						next(null, JSON.stringify(chunk));
+					},
+				}),
+			)
+			.pipe(process.stdout);
+	});
+
+	t.is(items.length, 5, 'stream contains 5 items');
+});
+
+test('[Cursor] piping to N9JSONStream ', async (t: ExecutionContext<ContextContent>) => {
+	const cursor = t.context.mongoClient.find({}, 0, 0);
+
+	let streamedData = '';
+	const total = await cursor.count();
+	await new Promise<void>((resolve, reject) => {
+		cursor
+			.pipe(
+				new N9JSONStream<{ _id: string }, { test: number }>({
+					total,
+				}),
+			)
+			.on('data', (data: string) => {
+				streamedData += data;
+			})
+			.once('close', () => resolve())
+			.on('error', (e) => reject(e));
+	});
+
+	t.is(JSON.parse(streamedData).total, 5, 'stream dans be parsed and total is 5 items');
+	t.is(JSON.parse(streamedData).count, 5, 'stream dans be parsed and count is 5 items');
+});
+
+test('[Cursor] piping to N9JSONStream using pipeline', async (t: ExecutionContext<ContextContent>) => {
+	const cursor = t.context.mongoClient.find({}, 0, 0);
+
+	let streamedData = '';
+	const total = await cursor.count();
+	await new Promise<void>((resolve, reject) => {
+		pipeline(
+			cursor,
+			new N9JSONStream<{ _id: string }, { test: number }>({
+				total,
+			}),
+			(e) => reject(e),
+		)
+			.on('data', (data: string) => {
+				streamedData += data;
+			})
+			.once('close', () => resolve());
+	});
+
+	let parsed: N9JSONStreamResponse<SampleType>;
+	t.notThrows(() => {
+		parsed = JSON.parse(streamedData);
+	}, 'Can parse pipeling result');
+	t.is(parsed.total, 5, 'stream dans be parsed and total is 5 items');
+	t.is(parsed.count, 5, 'stream dans be parsed and count is 5 items');
+});
+
+test('[Cursor] piping to N9JSONStream one page', async (t: ExecutionContext<ContextContent>) => {
+	const cursor = t.context.mongoClient.find({}, 0, 2);
+
+	let streamedData = '';
+	const total = await cursor.count();
+	await new Promise<void>((resolve, reject) => {
+		cursor
+			.pipe(
+				new N9JSONStream<{ _id: string }, { test: number }>({
+					total,
+				}),
+			)
+			.on('data', (data: string) => {
+				streamedData += data;
+			})
+			.once('close', () => resolve())
+			.on('error', (e) => reject(e));
+	});
+
+	t.is(JSON.parse(streamedData).total, 5, 'stream dans be parsed and total is 5 items');
+	t.is(
+		JSON.parse(streamedData).count,
+		2,
+		'stream dans be parsed and count is 2 items, size of page',
+	);
 });
 
 // Test for https://jira.mongodb.org/browse/NODE-2454
@@ -645,7 +746,7 @@ test('[Cursor] Check events listing functions', async (t: ExecutionContext<Conte
 	});
 	t.is(items?.length, 5, 'has 5 items');
 
-	t.deepEqual(cursor.eventNames(), ['close'], 'eventNames are only close');
+	t.deepEqual(cursor.eventNames(), ['close', 'error'], 'eventNames are close and error');
 	t.is(
 		cursor.listeners('close')?.[0],
 		onClose,
