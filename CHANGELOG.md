@@ -1,5 +1,12 @@
 
 
+# [1.0.0-rc.6](https://github.com/neo9/n9-mongodb-client/compare/1.0.0-rc.5...1.0.0-rc.6) (2023-09-11)
+
+
+### cursor
+
+* Fix events subscriptions on cursor and readable stream ([66fd449](https://github.com/neo9/n9-mongodb-client/commit/66fd4498ef89844fc44d019e268fc721b97e5915))
+
 # [1.0.0-rc.5](https://github.com/neo9/n9-mongodb-client/compare/1.0.0-rc.4...1.0.0-rc.5) (2023-09-06)
 
 
