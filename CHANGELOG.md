@@ -1,5 +1,12 @@
 
 
+# [1.0.0-rc.7](https://github.com/neo9/n9-mongodb-client/compare/1.0.0-rc.6...1.0.0-rc.7) (2023-09-11)
+
+
+### utils
+
+* Fix removeEmptyDeep function for ObjectId objects ([6948317](https://github.com/neo9/n9-mongodb-client/commit/69483173d52c3dc9caa7a62a3ed567befa07b7aa))
+
 # [1.0.0-rc.6](https://github.com/neo9/n9-mongodb-client/compare/1.0.0-rc.5...1.0.0-rc.6) (2023-09-11)
 
 
