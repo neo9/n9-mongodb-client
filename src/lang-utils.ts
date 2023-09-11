@@ -37,7 +37,8 @@ export class LangUtils {
 				LodashReplacerUtils.IS_OBJECT(objElement) &&
 				!Array.isArray(objElement) &&
 				LodashReplacerUtils.IS_OBJECT_EMPTY(objElement) &&
-				!LodashReplacerUtils.IS_DATE(objElement) // _.isEmpty return true for Date instance
+				!LodashReplacerUtils.IS_DATE(objElement) && // LodashReplacerUtils.IS_OBJECT_EMPTY return true for Date instance
+				!(objElement as ObjectId).toHexString // LodashReplacerUtils.IS_OBJECT_EMPTY return true for ObjectId instance
 			) {
 				delete obj[key];
 			}
