@@ -31,6 +31,8 @@ Upgrade main steps
   - `find src/ -type f -exec sed -i -e "s#from 'mongodb'# from '@neo9/n9-mongodb-client/mongodb'#g" {} +`
   - :warning: `find src/ -type f -exec sed -i -e "s#AggregationCursor<#N9AggregationCursor<#g" {} +` Can fix most of cases
   - :warning: `find src/ -type f -exec sed -i -e "s#Cursor<#N9FindCursor<#g" {} +` Can fix most of cases
+  - :warning: `find src/ -type f -exec sed -i -e "s#Cursor,##g" {} +` Can fix most of cases
+  - :warning: `find src/ -type f -exec sed -i -e "s#{ FilterQuery } from '@neo9/n9-mongodb-client/mongodb';#{ FilterQuery } from '@neo9/n9-mongodb-client';#g" {} +` Can fix most of cases
 
 - Upgrade dependencies required : `yarn upgrade typescript @neo9/n9-coding-style prettier --latest`
   - Upgrade tsconfig for node 16+ :
