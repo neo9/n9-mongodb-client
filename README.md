@@ -28,13 +28,14 @@ Upgrade main steps
 - Remove old mongodb types :
 
   - `yarn remove @types/mongodb`
-  - `find src/ -type f -exec sed -i -e "s#from 'mongodb'# from '@neo9/n9-mongodb-client/mongodb'#g" {} +`
-  - :warning: `find src/ -type f -exec sed -i -e "s#AggregationCursor<#N9AggregationCursor<#g" {} +` Can fix most of cases
-  - :warning: `find src/ -type f -exec sed -i -e "s#Cursor<#N9FindCursor<#g" {} +` Can fix most of cases
-  - :warning: `find src/ -type f -exec sed -i -e "s#Cursor,##g" {} +` Can fix most of cases
-  - :warning: `find src/ -type f -exec sed -i -e "s#{ FilterQuery } from '@neo9/n9-mongodb-client/mongodb';#{ FilterQuery } from '@neo9/n9-mongodb-client';#g" {} +` Can fix most of cases
+  - `find ./ -mindepth 1 -type f -not -path "./node_modules/*" -not -path "./.git/*" -name "*.ts" -exec sed -i -e "s#from 'mongodb'# from '@neo9/n9-mongodb-client/mongodb'#g" {} +`
+  - :warning: `find ./ -mindepth 1 -type f -not -path "./node_modules/*" -not -path "./.git/*" -name "*.ts" -exec sed -i -e "s#AggregationCursor<#N9AggregationCursor<#g" {} +` Can fix most of cases
+  - :warning: `find ./ -mindepth 1 -type f -not -path "./node_modules/*" -not -path "./.git/*" -name "*.ts" -exec sed -i -e "s#Cursor<#N9FindCursor<#g" {} +` Can fix most of cases
+  - :warning: `find ./ -mindepth 1 -type f -not -path "./node_modules/*" -not -path "./.git/*" -name "*.ts" -exec sed -i -e "s#Cursor,##g" {} +` Can fix most of cases
+  - :warning: `find ./ -mindepth 1 -type f -not -path "./node_modules/*" -not -path "./.git/*" -name "*.ts" -exec sed -i -e "s#{ FilterQuery } from '@neo9/n9-mongodb-client/mongodb';#{ FilterQuery } from '@neo9/n9-mongodb-client';#g" {} +` Can fix most of cases
+  - :warning: `find ./ -mindepth 1 -type f -not -path "./node_modules/*" -not -path "./.git/*" -name "*.ts" -exec sed -i -e "s#{ Cursor }  from '@neo9/n9-mongodb-client/mongodb';#{ N9FindCursor } from '@neo9/n9-mongodb-client';#g" {} +` Can fix most of cases
 
-- Upgrade dependencies required : `yarn upgrade typescript @neo9/n9-coding-style prettier --latest`
+- Upgrade dependencies required : `yarn upgrade typescript@^5.2.2 @neo9/n9-coding-style@^5.1.2 prettier@^3.0.3`
   - Upgrade tsconfig for node 16+ :
     - `yarn add -D @tsconfig/node16`
     - `yarn remove @tsconfig/node14`
@@ -42,6 +43,7 @@ Upgrade main steps
       - `sed -i 's#node14#node16#g' tsconfig.json`
 - Upgrade MongoDb used for tests to version 6.0+
 - Change MongoDB types imports from `import ... from 'mongodb';` to `import ... from '@neo9/n9-mongodb-client/mongodb';`
+- Use Node.js version 16.20.2 or greater.
 
 ## To build
 
