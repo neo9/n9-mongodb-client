@@ -27,6 +27,9 @@ export class MongoUtils {
 
 		const optionsWithDefaultValuesApplied: mongodb.MongoClientOptions = {
 			heartbeatFrequencyMS: 3_000,
+			driverInfo: {
+				name: '@neo9/n9-mongodb-client',
+			},
 			...options,
 		};
 

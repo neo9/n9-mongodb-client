@@ -403,8 +403,8 @@ export interface GraphLookupPipelineStage {
 
 /* GROUP */
 export interface GroupPipelineStageValue {
-	_id: Expression;
-	[fieldName: string]: Expression;
+	_id: number | Expression;
+	[fieldName: string]: number | Expression;
 }
 export interface GroupPipelineStage {
 	[AggregationPipelineStageOperator.GROUP]: GroupPipelineStageValue;

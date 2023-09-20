@@ -1050,10 +1050,14 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 	): N9AggregationCursor<T> {
 		if (readInOutputCollection) {
 			const nativeCursor = this.collection.aggregate<T>(aggregateSteps, options);
-			return new N9AggregationCursor<T>(this.collection, nativeCursor);
+			return new N9AggregationCursor<T>(this.collection, nativeCursor, aggregateSteps);
 		}
 		const nativeCursor = this.collectionSourceForAggregation.aggregate<T>(aggregateSteps, options);
-		return new N9AggregationCursor<T>(this.collectionSourceForAggregation, nativeCursor);
+		return new N9AggregationCursor<T>(
+			this.collectionSourceForAggregation,
+			nativeCursor,
+			aggregateSteps,
+		);
 	}
 
 	public aggregateWithBuilder<T = void>(

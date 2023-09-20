@@ -23,7 +23,7 @@ Notable Changes
 
 Upgrade main steps
 
-- `yarn remove @neo9/n9-mongo-client && yarn add @neo9/n9-mongodb-client@^1.0.0-rc.2` (this also upgrade all transitive dependencies)
+- `yarn remove @neo9/n9-mongo-client && yarn add @neo9/n9-mongodb-client@^1.0.0-rc.8` (this also upgrade all transitive dependencies)
 - Rename usage : `find src/ -type f -exec sed -i -e 's#@neo9/n9-mongo-client#@neo9/n9-mongodb-client#g' {} +`
 - Remove old mongodb types :
 
@@ -44,6 +44,8 @@ Upgrade main steps
 - Upgrade MongoDb used for tests to version 6.0+
 - Change MongoDB types imports from `import ... from 'mongodb';` to `import ... from '@neo9/n9-mongodb-client/mongodb';`
 - Use Node.js version 16.20.2 or greater.
+- Use new `count` function on `N9AggregationCursor` that wasn't available on `AggregationCursor`
+- It's a good time to use new version of `@neo9/n9-mongodb-migration` V1 : `yarn upgrade @neo9/n9-mongodb-migration@^1.0.0-rc.0`
 
 ## To build
 

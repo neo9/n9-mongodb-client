@@ -83,21 +83,18 @@ test('[Cursor] call hasNext before using in a for async', async (t: ExecutionCon
 
 test('[Cursor] Check count function', async (t: ExecutionContext<ContextContent>) => {
 	let cursor = t.context.mongoClient.aggregate<SampleType>([]);
-	cursor.filterQuery = {};
 	t.is(await cursor.count(), 5, 'cursor contains 5 items');
 
 	const filterQuery = { field1String: { $regex: /[24680]$/ } };
 	cursor = t.context.mongoClient.aggregateWithBuilder<SampleType>(
 		t.context.mongoClient.newAggregationBuilder().match(filterQuery),
 	);
-
-	await t.throwsAsync(
-		async () => await cursor.count(),
-		{ message: 'filter-query-not-initialized' },
-		'Should throw filter query not initialized error',
-	);
-	cursor.filterQuery = filterQuery;
 	t.is(await cursor.count(), 2, 'cursor contains only odd => 2 elements');
+
+	cursor = t.context.mongoClient.aggregateWithBuilder<SampleType>(
+		t.context.mongoClient.newAggregationBuilder().match(filterQuery).group({ _id: 1 }),
+	);
+	t.is(await cursor.count(), 1, 'cursor only contains the group result');
 });
 
 test('[Cursor] Check cursor clone function', async (t: ExecutionContext<ContextContent>) => {
