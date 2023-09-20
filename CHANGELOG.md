@@ -1,5 +1,17 @@
 
 
+# [1.0.0-rc.8](https://github.com/neo9/n9-mongodb-client/compare/1.0.0-rc.7...1.0.0-rc.8) (2023-09-20)
+
+
+### cursor
+
+* Fix count function on aggregation cursor ([3a62a18](https://github.com/neo9/n9-mongodb-client/commit/3a62a18887337a42c92961c41b865a0955def4a6))
+
+### doc
+
+* Add more migration command utils ([925ee1d](https://github.com/neo9/n9-mongodb-client/commit/925ee1dc8fa3af6f854ab959241ca2b328213e6e))
+* Fix migration command utils ([3edd345](https://github.com/neo9/n9-mongodb-client/commit/3edd3457fec2be2e7dd4826df2fe8718b2f5f14f))
+
 # [1.0.0-rc.7](https://github.com/neo9/n9-mongodb-client/compare/1.0.0-rc.6...1.0.0-rc.7) (2023-09-11)
 
 
