@@ -1,24 +1,25 @@
-import { N9Log } from '@neo9/n9-node-log';
 import test, { ExecutionContext } from 'ava';
 
-import { BaseMongoObject, MongoClient } from '../src';
-import { init } from './fixtures/utils';
+import { BaseMongoObject, N9MongoDBClient } from '../src';
+import { getBaseMongoClientSettings, getOneCollectionName, init, TestContext } from './fixtures';
 
 class SampleType extends BaseMongoObject {
 	public field1String: string;
 }
 
-interface ContextContent {
-	mongoClientBasic: MongoClient<SampleType, SampleType>;
+interface ContextContent extends TestContext {
+	mongoClientBasic: N9MongoDBClient<SampleType, SampleType>;
 }
 
-global.log = new N9Log('tests');
-
 init();
-test.beforeEach((t: ExecutionContext<ContextContent>) => {
-	const collectionName = `test-${Date.now()}`;
 
-	t.context.mongoClientBasic = new MongoClient(collectionName, SampleType, SampleType);
+test.beforeEach((t: ExecutionContext<ContextContent>) => {
+	t.context.mongoClientBasic = new N9MongoDBClient(
+		getOneCollectionName(),
+		SampleType,
+		SampleType,
+		getBaseMongoClientSettings(t),
+	);
 });
 
 test('Check aggregation builder', (t: ExecutionContext<ContextContent>) => {

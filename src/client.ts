@@ -1,7 +1,7 @@
 import { N9Log } from '@neo9/n9-node-log';
 import { N9Error } from '@neo9/n9-node-utils';
 import * as fastDeepEqual from 'fast-deep-equal/es6';
-import * as _ from 'lodash';
+import _ from 'lodash';
 import * as mingo from 'mingo-fork-no-hash';
 import {
 	ClientSession,
@@ -42,7 +42,7 @@ import {
 	BaseMongoObject,
 	ClassType,
 	EntityHistoric,
-	MongoClientConfiguration,
+	MongoClientSettings,
 	RemoveTagOptions,
 	StringMap,
 	UpdateManyAtOnceOptions,
@@ -54,12 +54,12 @@ import { MongoReadStream } from './mongo-read-stream';
 import { MongoUtils } from './mongo-utils';
 import { TagManager } from './tag-manager';
 
-const defaultConfiguration: MongoClientConfiguration = {
+const defaultConfiguration: Partial<MongoClientSettings> = {
 	keepHistoric: false,
 	historicPageSize: 100,
 };
 
-export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
+export class N9MongoDBClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 	private readonly collection: Collection<U>;
 	private readonly collectionSourceForAggregation: Collection<U>;
 	private readonly logger: N9Log;
@@ -67,7 +67,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 	private readonly mongoClient: MongodbClient;
 	private readonly type: ClassType<U>;
 	private readonly typeList: ClassType<L>;
-	private readonly conf: MongoClientConfiguration;
+	private readonly conf: Omit<MongoClientSettings, 'logger' | 'db'>;
 	private readonly lockFieldsManager: LockFieldsManager<U>;
 	private readonly indexManager: IndexManager<U>;
 	private readonly historicManager: HistoricManager<U>;
@@ -77,25 +77,30 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		collection: Collection<U> | string,
 		type: ClassType<U>,
 		typeList: ClassType<L>,
-		conf: MongoClientConfiguration = {},
+		mongoClientSettings: MongoClientSettings,
 	) {
-		this.conf = _.merge({}, defaultConfiguration, conf);
+		this.db = mongoClientSettings.db;
+		if (!mongoClientSettings.logger) {
+			throw new N9Error('missing-logger', 400);
+		}
+		this.logger =
+			mongoClientSettings.logger.name === 'mongo-client'
+				? mongoClientSettings.logger
+				: mongoClientSettings.logger.module('mongo-client');
+
+		this.conf = {
+			...defaultConfiguration,
+			..._.omitBy(mongoClientSettings, ['logger', 'db']), // force to use dedicated fields
+		};
 		if (this.conf.keepHistoric) {
 			this.conf.updateOnlyOnChange = { ...this.conf.updateOnlyOnChange };
 		}
 		if (this.conf.lockFields) {
 			this.lockFieldsManager = new LockFieldsManager(this.conf.lockFields);
 		}
-		this.logger = (global.log as N9Log).module('mongo-client');
 
-		this.db = global.db as Db;
 		if (!this.db) {
-			throw new N9Error('missing-db', 500);
-		}
-
-		this.mongoClient = global.dbClient as MongodbClient;
-		if (!this.mongoClient) {
-			throw new N9Error('missing-db-client', 500);
+			throw new N9Error('missing-db', 400);
 		}
 
 		this.type = type;
@@ -107,7 +112,10 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			this.collection = collection;
 		}
 		this.indexManager = new IndexManager<U>(this.collection);
-		this.historicManager = new HistoricManager(this.collection);
+		this.historicManager = new HistoricManager(this.collection, {
+			logger: this.logger,
+			db: this.db,
+		});
 		this.tagManager = new TagManager<U>(this.collection);
 
 		if (this.conf.aggregationCollectionSource) {
@@ -123,13 +131,16 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		newName: string,
 		dropTarget: boolean = false,
 		options?: { session?: ClientSession },
-	): Promise<MongoClient<U, L>> {
+	): Promise<N9MongoDBClient<U, L>> {
 		await this.collection.rename(newName, { ...options, dropTarget });
-		return new MongoClient<U, L>(newName, this.type, this.typeList, this.conf);
+		return new N9MongoDBClient<U, L>(newName, this.type, this.typeList, {
+			...this.conf,
+			logger: this.logger,
+			db: this.db,
+		});
 	}
 
 	public async findAllIndexes(): Promise<IndexDescription[]> {
-		// TODO: add test on this function
 		return await this.indexManager.findAllIndexes();
 	}
 
@@ -223,7 +234,8 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				);
 				delete newEntity._id;
 			}
-			let newEntityWithoutForbiddenCharacters = MongoUtils.removeSpecialCharactersInKeys(newEntity);
+			let newEntityWithoutForbiddenCharacters =
+				MongoUtils.REMOVE_SPECIAL_CHARACTERS_IN_KEYS(newEntity);
 
 			if (this.conf.lockFields) {
 				if (!newEntityWithoutForbiddenCharacters.objectInfos.lockFields) {
@@ -249,9 +261,9 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				newEntityWithoutForbiddenCharacters as OptionalUnlessRequiredId<U>,
 			);
 			if (returnNewValue) {
-				return MongoUtils.mapObjectToClass(
+				return MongoUtils.MAP_OBJECT_TO_CLASS(
 					this.type,
-					MongoUtils.unRemoveSpecialCharactersInKeys(newEntityWithoutForbiddenCharacters),
+					MongoUtils.UN_REMOVE_SPECIAL_CHARACTERS_IN_KEYS(newEntityWithoutForbiddenCharacters),
 				);
 			}
 			return;
@@ -299,7 +311,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 					);
 					delete newEntity._id;
 				}
-				return MongoUtils.removeSpecialCharactersInKeys(newEntity);
+				return MongoUtils.REMOVE_SPECIAL_CHARACTERS_IN_KEYS(newEntity);
 			});
 
 			const insertResult = await this.collection.insertMany(entitiesToInsert, options);
@@ -337,8 +349,8 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		let transformFunction: (a: Partial<U | L>) => any;
 		if (type) {
 			transformFunction = (a: Partial<U | L>): T => {
-				const b = MongoUtils.unRemoveSpecialCharactersInKeys(a);
-				return MongoUtils.mapObjectToClass(type, b);
+				const b = MongoUtils.UN_REMOVE_SPECIAL_CHARACTERS_IN_KEYS(a);
+				return MongoUtils.MAP_OBJECT_TO_CLASS(type, b);
 			};
 		} else if (
 			LodashReplacerUtils.IS_NIL(type) &&
@@ -405,7 +417,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 	}
 
 	public async findOneById(id: string, projection?: object): Promise<U> {
-		return this.findOneByKey(MongoUtils.oid(id), '_id', projection);
+		return this.findOneByKey(MongoUtils.TO_OBJECT_ID(id), '_id', projection);
 	}
 
 	public async findOneByKey(
@@ -415,7 +427,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 	): Promise<U> {
 		try {
 			const query: StringMap<any> = {
-				[MongoUtils.escapeSpecialCharacters(keyName)]: keyValue,
+				[MongoUtils.ESCAPE_SPECIAL_CHARACTERS(keyName)]: keyValue,
 			};
 
 			return await this.findOne(query, projection);
@@ -428,21 +440,21 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		try {
 			const internalEntity = await this.collection.findOne(query, { projection });
 			if (!internalEntity) return null;
-			const entity = MongoUtils.unRemoveSpecialCharactersInKeys(internalEntity);
-			return MongoUtils.mapObjectToClass(this.type, entity);
+			const entity = MongoUtils.UN_REMOVE_SPECIAL_CHARACTERS_IN_KEYS(internalEntity);
+			return MongoUtils.MAP_OBJECT_TO_CLASS(this.type, entity);
 		} catch (e) {
 			LangUtils.throwN9ErrorFromError(e, { query, projection });
 		}
 	}
 
 	public async existsById(id: string): Promise<boolean> {
-		return this.existsByKey(MongoUtils.oid(id), '_id');
+		return this.existsByKey(MongoUtils.TO_OBJECT_ID(id), '_id');
 	}
 
 	public async existsByKey(keyValue: any, keyName: string = 'code'): Promise<boolean> {
 		try {
 			const query: StringMap<any> = {
-				[MongoUtils.escapeSpecialCharacters(keyName)]: keyValue,
+				[MongoUtils.ESCAPE_SPECIAL_CHARACTERS(keyName)]: keyValue,
 			};
 
 			return await this.exists(query);
@@ -470,7 +482,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 	): Promise<U> {
 		try {
 			const query: FilterQuery<any> = {
-				_id: MongoUtils.oid(id),
+				_id: MongoUtils.TO_OBJECT_ID(id),
 			};
 			return await this.findOneAndUpdate(
 				query,
@@ -504,7 +516,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 	): Promise<U> {
 		try {
 			const query: FilterQuery<any> = {
-				[MongoUtils.escapeSpecialCharacters(keyName)]: keyValue,
+				[MongoUtils.ESCAPE_SPECIAL_CHARACTERS(keyName)]: keyValue,
 			};
 			return await this.findOneAndUpdate(
 				query,
@@ -565,7 +577,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 
 			const now = new Date();
 			const formattedUserId = (
-				ObjectId.isValid(userId) ? MongoUtils.oid(userId) : userId
+				ObjectId.isValid(userId) ? MongoUtils.TO_OBJECT_ID(userId) : userId
 			) as string;
 
 			updateQuery.$set = {
@@ -619,9 +631,9 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				returnDocument: ReturnDocument.AFTER,
 			})) as U; // WithId<U>
 			if (returnNewValue || this.conf.keepHistoric || this.conf.updateOnlyOnChange) {
-				newEntity = MongoUtils.mapObjectToClass(
+				newEntity = MongoUtils.MAP_OBJECT_TO_CLASS(
 					this.type,
-					MongoUtils.unRemoveSpecialCharactersInKeys(newEntity),
+					MongoUtils.UN_REMOVE_SPECIAL_CHARACTERS_IN_KEYS(newEntity),
 				);
 			}
 
@@ -634,7 +646,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 						const newUpdate = await this.updateLastModificationDate(newEntity._id, now, userId);
 
 						if (returnNewValue) {
-							newEntity.objectInfos.lastModification = MongoUtils.mapObjectIdToStringHex(
+							newEntity.objectInfos.lastModification = MongoUtils.MAP_OBJECT_ID_TO_STRING_HEX(
 								newUpdate.objectInfos.lastModification,
 							);
 						}
@@ -683,7 +695,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 	): Promise<U> {
 		try {
 			const query: FilterQuery<any> = {
-				_id: MongoUtils.oid(id),
+				_id: MongoUtils.TO_OBJECT_ID(id),
 			};
 			return await this.findOneAndRemoveLock(query, lockFieldPath, userId);
 		} catch (e) {
@@ -719,7 +731,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 	): Promise<U> {
 		try {
 			const query: FilterQuery<any> = {
-				_id: MongoUtils.oid(id),
+				_id: MongoUtils.TO_OBJECT_ID(id),
 			};
 			return await this.findOneAndRemoveLock(query, baseLockFieldPath, userId, true);
 		} catch (e) {
@@ -801,7 +813,9 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		try {
 			LangUtils.removeEmptyDeep(newEntity, true, false, true);
 			if (this.conf.lockFields) {
-				const existingEntity = await this.collection.findOne<U>({ _id: MongoUtils.oid(id) as any }); // avoid mapping ObjectId to string
+				const existingEntity = await this.collection.findOne<U>({
+					_id: MongoUtils.TO_OBJECT_ID(id) as any,
+				}); // avoid mapping ObjectId to string
 				if (!existingEntity) {
 					this.logger.warn(`Entity not found with id ${id} (${this.type.name})`, {
 						userId,
@@ -902,13 +916,13 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 	}
 
 	public async deleteOneById(id: string): Promise<U> {
-		return this.deleteOneByKey(MongoUtils.oid(id), '_id');
+		return this.deleteOneByKey(MongoUtils.TO_OBJECT_ID(id), '_id');
 	}
 
 	public async deleteOneByKey(keyValue: any, keyName: string = 'code'): Promise<U> {
 		try {
 			const query: StringMap<any> = {
-				[MongoUtils.escapeSpecialCharacters(keyName)]: keyValue,
+				[MongoUtils.ESCAPE_SPECIAL_CHARACTERS(keyName)]: keyValue,
 			};
 
 			return await this.deleteOne(query);
@@ -1010,12 +1024,12 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				// eslint-disable-next-line @typescript-eslint/naming-convention
 				'objectInfos.lastUpdate': {
 					date: now,
-					userId: ObjectId.isValid(userId) ? MongoUtils.oid(userId) : userId,
+					userId: ObjectId.isValid(userId) ? MongoUtils.TO_OBJECT_ID(userId) : userId,
 				},
 				// eslint-disable-next-line @typescript-eslint/naming-convention
 				'objectInfos.lastModification': {
 					date: now,
-					userId: ObjectId.isValid(userId) ? MongoUtils.oid(userId) : userId,
+					userId: ObjectId.isValid(userId) ? MongoUtils.TO_OBJECT_ID(userId) : userId,
 				},
 			};
 
@@ -1103,7 +1117,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 					cursor = this.collection
 						.find({
 							...query,
-							_id: { $gt: MongoUtils.oid(lastId) },
+							_id: { $gt: MongoUtils.TO_OBJECT_ID(lastId) },
 						})
 						.project({ _id: 1 })
 						.sort({ _id: 1 })
@@ -1334,7 +1348,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			for (const newEnt of newEntities) {
 				const updateQuery = newEnt.updateQuery;
 
-				const formattedUserId = ObjectId.isValid(userId) ? MongoUtils.oid(userId) : userId;
+				const formattedUserId = ObjectId.isValid(userId) ? MongoUtils.TO_OBJECT_ID(userId) : userId;
 				updateQuery.$set = {
 					...updateQuery.$set,
 					// eslint-disable-next-line @typescript-eslint/naming-convention
@@ -1377,7 +1391,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				let filter: FilterQuery<any> = {};
 
 				if (newEnt.id) {
-					filter._id = MongoUtils.oid(newEnt.id) as any;
+					filter._id = MongoUtils.TO_OBJECT_ID(newEnt.id) as any;
 				} else if (newEnt.key) {
 					filter[newEnt.key.name] = newEnt.key.value;
 				} else if (newEnt.query) {
@@ -1401,7 +1415,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				const oldValues = await this.findWithType(
 					{
 						_id: {
-							$in: MongoUtils.oids(newEntities.map((newEntity) => newEntity.id)),
+							$in: MongoUtils.TO_OBJECT_IDS(newEntities.map((newEntity) => newEntity.id)),
 						},
 					},
 					this.type,
@@ -1422,7 +1436,7 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 			if (returnNewEntities || this.conf.keepHistoric || this.conf.updateOnlyOnChange) {
 				const newValuesQuery = {
 					_id: {
-						$in: MongoUtils.oids([
+						$in: MongoUtils.TO_OBJECT_IDS([
 							...newEntities.map((newEntity) => newEntity.id),
 							...(Object.values(bulkResult.insertedIds ?? {}) as string[]),
 							...(Object.values(bulkResult.upsertedIds ?? {}) as string[]),
@@ -1530,7 +1544,10 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 				).toArray();
 				for (const [index, query] of Object.entries(queries)) {
 					// mingo all use to find in the array like mongo search in collection
-					const matchElements = mingo.find(allEntities, MongoUtils.mapObjectIdToStringHex(query));
+					const matchElements = mingo.find(
+						allEntities,
+						MongoUtils.MAP_OBJECT_ID_TO_STRING_HEX(query),
+					);
 					if (matchElements.hasNext()) {
 						currentValues[index] = matchElements.next();
 					}
@@ -1757,13 +1774,13 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		userId: string,
 	): Promise<WithId<U>> {
 		const updateResult = await this.collection.findOneAndUpdate(
-			{ _id: MongoUtils.oid(id) as any },
+			{ _id: MongoUtils.TO_OBJECT_ID(id) as any },
 			{
 				$set: {
 					// eslint-disable-next-line @typescript-eslint/naming-convention
 					'objectInfos.lastModification': {
 						date: modificationDate,
-						userId: (ObjectId.isValid(userId) ? MongoUtils.oid(userId) : userId) as string,
+						userId: (ObjectId.isValid(userId) ? MongoUtils.TO_OBJECT_ID(userId) : userId) as string,
 					},
 				} as any,
 			},
@@ -1782,13 +1799,13 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 		if (LodashReplacerUtils.IS_ARRAY_EMPTY(idsToUpdate)) return;
 
 		await this.collection.updateMany(
-			{ _id: { $in: MongoUtils.oids(idsToUpdate) as any[] } },
+			{ _id: { $in: MongoUtils.TO_OBJECT_IDS(idsToUpdate) as any[] } },
 			{
 				$set: {
 					// eslint-disable-next-line @typescript-eslint/naming-convention
 					'objectInfos.lastModification': {
 						date: updateDate,
-						userId: (ObjectId.isValid(userId) ? MongoUtils.oid(userId) : userId) as string,
+						userId: (ObjectId.isValid(userId) ? MongoUtils.TO_OBJECT_ID(userId) : userId) as string,
 					},
 				} as any,
 			},
@@ -1840,6 +1857,6 @@ export class MongoClient<U extends BaseMongoObject, L extends BaseMongoObject> {
 	// Method is not static to use U and L
 	// eslint-disable-next-line class-methods-use-this
 	private mapEntityFromMongoWithoutClassTransformer(entity: Partial<U | L>): U {
-		return MongoUtils.unRemoveSpecialCharactersInKeys(entity);
+		return MongoUtils.UN_REMOVE_SPECIAL_CHARACTERS_IN_KEYS(entity);
 	}
 }

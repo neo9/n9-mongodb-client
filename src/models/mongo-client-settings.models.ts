@@ -1,3 +1,6 @@
+import { N9Log } from '@neo9/n9-node-log';
+import { Db } from 'mongodb';
+
 import { StringMap } from './maps.models';
 
 export interface LockFieldConfiguration {
@@ -42,7 +45,18 @@ export interface UpdateOnlyOnChangeConfiguration {
 /**
  * Options to pass to n9-mongodb-client to configure its behaviour
  */
-export interface MongoClientConfiguration {
+export interface MongoClientSettings {
+	/**
+	 * Logger used to print messages
+	 */
+	logger: N9Log;
+
+	/**
+	 * Mongo Db object used to access the database.
+	 * To get one, use MongoUtils.CONNECT()
+	 */
+	db: Db;
+
 	/**
 	 * If true, each update will create a document describing the update in a separate history collection.
 	 * Defaults to false

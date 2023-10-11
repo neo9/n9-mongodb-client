@@ -1,8 +1,7 @@
-import { N9Log } from '@neo9/n9-node-log';
-import test, { Assertions } from 'ava';
+import test, { ExecutionContext } from 'ava';
 
-import { BaseMongoObject, CollationDocument, MongoClient, MongoDB } from '../src';
-import { init } from './fixtures/utils';
+import { BaseMongoObject, CollationDocument, MongoDB, N9MongoDBClient } from '../src';
+import { getBaseMongoClientSettings, getOneCollectionName, init, TestContext } from './fixtures';
 
 class SampleTypeListing extends BaseMongoObject {
 	public field1String: string;
@@ -13,12 +12,15 @@ class SampleType extends SampleTypeListing {
 	public field3String?: string;
 }
 
-global.log = new N9Log('tests');
-
 init();
 
-test('[CRUD] Insert multiples and find with collation', async (t: Assertions) => {
-	const mongoClient = new MongoClient(`test-${Date.now()}`, SampleType, SampleTypeListing);
+test('[CRUD] Insert multiples and find with collation', async (t: ExecutionContext<TestContext>) => {
+	const mongoClient = new N9MongoDBClient(
+		getOneCollectionName(),
+		SampleType,
+		SampleTypeListing,
+		getBaseMongoClientSettings(t),
+	);
 	const size = await mongoClient.count();
 
 	t.true(size === 0, 'collection should be empty');

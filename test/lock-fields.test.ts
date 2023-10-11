@@ -1,16 +1,15 @@
-import { N9Log } from '@neo9/n9-node-log';
-import test, { Assertions } from 'ava';
-import * as _ from 'lodash';
+import test, { ExecutionContext } from 'ava';
+import _ from 'lodash';
 
 import {
 	BaseMongoObject,
 	EntityHistoric,
-	MongoClient,
-	MongoClientConfiguration,
+	MongoClientSettings,
+	N9MongoDBClient,
 	ObjectID,
 	StringMap,
 } from '../src';
-import { init } from './fixtures/utils';
+import { getBaseMongoClientSettings, getOneCollectionName, init, TestContext } from './fixtures';
 
 export class AttributeEntity extends BaseMongoObject {
 	public type: 'select';
@@ -90,11 +89,13 @@ const locksDataSample: SampleComplexType = {
 };
 
 const getLockFieldsMongoClient = (
+	t: ExecutionContext<TestContext>,
 	keepHistoric: boolean = false,
 	withArrayReferences: boolean = true,
 	excludedFieldsRegex?: RegExp[],
-): MongoClient<SampleComplexType, SampleComplexType> => {
-	const conf: MongoClientConfiguration = {
+): N9MongoDBClient<SampleComplexType, SampleComplexType> => {
+	const conf: MongoClientSettings = {
+		...getBaseMongoClientSettings(t),
 		keepHistoric,
 		lockFields: {
 			excludedFields: ['excludedField', 'excludedArray'],
@@ -108,15 +109,13 @@ const getLockFieldsMongoClient = (
 	if (excludedFieldsRegex) {
 		conf.lockFields.excludedFields = conf.lockFields.excludedFields.concat(excludedFieldsRegex);
 	}
-	return new MongoClient(`test-${Date.now()}`, SampleComplexType, SampleComplexType, conf);
+	return new N9MongoDBClient(getOneCollectionName(), SampleComplexType, SampleComplexType, conf);
 };
-
-global.log = new N9Log('tests').module('lock-fields');
 
 init();
 
-test('[LOCK-FIELDS] Insert one and check locks', async (t: Assertions) => {
-	const mongoClient = getLockFieldsMongoClient();
+test('[LOCK-FIELDS] Insert one and check locks', async (t: ExecutionContext<TestContext>) => {
+	const mongoClient = getLockFieldsMongoClient(t);
 
 	const lockDataEntity: SampleComplexType = {
 		...locksDataSample,
@@ -155,8 +154,8 @@ test('[LOCK-FIELDS] Insert one and check locks', async (t: Assertions) => {
 	);
 });
 
-test('[LOCK-FIELDS] Insert one and check locks with regex excluded field', async (t: Assertions) => {
-	const mongoClient = getLockFieldsMongoClient(false, true, [
+test('[LOCK-FIELDS] Insert one and check locks with regex excluded field', async (t: ExecutionContext<TestContext>) => {
+	const mongoClient = getLockFieldsMongoClient(t, false, true, [
 		/^objects\[code=k2\]/,
 		/^stringMap\.[0-9a-f]{6}\.((?!value))/,
 	]);
@@ -201,8 +200,8 @@ test('[LOCK-FIELDS] Insert one and check locks with regex excluded field', async
 	);
 });
 
-test('[LOCK-FIELDS] Insert&Update one with mongoID and Date and check locks', async (t: Assertions) => {
-	const mongoClient = getLockFieldsMongoClient();
+test('[LOCK-FIELDS] Insert&Update one with mongoID and Date and check locks', async (t: ExecutionContext<TestContext>) => {
+	const mongoClient = getLockFieldsMongoClient(t);
 	const date = new Date('2020-01-01');
 	const newDate = new Date('2020-01-01');
 
@@ -284,8 +283,8 @@ test('[LOCK-FIELDS] Insert&Update one with mongoID and Date and check locks', as
 	);
 });
 
-test('[LOCK-FIELDS] Insert&Update one with simple array', async (t: Assertions) => {
-	const mongoClient = getLockFieldsMongoClient(false, false);
+test('[LOCK-FIELDS] Insert&Update one with simple array', async (t: ExecutionContext<TestContext>) => {
+	const mongoClient = getLockFieldsMongoClient(t, false, false);
 
 	const data = {
 		strings: ['a', 'b'],
@@ -335,8 +334,8 @@ test('[LOCK-FIELDS] Insert&Update one with simple array', async (t: Assertions) 
 	t.deepEqual(updatedData.strings, ['a', 'b', 'c'], 'c is stored');
 });
 
-test('[LOCK-FIELDS] Insert&Update one with Date and change to String', async (t: Assertions) => {
-	const mongoClient = getLockFieldsMongoClient();
+test('[LOCK-FIELDS] Insert&Update one with Date and change to String', async (t: ExecutionContext<TestContext>) => {
+	const mongoClient = getLockFieldsMongoClient(t);
 	const date = new Date('2020-01-01');
 	const dateString = date.toUTCString();
 
@@ -419,8 +418,8 @@ test('[LOCK-FIELDS] Insert&Update one with Date and change to String', async (t:
 	);
 });
 
-test('[LOCK-FIELDS] Insert&Update one with String and change to Date', async (t: Assertions) => {
-	const mongoClient = getLockFieldsMongoClient();
+test('[LOCK-FIELDS] Insert&Update one with String and change to Date', async (t: ExecutionContext<TestContext>) => {
+	const mongoClient = getLockFieldsMongoClient(t);
 	const date = new Date('2020-01-01');
 	const dateString = date.toUTCString();
 
@@ -503,8 +502,8 @@ test('[LOCK-FIELDS] Insert&Update one with String and change to Date', async (t:
 	);
 });
 
-test('[LOCK-FIELDS] Insert&Update one and check locks', async (t: Assertions) => {
-	const mongoClient = getLockFieldsMongoClient();
+test('[LOCK-FIELDS] Insert&Update one and check locks', async (t: ExecutionContext<TestContext>) => {
+	const mongoClient = getLockFieldsMongoClient(t);
 
 	const insertedEntity = await mongoClient.insertOne(_.cloneDeep(locksDataSample), '');
 	const entity = await mongoClient.findOneById(insertedEntity._id);
@@ -564,8 +563,8 @@ test('[LOCK-FIELDS] Insert&Update one and check locks', async (t: Assertions) =>
 	);
 });
 
-test('[LOCK-FIELDS] Insert&update one without saving locks', async (t: Assertions) => {
-	const mongoClient = getLockFieldsMongoClient();
+test('[LOCK-FIELDS] Insert&update one without saving locks', async (t: ExecutionContext<TestContext>) => {
+	const mongoClient = getLockFieldsMongoClient(t);
 
 	const insertedEntity = await mongoClient.insertOne(_.cloneDeep(locksDataSample), 'userId', false);
 	const entity = await mongoClient.findOneById(insertedEntity._id);
@@ -606,8 +605,8 @@ test('[LOCK-FIELDS] Insert&update one without saving locks', async (t: Assertion
 	t.is(updatedData.objectInfos.lockFields.length, 5, 'Number of lock fields');
 });
 
-test('[LOCK-FIELDS] Forbide usage of some methods', async (t: Assertions) => {
-	const mongoClient = getLockFieldsMongoClient();
+test('[LOCK-FIELDS] Forbide usage of some methods', async (t: ExecutionContext<TestContext>) => {
+	const mongoClient = getLockFieldsMongoClient(t);
 
 	await t.throwsAsync(async () => {
 		await mongoClient.findOneAndUpdateById('', {}, 'userId');
@@ -626,8 +625,8 @@ test('[LOCK-FIELDS] Forbide usage of some methods', async (t: Assertions) => {
 	});
 });
 
-test('[LOCK-FIELDS] Update many with locks', async (t: Assertions) => {
-	const mongoClient = getLockFieldsMongoClient();
+test('[LOCK-FIELDS] Update many with locks', async (t: ExecutionContext<TestContext>) => {
+	const mongoClient = getLockFieldsMongoClient(t);
 
 	const locksDataSample1: SampleComplexType = {
 		...locksDataSample,
@@ -674,8 +673,8 @@ test('[LOCK-FIELDS] Update many with locks', async (t: Assertions) => {
 	t.is(listing[0].excludedField, locksDataSample1.excludedField);
 });
 
-test('[LOCK-FIELDS] Update many with locks with excluded lock field as ObjectId', async (t: Assertions) => {
-	const mongoClient = getLockFieldsMongoClient();
+test('[LOCK-FIELDS] Update many with locks with excluded lock field as ObjectId', async (t: ExecutionContext<TestContext>) => {
+	const mongoClient = getLockFieldsMongoClient(t);
 
 	const objectIDSample = new ObjectID();
 	const locksDataSample1: SampleComplexType = {
@@ -751,8 +750,8 @@ test('[LOCK-FIELDS] Update many with locks with excluded lock field as ObjectId'
 	);
 });
 
-test('[LOCK-FIELDS] Remove lock field', async (t: Assertions) => {
-	const mongoClient = getLockFieldsMongoClient(true);
+test('[LOCK-FIELDS] Remove lock field', async (t: ExecutionContext<TestContext>) => {
+	const mongoClient = getLockFieldsMongoClient(t, true);
 	const insertedEntity = await mongoClient.insertOne(_.cloneDeep(locksDataSample), 'userId', true);
 
 	t.is(insertedEntity.objectInfos.lockFields.length, 7, 'Nb lock fields after creation');
@@ -786,8 +785,8 @@ test('[LOCK-FIELDS] Remove lock field', async (t: Assertions) => {
 	t.is(allHistoric.length, 2, '2 historic entries');
 });
 
-test('[LOCK-FIELDS] Remove lock field subparts', async (t: Assertions) => {
-	const mongoClient = getLockFieldsMongoClient(true);
+test('[LOCK-FIELDS] Remove lock field subparts', async (t: ExecutionContext<TestContext>) => {
+	const mongoClient = getLockFieldsMongoClient(t, true);
 
 	const dataWithNestedObject = {
 		...locksDataSample,
@@ -847,8 +846,8 @@ test('[LOCK-FIELDS] Remove lock field subparts', async (t: Assertions) => {
 	t.is(allHistoric.length, 2, '2 historic entries');
 });
 
-test('[LOCK-FIELDS] Insert&update one without saving locks clear all locks and update only one field', async (t: Assertions) => {
-	const mongoClient = getLockFieldsMongoClient();
+test('[LOCK-FIELDS] Insert&update one without saving locks clear all locks and update only one field', async (t: ExecutionContext<TestContext>) => {
+	const mongoClient = getLockFieldsMongoClient(t);
 
 	const insertedEntity = await mongoClient.insertOne(_.cloneDeep(locksDataSample), 'userId', false);
 	const entity = await mongoClient.findOneById(insertedEntity._id);
@@ -912,7 +911,7 @@ test('[LOCK-FIELDS] Insert&update one without saving locks clear all locks and u
 	t.is(updatedData2.property.value, newValue2.property.value, `Update one field OK`);
 });
 
-test('[LOCK-FIELDS] Insert&update boolean', async (t: Assertions) => {
+test('[LOCK-FIELDS] Insert&update boolean', async (t: ExecutionContext<TestContext>) => {
 	const attribute: AttributeEntity = {
 		code: 'caracteristique_dimension_jeton',
 		defaultLanguageCode: 'fr-FR',
@@ -930,7 +929,8 @@ test('[LOCK-FIELDS] Insert&update boolean', async (t: Assertions) => {
 		validations: {},
 	};
 
-	const mongoClient = new MongoClient(`test-${Date.now()}`, AttributeEntity, null, {
+	const mongoClient = new N9MongoDBClient(getOneCollectionName(), AttributeEntity, null, {
+		...getBaseMongoClientSettings(t),
 		lockFields: {
 			arrayWithReferences: {
 				'parameters.items': 'code',
@@ -966,7 +966,7 @@ test('[LOCK-FIELDS] Insert&update boolean', async (t: Assertions) => {
 	);
 });
 
-test('[LOCK-FIELDS] Insert&update array sub object element', async (t: Assertions) => {
+test('[LOCK-FIELDS] Insert&update array sub object element', async (t: ExecutionContext<TestContext>) => {
 	const attribute: AttributeEntity = {
 		code: 'caracteristique_dimension_jeton',
 		defaultLanguageCode: 'fr-FR',
@@ -1001,7 +1001,8 @@ test('[LOCK-FIELDS] Insert&update array sub object element', async (t: Assertion
 		validations: {},
 	};
 
-	const mongoClient = new MongoClient(`test-${Date.now()}`, AttributeEntity, null, {
+	const mongoClient = new N9MongoDBClient(getOneCollectionName(), AttributeEntity, null, {
+		...getBaseMongoClientSettings(t),
 		lockFields: {
 			arrayWithReferences: {
 				'parameters.items': 'code',
@@ -1037,7 +1038,7 @@ test('[LOCK-FIELDS] Insert&update array sub object element', async (t: Assertion
 	);
 });
 
-test('[LOCK-FIELDS] Insert object with array and code with no value', async (t: Assertions) => {
+test('[LOCK-FIELDS] Insert object with array and code with no value', async (t: ExecutionContext<TestContext>) => {
 	const objectWithArray: ObjectWithArray = {
 		parameters: {
 			items: [
@@ -1055,7 +1056,8 @@ test('[LOCK-FIELDS] Insert object with array and code with no value', async (t: 
 		},
 	};
 
-	const mongoClient = new MongoClient(`test-${Date.now()}`, ObjectWithArray, null, {
+	const mongoClient = new N9MongoDBClient(getOneCollectionName(), ObjectWithArray, null, {
+		...getBaseMongoClientSettings(t),
 		lockFields: {
 			arrayWithReferences: {
 				'parameters.items': 'code',
@@ -1098,7 +1100,7 @@ test('[LOCK-FIELDS] Insert object with array and code with no value', async (t: 
 	t.is(objectUpdated.parameters.items.length, 2, 'Should kee element locked');
 });
 
-test('[LOCK-FIELDS] Insert&update attribute', async (t: Assertions) => {
+test('[LOCK-FIELDS] Insert&update attribute', async (t: ExecutionContext<TestContext>) => {
 	const attribute: AttributeEntity = {
 		code: 'caracteristique_dimension_jeton',
 		defaultLanguageCode: 'fr-FR',
@@ -1147,7 +1149,8 @@ test('[LOCK-FIELDS] Insert&update attribute', async (t: Assertions) => {
 		validations: {},
 	};
 
-	const mongoClient = new MongoClient(`test-${Date.now()}`, AttributeEntity, null, {
+	const mongoClient = new N9MongoDBClient(getOneCollectionName(), AttributeEntity, null, {
+		...getBaseMongoClientSettings(t),
 		lockFields: {
 			arrayWithReferences: {
 				'parameters.items': 'code',
@@ -1186,7 +1189,7 @@ test('[LOCK-FIELDS] Insert&update attribute', async (t: Assertions) => {
 	);
 });
 
-test('[LOCK-FIELDS] Insert&update entity with date property', async (t: Assertions) => {
+test('[LOCK-FIELDS] Insert&update entity with date property', async (t: ExecutionContext<TestContext>) => {
 	const entity: ObjectWithDateProperty = {
 		code: 'test_case',
 		props: {
@@ -1194,7 +1197,8 @@ test('[LOCK-FIELDS] Insert&update entity with date property', async (t: Assertio
 		},
 	};
 
-	const mongoClient = new MongoClient(`test-${Date.now()}`, ObjectWithDateProperty, null, {
+	const mongoClient = new N9MongoDBClient(getOneCollectionName(), ObjectWithDateProperty, null, {
+		...getBaseMongoClientSettings(t),
 		lockFields: {},
 		keepHistoric: false,
 	});
@@ -1330,8 +1334,9 @@ test('[LOCK-FIELDS] Insert&update entity with date property', async (t: Assertio
 	);
 });
 
-test('[LOCK-FIELDS] Forbidden actions', async (t: Assertions) => {
-	const mongoClient = new MongoClient(`test-${Date.now()}`, AttributeEntity, null, {
+test('[LOCK-FIELDS] Forbidden actions', async (t: ExecutionContext<TestContext>) => {
+	const mongoClient = new N9MongoDBClient(getOneCollectionName(), AttributeEntity, null, {
+		...getBaseMongoClientSettings(t),
 		lockFields: {},
 	});
 
@@ -1345,8 +1350,13 @@ test('[LOCK-FIELDS] Forbidden actions', async (t: Assertions) => {
 	t.is(notFoundElement, undefined, 'element is null is not found');
 });
 
-test('[LOCK-FIELDS] Forbidden actions without locks', async (t: Assertions) => {
-	const mongoClient = new MongoClient(`test-${Date.now()}`, AttributeEntity, null);
+test('[LOCK-FIELDS] Forbidden actions without locks', async (t: ExecutionContext<TestContext>) => {
+	const mongoClient = new N9MongoDBClient(
+		getOneCollectionName(),
+		AttributeEntity,
+		null,
+		getBaseMongoClientSettings(t),
+	);
 
 	await t.throwsAsync(
 		async () => await mongoClient.findOneAndRemoveLock({}, 'lock.path', 'userId'),

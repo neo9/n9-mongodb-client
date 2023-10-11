@@ -1,12 +1,10 @@
-import { N9Log } from '@neo9/n9-node-log';
-import test, { Assertions } from 'ava';
-import * as _ from 'lodash';
+import test, { ExecutionContext } from 'ava';
+import _ from 'lodash';
 
 import { MongoUtils, ObjectId } from '../src';
+import { TestContext } from './fixtures';
 
-global.log = new N9Log('tests').module('treat-special-character');
-
-test('[SPECIAL-CHARACTERS] Transform object and keep types', (t: Assertions) => {
+test('[SPECIAL-CHARACTERS] Transform object and keep types', (t: ExecutionContext<TestContext>) => {
 	const origin = {
 		a: new Date(),
 		string: 'string test',
@@ -16,8 +14,8 @@ test('[SPECIAL-CHARACTERS] Transform object and keep types', (t: Assertions) => 
 			objectID: new ObjectId(),
 		},
 	};
-	const result = MongoUtils.removeSpecialCharactersInKeys(_.cloneDeep(origin));
+	const result = MongoUtils.REMOVE_SPECIAL_CHARACTERS_IN_KEYS(_.cloneDeep(origin));
 	t.deepEqual(origin, result, 'object should not change');
-	const result2 = MongoUtils.unRemoveSpecialCharactersInKeys(result);
+	const result2 = MongoUtils.UN_REMOVE_SPECIAL_CHARACTERS_IN_KEYS(result);
 	t.deepEqual(origin, result2, 'object should not change without clone');
 });

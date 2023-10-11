@@ -1,9 +1,8 @@
-import { N9Log } from '@neo9/n9-node-log';
 import { waitFor } from '@neo9/n9-node-utils';
-import test, { Assertions } from 'ava';
+import test, { ExecutionContext } from 'ava';
 
-import { BaseMongoObject, MongoClient } from '../src';
-import { init } from './fixtures/utils';
+import { BaseMongoObject, N9MongoDBClient } from '../src';
+import { getBaseMongoClientSettings, getOneCollectionName, init, TestContext } from './fixtures';
 
 class SampleTypeListing extends BaseMongoObject {
 	public field1StringThatDoesNotAffectChange: string;
@@ -18,16 +17,16 @@ class SampleType extends SampleTypeListing {
 	public field2Number: number;
 	public subItem: SubItem;
 }
-global.log = new N9Log('tests').module('update-only-on-change-deep');
 
 init();
 
-test('[CRUD] Find one and update with omit', async (t: Assertions) => {
-	const mongoClient = new MongoClient(
-		global.db.collection(`test-${Date.now()}`),
+test('[CRUD] Find one and update with omit', async (t: ExecutionContext<TestContext>) => {
+	const mongoClient = new N9MongoDBClient(
+		t.context.db.collection(getOneCollectionName()),
 		SampleType,
 		SampleTypeListing,
 		{
+			...getBaseMongoClientSettings(t),
 			updateOnlyOnChange: {
 				changeFilters: {
 					omit: ['subItem.property1ThatDoesNotAffectChange', 'field1StringThatDoesNotAffectChange'],
@@ -148,12 +147,13 @@ test('[CRUD] Find one and update with omit', async (t: Assertions) => {
 	await mongoClient.dropCollection();
 });
 
-test('[CRUD] Find one and update with pick', async (t: Assertions) => {
-	const mongoClient = new MongoClient(
-		global.db.collection(`test-${Date.now()}`),
+test('[CRUD] Find one and update with pick', async (t: ExecutionContext<TestContext>) => {
+	const mongoClient = new N9MongoDBClient(
+		t.context.db.collection(getOneCollectionName()),
 		SampleType,
 		SampleTypeListing,
 		{
+			...getBaseMongoClientSettings(t),
 			updateOnlyOnChange: {
 				changeFilters: {
 					pick: ['subItem', 'field2Number'],

@@ -1,9 +1,8 @@
-import { N9Log } from '@neo9/n9-node-log';
-import test, { Assertions } from 'ava';
-import * as _ from 'lodash';
+import test, { ExecutionContext } from 'ava';
+import _ from 'lodash';
 
-import { BaseMongoObject, MongoClient } from '../src';
-import { init } from './fixtures/utils';
+import { BaseMongoObject, N9MongoDBClient } from '../src';
+import { getBaseMongoClientSettings, getOneCollectionName, init, TestContext } from './fixtures';
 
 export class AttributeValueListItemEntity extends BaseMongoObject {
 	public code: string;
@@ -13,15 +12,15 @@ export class AttributeValueListItemEntity extends BaseMongoObject {
 	public position?: number;
 }
 
-const getLockFieldsMongoClient = (): MongoClient<
-	AttributeValueListItemEntity,
-	AttributeValueListItemEntity
-> =>
-	new MongoClient<AttributeValueListItemEntity, AttributeValueListItemEntity>(
-		`test-${Date.now()}`,
+const getLockFieldsMongoClient = (
+	t: ExecutionContext<TestContext>,
+): N9MongoDBClient<AttributeValueListItemEntity, AttributeValueListItemEntity> =>
+	new N9MongoDBClient<AttributeValueListItemEntity, AttributeValueListItemEntity>(
+		getOneCollectionName(),
 		AttributeValueListItemEntity,
 		AttributeValueListItemEntity,
 		{
+			...getBaseMongoClientSettings(t),
 			keepHistoric: false,
 			lockFields: {
 				excludedFields: ['attributeId', 'code'],
@@ -29,12 +28,10 @@ const getLockFieldsMongoClient = (): MongoClient<
 		},
 	);
 
-global.log = new N9Log('tests').module('lock-fields-regression');
-
 init();
 
-test('[LOCK-FIELDS-REG] Insert&update multiple times without changing locks', async (t: Assertions) => {
-	const mongoClient = getLockFieldsMongoClient();
+test('[LOCK-FIELDS-REG] Insert&update multiple times without changing locks', async (t: ExecutionContext<TestContext>) => {
+	const mongoClient = getLockFieldsMongoClient(t);
 
 	const insertedEntity = await mongoClient.insertOne(
 		{

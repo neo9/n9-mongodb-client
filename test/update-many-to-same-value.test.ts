@@ -1,8 +1,7 @@
-import { N9Log } from '@neo9/n9-node-log';
-import test, { Assertions } from 'ava';
+import test, { ExecutionContext } from 'ava';
 
-import { BaseMongoObject, MongoClient } from '../src';
-import { init } from './fixtures/utils';
+import { BaseMongoObject, N9MongoDBClient } from '../src';
+import { getBaseMongoClientSettings, getOneCollectionName, init, TestContext } from './fixtures';
 
 class SampleTypeListing extends BaseMongoObject {
 	public field1String: string;
@@ -12,13 +11,15 @@ class SampleType extends SampleTypeListing {
 	public field2Number: number;
 }
 
-global.log = new N9Log('tests');
-
 init();
 
-test('[UPDATE MANY TO SAME VALUE] Should update many documents', async (t: Assertions) => {
-	const collectionName = `test-${Date.now()}`;
-	const mongoClient = new MongoClient(collectionName, SampleType, SampleTypeListing, {});
+test('[UPDATE MANY TO SAME VALUE] Should update many documents', async (t: ExecutionContext<TestContext>) => {
+	const mongoClient = new N9MongoDBClient(
+		getOneCollectionName(),
+		SampleType,
+		SampleTypeListing,
+		getBaseMongoClientSettings(t),
+	);
 
 	await mongoClient.insertOne(
 		{
@@ -82,9 +83,9 @@ test('[UPDATE MANY TO SAME VALUE] Should update many documents', async (t: Asser
 	t.true(dateCheck, 'all dates should have been updated correclty');
 });
 
-test('[UPDATE MANY TO SAME VALUE] Should throw if lock field are setted', async (t: Assertions) => {
-	const collectionName = `test-${Date.now()}`;
-	const mongoClient = new MongoClient(collectionName, SampleType, SampleTypeListing, {
+test('[UPDATE MANY TO SAME VALUE] Should throw if lock field are setted', async (t: ExecutionContext<TestContext>) => {
+	const mongoClient = new N9MongoDBClient(getOneCollectionName(), SampleType, SampleTypeListing, {
+		...getBaseMongoClientSettings(t),
 		lockFields: {},
 	});
 
@@ -133,9 +134,9 @@ test('[UPDATE MANY TO SAME VALUE] Should throw if lock field are setted', async 
 	);
 });
 
-test('[UPDATE MANY TO SAME VALUE] Should throw if historic is kept for collection', async (t: Assertions) => {
-	const collectionName = `test-${Date.now()}`;
-	const mongoClient = new MongoClient(collectionName, SampleType, SampleTypeListing, {
+test('[UPDATE MANY TO SAME VALUE] Should throw if historic is kept for collection', async (t: ExecutionContext<TestContext>) => {
+	const mongoClient = new N9MongoDBClient(getOneCollectionName(), SampleType, SampleTypeListing, {
+		...getBaseMongoClientSettings(t),
 		keepHistoric: true,
 	});
 
@@ -184,9 +185,9 @@ test('[UPDATE MANY TO SAME VALUE] Should throw if historic is kept for collectio
 	);
 });
 
-test('[UPDATE MANY TO SAME VALUE] Should throw if updateOnlyOnChange is setted without options to force lastModificationDate update', async (t: Assertions) => {
-	const collectionName = `test-${Date.now()}`;
-	const mongoClient = new MongoClient(collectionName, SampleType, SampleTypeListing, {
+test('[UPDATE MANY TO SAME VALUE] Should throw if updateOnlyOnChange is setted without options to force lastModificationDate update', async (t: ExecutionContext<TestContext>) => {
+	const mongoClient = new N9MongoDBClient(getOneCollectionName(), SampleType, SampleTypeListing, {
+		...getBaseMongoClientSettings(t),
 		updateOnlyOnChange: {},
 	});
 
@@ -235,9 +236,9 @@ test('[UPDATE MANY TO SAME VALUE] Should throw if updateOnlyOnChange is setted w
 	);
 });
 
-test('[UPDATE MANY TO SAME VALUE] Should allow update when updateOnlyOnChange is setted with options to force lastModificationDate update', async (t: Assertions) => {
-	const collectionName = `test-${Date.now()}`;
-	const mongoClient = new MongoClient(collectionName, SampleType, SampleTypeListing, {
+test('[UPDATE MANY TO SAME VALUE] Should allow update when updateOnlyOnChange is setted with options to force lastModificationDate update', async (t: ExecutionContext<TestContext>) => {
+	const mongoClient = new N9MongoDBClient(getOneCollectionName(), SampleType, SampleTypeListing, {
+		...getBaseMongoClientSettings(t),
 		updateOnlyOnChange: {},
 	});
 

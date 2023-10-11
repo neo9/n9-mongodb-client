@@ -1,19 +1,21 @@
-import { N9Log } from '@neo9/n9-node-log';
-import test, { Assertions } from 'ava';
+import test, { ExecutionContext } from 'ava';
 
-import { BaseMongoObject, MongoClient, MongoUtils } from '../src';
-import { init } from './fixtures/utils';
+import { BaseMongoObject, MongoUtils, N9MongoDBClient } from '../src';
+import { getBaseMongoClientSettings, getOneCollectionName, init, TestContext } from './fixtures';
 
 class SampleType extends BaseMongoObject {
 	public 'a.key.with.dots': number;
 }
 
-global.log = new N9Log('tests').module('dots-keys');
-
 init();
 
-test('[DOTS-KEYS] Insert one with dots and find it', async (t: Assertions) => {
-	const mongoClient = new MongoClient(`test-${Date.now()}`, SampleType, SampleType);
+test('[DOTS-KEYS] Insert one with dots and find it', async (t: ExecutionContext<TestContext>) => {
+	const mongoClient = new N9MongoDBClient(
+		getOneCollectionName(),
+		SampleType,
+		SampleType,
+		getBaseMongoClientSettings(t),
+	);
 	const size = await mongoClient.count();
 
 	t.true(size === 0, 'collection should be empty');
@@ -26,7 +28,7 @@ test('[DOTS-KEYS] Insert one with dots and find it', async (t: Assertions) => {
 	await mongoClient.insertOne(newEntity, 'userId1');
 
 	const sizeWithElementIn = await mongoClient.count();
-	const query = { [MongoUtils.escapeSpecialCharacters(aKeyWithDots)]: intValue };
+	const query = { [MongoUtils.ESCAPE_SPECIAL_CHARACTERS(aKeyWithDots)]: intValue };
 	const foundObject = await mongoClient.findOne(query);
 	t.truthy(foundObject, 'found by query');
 	t.is(sizeWithElementIn, 1, 'nb element in collection');
@@ -67,8 +69,9 @@ test('[DOTS-KEYS] Insert one with dots and find it', async (t: Assertions) => {
 	await mongoClient.dropCollection();
 });
 
-test('[DOTS-KEYS] Insert&update and check historic', async (t: Assertions) => {
-	const mongoClient = new MongoClient(`test-${Date.now()}`, SampleType, SampleType, {
+test('[DOTS-KEYS] Insert&update and check historic', async (t: ExecutionContext<TestContext>) => {
+	const mongoClient = new N9MongoDBClient(getOneCollectionName(), SampleType, SampleType, {
+		...getBaseMongoClientSettings(t),
 		keepHistoric: true,
 	});
 	await mongoClient.initHistoricIndexes();
@@ -83,7 +86,7 @@ test('[DOTS-KEYS] Insert&update and check historic', async (t: Assertions) => {
 		intValue,
 		{
 			$set: {
-				[MongoUtils.escapeSpecialCharacters(aKeyWithDots)]: 42,
+				[MongoUtils.ESCAPE_SPECIAL_CHARACTERS(aKeyWithDots)]: 42,
 			},
 		},
 		'userId',
@@ -105,8 +108,13 @@ test('[DOTS-KEYS] Insert&update and check historic', async (t: Assertions) => {
 	);
 });
 
-test('[DOTS-KEYS] Insert many with dots and find it', async (t: Assertions) => {
-	const mongoClient = new MongoClient(`test-${Date.now()}`, SampleType, SampleType);
+test('[DOTS-KEYS] Insert many with dots and find it', async (t: ExecutionContext<TestContext>) => {
+	const mongoClient = new N9MongoDBClient(
+		getOneCollectionName(),
+		SampleType,
+		SampleType,
+		getBaseMongoClientSettings(t),
+	);
 	const size = await mongoClient.count();
 
 	t.true(size === 0, 'collection should be empty');
@@ -121,7 +129,7 @@ test('[DOTS-KEYS] Insert many with dots and find it', async (t: Assertions) => {
 	const sizeWithElementIn = await mongoClient.count();
 	t.is(sizeWithElementIn, 2, 'nb element in collection');
 
-	const query = { [MongoUtils.escapeSpecialCharacters(aKeyWithDots)]: intValue };
+	const query = { [MongoUtils.ESCAPE_SPECIAL_CHARACTERS(aKeyWithDots)]: intValue };
 	const foundObject = await mongoClient.findOne(query);
 	t.truthy(foundObject, 'found by query');
 

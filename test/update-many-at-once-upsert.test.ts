@@ -1,11 +1,9 @@
-import { N9Log } from '@neo9/n9-node-log';
-import test, { Assertions } from 'ava';
-import * as _ from 'lodash';
+import test, { ExecutionContext } from 'ava';
+import _ from 'lodash';
 import { PromisePoolExecutor } from 'promise-pool-executor';
 
-import { BaseMongoObject, MongoClient, MongoUtils } from '../src';
-import { Db } from '../src/mongodb';
-import { init } from './fixtures/utils';
+import { BaseMongoObject, MongoUtils, N9MongoDBClient } from '../src';
+import { getBaseMongoClientSettings, getOneCollectionName, init, TestContext } from './fixtures';
 
 class SampleType extends BaseMongoObject {
 	public externalReferences: {
@@ -30,8 +28,6 @@ class DataSampleWithCodes extends BaseMongoObject {
 	codes: string[];
 	value: string;
 }
-
-global.log = new N9Log('tests');
 
 init();
 
@@ -64,9 +60,14 @@ function mapSampleTypeCreateToSampleType(
 	return sampleType1;
 }
 
-test('[UPDATE MANY AT ONCE] Should update one document', async (t: Assertions) => {
-	const collectionName = `test-${Date.now()}`;
-	const mongoClient = new MongoClient(collectionName, SampleType, SampleType, {});
+test('[UPDATE MANY AT ONCE] Should update one document', async (t: ExecutionContext<TestContext>) => {
+	const collectionName = getOneCollectionName();
+	const mongoClient = new N9MongoDBClient(
+		collectionName,
+		SampleType,
+		SampleType,
+		getBaseMongoClientSettings(t),
+	);
 
 	const insertedValue = await mongoClient.insertOne(
 		{
@@ -102,7 +103,7 @@ test('[UPDATE MANY AT ONCE] Should update one document', async (t: Assertions) =
 		value: '2',
 	};
 	const newEntity3: SampleType = {
-		_id: MongoUtils.oid('012345678901234567890123') as any, // try to edit the mongodb ID, it will be ignored
+		_id: MongoUtils.TO_OBJECT_ID('012345678901234567890123') as any, // try to edit the mongodb ID, it will be ignored
 		sku: 'new-sku-3',
 		externalReferences: [
 			{
@@ -137,7 +138,7 @@ test('[UPDATE MANY AT ONCE] Should update one document', async (t: Assertions) =
 			forceEditLockFields: false,
 		})
 	).toArray();
-	const sampleTypeFoundWithNativeClient = await (global.db as Db)
+	const sampleTypeFoundWithNativeClient = await t.context.db
 		.collection(collectionName)
 		.findOne<SampleType>({ sku: newEntity2.sku });
 
@@ -146,9 +147,14 @@ test('[UPDATE MANY AT ONCE] Should update one document', async (t: Assertions) =
 	t.is(typeof sampleTypeFoundWithNativeClient._id, 'object', '_id is still an object');
 });
 
-test('[UPDATE MANY AT ONCE] Should update one document by _id ObjectID', async (t: Assertions) => {
-	const collectionName = `test-${Date.now()}`;
-	const mongoClient = new MongoClient(collectionName, DataSample, DataSample, {});
+test('[UPDATE MANY AT ONCE] Should update one document by _id ObjectID', async (t: ExecutionContext<TestContext>) => {
+	const collectionName = getOneCollectionName();
+	const mongoClient = new N9MongoDBClient(
+		collectionName,
+		DataSample,
+		DataSample,
+		getBaseMongoClientSettings(t),
+	);
 
 	const dataSample: DataSample = {
 		value: 'init',
@@ -164,7 +170,7 @@ test('[UPDATE MANY AT ONCE] Should update one document by _id ObjectID', async (
 		],
 		'TEST',
 		{
-			query: (e) => ({ _id: MongoUtils.oid(e._id) as any }),
+			query: (e) => ({ _id: MongoUtils.TO_OBJECT_ID(e._id) as any }),
 		},
 	);
 
@@ -173,9 +179,10 @@ test('[UPDATE MANY AT ONCE] Should update one document by _id ObjectID', async (
 	t.deepEqual(dataUpdatedArray[0].value, 'update', 'value is updated');
 });
 
-test('[UPDATE MANY AT ONCE] Should call mapAfterLockFieldsApplied with merged entity on update', async (t: Assertions) => {
-	const collectionName = `test-${Date.now()}`;
-	const mongoClient = new MongoClient(collectionName, SampleType, SampleType, {
+test('[UPDATE MANY AT ONCE] Should call mapAfterLockFieldsApplied with merged entity on update', async (t: ExecutionContext<TestContext>) => {
+	const collectionName = getOneCollectionName();
+	const mongoClient = new N9MongoDBClient(collectionName, SampleType, SampleType, {
+		...getBaseMongoClientSettings(t),
 		lockFields: {
 			arrayWithReferences: {
 				externalReferences: 'value',
@@ -235,9 +242,9 @@ test('[UPDATE MANY AT ONCE] Should call mapAfterLockFieldsApplied with merged en
 	t.is(updateResult[0].status, 'OK', 'status updated');
 });
 
-test('[UPDATE MANY AT ONCE] Should not update entity if mapAfterLockFieldsApplied returns undefined', async (t: Assertions) => {
-	const collectionName = `test-${Date.now()}`;
-	const mongoClient = new MongoClient(collectionName, SampleType, SampleType, {
+test('[UPDATE MANY AT ONCE] Should not update entity if mapAfterLockFieldsApplied returns undefined', async (t: ExecutionContext<TestContext>) => {
+	const mongoClient = new N9MongoDBClient(getOneCollectionName(), SampleType, SampleType, {
+		...getBaseMongoClientSettings(t),
 		lockFields: {
 			arrayWithReferences: {
 				externalReferences: 'value',
@@ -316,9 +323,13 @@ test('[UPDATE MANY AT ONCE] Should not update entity if mapAfterLockFieldsApplie
 	t.is(updateResult[0].sku, 'ABCD', 'Correct entity should be updated');
 });
 
-test('[UPDATE MANY AT ONCE] Should use options pool promise exectuor if defined', async (t: Assertions) => {
-	const collectionName = `test-${Date.now()}`;
-	const mongoClient = new MongoClient(collectionName, SampleType, SampleType);
+test('[UPDATE MANY AT ONCE] Should use options pool promise exectuor if defined', async (t: ExecutionContext<TestContext>) => {
+	const mongoClient = new N9MongoDBClient(
+		getOneCollectionName(),
+		SampleType,
+		SampleType,
+		getBaseMongoClientSettings(t),
+	);
 
 	const newEntity1: SampleType = {
 		sku: 'sku-1',
@@ -378,9 +389,13 @@ test('[UPDATE MANY AT ONCE] Should use options pool promise exectuor if defined'
 	t.is(updateResult.length, 3, '3 entity updated');
 });
 
-test('[UPDATE MANY AT ONCE] Should call mapAfterLockFieldsApplied with new entity on insert', async (t: Assertions) => {
-	const collectionName = `test-${Date.now()}`;
-	const mongoClient = new MongoClient(collectionName, SampleType, SampleType, {});
+test('[UPDATE MANY AT ONCE] Should call mapAfterLockFieldsApplied with new entity on insert', async (t: ExecutionContext<TestContext>) => {
+	const mongoClient = new N9MongoDBClient(
+		getOneCollectionName(),
+		SampleType,
+		SampleType,
+		getBaseMongoClientSettings(t),
+	);
 
 	const newEntity: SampleType = {
 		sku: 'sku-1',
@@ -416,10 +431,13 @@ test('[UPDATE MANY AT ONCE] Should call mapAfterLockFieldsApplied with new entit
 	t.is(updateResult[0].status, 'OK', 'status updated');
 });
 
-test('[UPDATE MANY AT ONCE] Should update nothing with empty array', async (t: Assertions) => {
-	const collectionName = `test-${Date.now()}`;
-
-	const mongoClient = new MongoClient(collectionName, DataSample, DataSample, {});
+test('[UPDATE MANY AT ONCE] Should update nothing with empty array', async (t: ExecutionContext<TestContext>) => {
+	const mongoClient = new N9MongoDBClient(
+		getOneCollectionName(),
+		DataSample,
+		DataSample,
+		getBaseMongoClientSettings(t),
+	);
 
 	const dataSample: DataSample = {
 		value: 'init',
@@ -427,16 +445,20 @@ test('[UPDATE MANY AT ONCE] Should update nothing with empty array', async (t: A
 	await mongoClient.insertOne(_.cloneDeep(dataSample), '', false, true);
 
 	const entities = await mongoClient.updateManyAtOnce([], 'TEST', {
-		query: (e) => ({ _id: MongoUtils.oid(e._id) as any }),
+		query: (e) => ({ _id: MongoUtils.TO_OBJECT_ID(e._id) as any }),
 	});
 
 	const dataUpdatedArray = await entities.toArray();
 	t.is(dataUpdatedArray.length, 0, '0 value updated');
 });
 
-test('[UPDATE MANY AT ONCE] Update entity by query on attribut type number', async (t: Assertions) => {
-	const collectionName = `test-${Date.now()}`;
-	const mongoClient = new MongoClient(collectionName, DataSampleWithCode, DataSampleWithCode, {});
+test('[UPDATE MANY AT ONCE] Update entity by query on attribut type number', async (t: ExecutionContext<TestContext>) => {
+	const mongoClient = new N9MongoDBClient(
+		getOneCollectionName(),
+		DataSampleWithCode,
+		DataSampleWithCode,
+		getBaseMongoClientSettings(t),
+	);
 
 	const dataSample: DataSampleWithCode = {
 		code: 1,
@@ -463,9 +485,13 @@ test('[UPDATE MANY AT ONCE] Update entity by query on attribut type number', asy
 /**
  * This test fail due to a hash computed in `mingo`. This hash is the same for `KNE_OC42-midas` and `KNE_OCS3-midas`.
  */
-test('[UPDATE MANY AT ONCE] Update with mingo hash collision ', async (t: Assertions) => {
-	const collectionName = `test-${Date.now()}`;
-	const mongoClient = new MongoClient(collectionName, DataSampleWithCodes, DataSampleWithCodes, {});
+test('[UPDATE MANY AT ONCE] Update with mingo hash collision ', async (t: ExecutionContext<TestContext>) => {
+	const mongoClient = new N9MongoDBClient(
+		getOneCollectionName(),
+		DataSampleWithCodes,
+		DataSampleWithCodes,
+		getBaseMongoClientSettings(t),
+	);
 	await mongoClient.createUniqueIndex('codes');
 	const dataSample1: DataSampleWithCodes = {
 		id: 1,
@@ -525,9 +551,13 @@ test('[UPDATE MANY AT ONCE] Update with mingo hash collision ', async (t: Assert
 	await mongoClient.dropCollection();
 });
 
-test('[UPDATE MANY AT ONCE] Update entity by query on attribut type boolean', async (t: Assertions) => {
-	const collectionName = `test-${Date.now()}`;
-	const mongoClient = new MongoClient(collectionName, DataSampleWithCode, DataSampleWithCode, {});
+test('[UPDATE MANY AT ONCE] Update entity by query on attribut type boolean', async (t: ExecutionContext<TestContext>) => {
+	const mongoClient = new N9MongoDBClient(
+		getOneCollectionName(),
+		DataSampleWithCode,
+		DataSampleWithCode,
+		getBaseMongoClientSettings(t),
+	);
 
 	const dataSample: DataSampleWithCode = {
 		code: true,
@@ -551,9 +581,13 @@ test('[UPDATE MANY AT ONCE] Update entity by query on attribut type boolean', as
 	t.deepEqual((await entities.toArray())[0].value, 'update', 'value is updated');
 });
 
-test('[UPDATE MANY AT ONCE] Throw on missing value', async (t: Assertions) => {
-	const collectionName = `test-${Date.now()}`;
-	const mongoClient = new MongoClient(collectionName, DataSample, DataSample, {});
+test('[UPDATE MANY AT ONCE] Throw on missing value', async (t: ExecutionContext<TestContext>) => {
+	const mongoClient = new N9MongoDBClient(
+		getOneCollectionName(),
+		DataSample,
+		DataSample,
+		getBaseMongoClientSettings(t),
+	);
 
 	const dataSample: DataSample = {
 		value: 'init',

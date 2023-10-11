@@ -1,19 +1,21 @@
-import { N9Log } from '@neo9/n9-node-log';
-import test, { Assertions } from 'ava';
+import test, { ExecutionContext } from 'ava';
 
-import { BaseMongoObject, MongoClient } from '../src';
-import { init } from './fixtures/utils';
+import { BaseMongoObject, N9MongoDBClient } from '../src';
+import { getBaseMongoClientSettings, getOneCollectionName, init, TestContext } from './fixtures';
 
 class SampleType extends BaseMongoObject {
 	public test: string;
 }
 
-global.log = new N9Log('tests');
-
 init();
 
-test('[EXISTS] Create collection and test existence', async (t: Assertions) => {
-	const mongoClient = new MongoClient(`test-${Date.now()}`, SampleType, null);
+test('[EXISTS] Create collection and test existence', async (t: ExecutionContext<TestContext>) => {
+	const mongoClient = new N9MongoDBClient(
+		getOneCollectionName(),
+		SampleType,
+		null,
+		getBaseMongoClientSettings(t),
+	);
 
 	await mongoClient.insertOne({ test: 'test' }, 'userId1');
 
@@ -22,14 +24,24 @@ test('[EXISTS] Create collection and test existence', async (t: Assertions) => {
 	await mongoClient.dropCollection();
 });
 
-test('[EXISTS] Do not create collection and test existence', async (t: Assertions) => {
-	const mongoClient = new MongoClient(`test-${Date.now()}`, SampleType, null);
+test('[EXISTS] Do not create collection and test existence', async (t: ExecutionContext<TestContext>) => {
+	const mongoClient = new N9MongoDBClient(
+		getOneCollectionName(),
+		SampleType,
+		null,
+		getBaseMongoClientSettings(t),
+	);
 
 	t.false(await mongoClient.collectionExists(), 'collection does not exist');
 });
 
-test('[EXISTS] Create collection then drop it then test existence', async (t: Assertions) => {
-	const mongoClient = new MongoClient(`test-${Date.now()}`, SampleType, null);
+test('[EXISTS] Create collection then drop it then test existence', async (t: ExecutionContext<TestContext>) => {
+	const mongoClient = new N9MongoDBClient(
+		getOneCollectionName(),
+		SampleType,
+		null,
+		getBaseMongoClientSettings(t),
+	);
 
 	await mongoClient.insertOne({ test: 'test' }, 'userId1');
 	await mongoClient.dropCollection();

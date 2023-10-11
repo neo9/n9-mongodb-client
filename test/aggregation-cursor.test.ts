@@ -1,27 +1,26 @@
-import { N9Log } from '@neo9/n9-node-log';
 import test, { ExecutionContext } from 'ava';
-import * as _ from 'lodash';
+import _ from 'lodash';
 
-import { BaseMongoObject, MongoClient, N9AggregationCursor } from '../src';
-import { MongoClient as MongodbClient, ObjectId } from '../src/mongodb';
-import { init } from './fixtures/utils';
+import { BaseMongoObject, N9AggregationCursor, N9MongoDBClient } from '../src';
+import { ObjectId } from '../src/mongodb';
+import { getBaseMongoClientSettings, getOneCollectionName, init, TestContext } from './fixtures';
 
 class SampleType extends BaseMongoObject {
 	public field1String: string;
 }
 
-interface ContextContent {
-	mongoClient: MongoClient<SampleType, SampleType>;
-	collectionName: string;
-	dbClient: MongodbClient;
+interface ContextContent extends TestContext {
+	mongoClient: N9MongoDBClient<SampleType, SampleType>;
 }
-
-global.log = new N9Log('tests');
 
 init();
 test.beforeEach(async (t: ExecutionContext<ContextContent>) => {
-	const collectionName = `test-${Date.now()}`;
-	const mongoClient = new MongoClient(collectionName, SampleType, SampleType);
+	const mongoClient = new N9MongoDBClient(
+		getOneCollectionName(),
+		SampleType,
+		SampleType,
+		getBaseMongoClientSettings(t),
+	);
 
 	// insert items not sorted to avoid case where we rely on the insert order
 	await mongoClient.insertMany(
@@ -35,8 +34,6 @@ test.beforeEach(async (t: ExecutionContext<ContextContent>) => {
 		'userId1',
 	);
 	t.context.mongoClient = mongoClient;
-	t.context.collectionName = collectionName;
-	t.context.dbClient = global.dbClient;
 });
 
 test.afterEach(async (t: ExecutionContext<ContextContent>) => {

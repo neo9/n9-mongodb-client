@@ -1,13 +1,14 @@
-import test, { Assertions } from 'ava';
-import * as _ from 'lodash';
+import test, { ExecutionContext } from 'ava';
+import _ from 'lodash';
 
 import { LangUtils, MongoUtils } from '../src';
+import { TestContext } from './fixtures';
 
-test('[LANG-UTILS] Test to removeEmptyDeep on object with ObjectIds', (t: Assertions) => {
+test('[LANG-UTILS] Test to removeEmptyDeep on object with ObjectIds', (t: ExecutionContext<TestContext>) => {
 	const anObjectToTest = {
 		s: '2019-01-02',
 		n: 5,
-		id: MongoUtils.oid('012345678901234568790123'),
+		id: MongoUtils.TO_OBJECT_ID('012345678901234568790123'),
 		date: new Date('2020-01-01'),
 		undef: undefined,
 		emptyObject: {},
@@ -34,7 +35,7 @@ test('[LANG-UTILS] Test to removeEmptyDeep on object with ObjectIds', (t: Assert
 		{
 			s: '2019-01-02',
 			n: 5,
-			id: MongoUtils.oid('012345678901234568790123'),
+			id: MongoUtils.TO_OBJECT_ID('012345678901234568790123'),
 			date: new Date('2020-01-01'),
 			emptyArray: [],
 			objectWithOnlyEmptyArray: {
@@ -61,7 +62,7 @@ test('[LANG-UTILS] Test to removeEmptyDeep on object with ObjectIds', (t: Assert
 		{
 			s: '2019-01-02',
 			n: 5,
-			id: MongoUtils.oid('012345678901234568790123'),
+			id: MongoUtils.TO_OBJECT_ID('012345678901234568790123'),
 			date: new Date('2020-01-01'),
 			emptyObject: {},
 			emptyArray: [],

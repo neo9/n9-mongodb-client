@@ -1,5 +1,5 @@
 import { N9Error } from '@neo9/n9-node-utils';
-import * as _ from 'lodash';
+import _ from 'lodash';
 import {
 	AbstractCursor,
 	AbstractCursorEvents,

@@ -1,16 +1,18 @@
-import { N9Log } from '@neo9/n9-node-log';
-import test, { Assertions } from 'ava';
+import test, { ExecutionContext } from 'ava';
 
-import { BaseMongoObject, MongoClient } from '../src';
-import { init } from './fixtures/utils';
-
-global.log = new N9Log('tests');
+import { BaseMongoObject, N9MongoDBClient } from '../src';
+import { getBaseMongoClientSettings, getOneCollectionName, init, TestContext } from './fixtures';
 
 init();
 
-test('[Indexes] Create index', async (t: Assertions) => {
-	const collection = global.db.collection(`test-${Date.now()}`);
-	const mongoClient = new MongoClient(collection, BaseMongoObject, null);
+test('[Indexes] Create index', async (t: ExecutionContext<TestContext>) => {
+	const collection = t.context.db.collection(getOneCollectionName());
+	const mongoClient = new N9MongoDBClient(
+		collection,
+		BaseMongoObject,
+		null,
+		getBaseMongoClientSettings(t),
+	);
 
 	await mongoClient.createIndex('name');
 	t.true(
@@ -21,9 +23,14 @@ test('[Indexes] Create index', async (t: Assertions) => {
 	await mongoClient.dropCollection();
 });
 
-test('[Indexes] List all indexes', async (t: Assertions) => {
-	const collection = global.db.collection(`test-${Date.now()}`);
-	const mongoClient = new MongoClient(collection, BaseMongoObject, null);
+test('[Indexes] List all indexes', async (t: ExecutionContext<TestContext>) => {
+	const collection = t.context.db.collection(getOneCollectionName());
+	const mongoClient = new N9MongoDBClient(
+		collection,
+		BaseMongoObject,
+		null,
+		getBaseMongoClientSettings(t),
+	);
 
 	await mongoClient.createIndex('index_1');
 	await mongoClient.createIndex('index_2');
@@ -39,9 +46,14 @@ test('[Indexes] List all indexes', async (t: Assertions) => {
 	await mongoClient.dropCollection();
 });
 
-test('[Indexes] Create unique index', async (t: Assertions) => {
-	const collection = global.db.collection(`test-${Date.now()}`);
-	const mongoClient = new MongoClient(collection, BaseMongoObject, null);
+test('[Indexes] Create unique index', async (t: ExecutionContext<TestContext>) => {
+	const collection = t.context.db.collection(getOneCollectionName());
+	const mongoClient = new N9MongoDBClient(
+		collection,
+		BaseMongoObject,
+		null,
+		getBaseMongoClientSettings(t),
+	);
 
 	await mongoClient.createUniqueIndex('code');
 
@@ -53,10 +65,15 @@ test('[Indexes] Create unique index', async (t: Assertions) => {
 	await mongoClient.dropCollection();
 });
 
-test('[Indexes] Drop index', async (t: Assertions) => {
-	const collection = global.db.collection(`test-${Date.now()}`);
+test('[Indexes] Drop index', async (t: ExecutionContext<TestContext>) => {
+	const collection = t.context.db.collection(getOneCollectionName());
 	await collection.createIndex('name');
-	const mongoClient = new MongoClient(collection, BaseMongoObject, null);
+	const mongoClient = new N9MongoDBClient(
+		collection,
+		BaseMongoObject,
+		null,
+		getBaseMongoClientSettings(t),
+	);
 
 	t.true(
 		(await collection.listIndexes().toArray()).some((i) => i.name === 'name_1'),
@@ -71,9 +88,14 @@ test('[Indexes] Drop index', async (t: Assertions) => {
 	await mongoClient.dropCollection();
 });
 
-test('[Indexes] Create expiration index', async (t: Assertions) => {
-	const collection = global.db.collection(`test-${Date.now()}`);
-	const mongoClient = new MongoClient(collection, BaseMongoObject, null);
+test('[Indexes] Create expiration index', async (t: ExecutionContext<TestContext>) => {
+	const collection = t.context.db.collection(getOneCollectionName());
+	const mongoClient = new N9MongoDBClient(
+		collection,
+		BaseMongoObject,
+		null,
+		getBaseMongoClientSettings(t),
+	);
 
 	await mongoClient.createExpirationIndex(1, 'objectInfos.creation.date', { name: 'expiration' });
 	const index = (await collection.listIndexes().toArray()).find((i) => i.name === 'expiration');
@@ -86,10 +108,13 @@ test('[Indexes] Create expiration index', async (t: Assertions) => {
 	await mongoClient.dropCollection();
 });
 
-test('[Indexes] Create historic expiration index', async (t: Assertions) => {
-	const collection = global.db.collection(`test-${Date.now()}`);
-	const historicCollection = global.db.collection(`test-${Date.now()}Historic`);
-	const mongoClient = new MongoClient(collection, BaseMongoObject, BaseMongoObject, {
+test('[Indexes] Create historic expiration index', async (t: ExecutionContext<TestContext>) => {
+	const collection = t.context.db.collection(getOneCollectionName());
+	const historicCollection = t.context.db.collection(`${collection.collectionName}Historic`);
+	const mongoClient = new N9MongoDBClient(collection, BaseMongoObject, BaseMongoObject, {
+		// ..getBaseMongoClientSettings(t),
+		db: t.context.db,
+		logger: t.context.logger,
 		keepHistoric: true,
 	});
 	await mongoClient.initHistoricIndexes();
@@ -104,9 +129,14 @@ test('[Indexes] Create historic expiration index', async (t: Assertions) => {
 	await mongoClient.dropHistory();
 });
 
-test('[Indexes] Update expiration index if it exists', async (t: Assertions) => {
-	const collection = global.db.collection(`test-${Date.now()}`);
-	const mongoClient = new MongoClient(collection, BaseMongoObject, null);
+test('[Indexes] Update expiration index if it exists', async (t: ExecutionContext<TestContext>) => {
+	const collection = t.context.db.collection(getOneCollectionName());
+	const mongoClient = new N9MongoDBClient(
+		collection,
+		BaseMongoObject,
+		null,
+		getBaseMongoClientSettings(t),
+	);
 
 	await mongoClient.createExpirationIndex(1, 'objectInfos.creation.date', { name: 'expiration' });
 	let index = (await collection.listIndexes().toArray()).find((i) => i.name === 'expiration');
@@ -139,10 +169,11 @@ test('[Indexes] Update expiration index if it exists', async (t: Assertions) => 
 	await mongoClient.dropCollection();
 });
 
-test('[Indexes] Update historic expiration index if it exists', async (t: Assertions) => {
-	const collection = global.db.collection(`test-${Date.now()}`);
-	const historicCollection = global.db.collection(`test-${Date.now()}Historic`);
-	const mongoClient = new MongoClient(collection, BaseMongoObject, BaseMongoObject, {
+test('[Indexes] Update historic expiration index if it exists', async (t: ExecutionContext<TestContext>) => {
+	const collection = t.context.db.collection(getOneCollectionName());
+	const historicCollection = t.context.db.collection(`${collection.collectionName}Historic`);
+	const mongoClient = new N9MongoDBClient(collection, BaseMongoObject, BaseMongoObject, {
+		...getBaseMongoClientSettings(t),
 		keepHistoric: true,
 	});
 

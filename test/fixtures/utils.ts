@@ -1,11 +1,17 @@
-import test from 'ava';
+import { N9Log } from '@neo9/n9-node-log';
+import test, { ExecutionContext } from 'ava';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 
-import { BaseMongoObject, MongoClient, MongoUtils, StringMap } from '../../src';
+import { BaseMongoObject, MongoUtils, N9MongoDBClient, StringMap } from '../../src';
 import * as mongodb from '../../src/mongodb';
 
 export const print = true;
 
+export interface TestContext {
+	db: mongodb.Db;
+	mongodbClient: mongodb.MongoClient;
+	logger: N9Log;
+}
 export class ArrayElement {
 	public code: string;
 	public otherCode?: string;
@@ -26,10 +32,25 @@ export class SampleEntityWithSimpleArray extends BaseMongoObject {
 		items: string[];
 	};
 }
+export function getOneCollectionName(prefix: string = 'test'): string {
+	return `${prefix}-${Math.round(Math.random() * 100000)}${Date.now()}`;
+}
 
-export function generateMongoClient(): MongoClient<SampleEntityWithArray, null> {
-	const collectionName = `test-${Math.ceil(Math.random() * 10000)}-${Date.now()}`;
-	return new MongoClient(collectionName, SampleEntityWithArray, null, {
+export function getBaseMongoClientSettings(t: ExecutionContext<TestContext>): {
+	logger: N9Log;
+	db: mongodb.Db;
+} {
+	return {
+		logger: t.context.logger,
+		db: t.context.db,
+	};
+}
+
+export function generateMongoClient(
+	t: ExecutionContext<TestContext>,
+): N9MongoDBClient<SampleEntityWithArray, null> {
+	return new N9MongoDBClient(getOneCollectionName(), SampleEntityWithArray, null, {
+		...getBaseMongoClientSettings(t),
 		lockFields: {
 			arrayWithReferences: {
 				'parameters.items': ['code', 'otherCode'],
@@ -40,12 +61,11 @@ export function generateMongoClient(): MongoClient<SampleEntityWithArray, null> 
 	});
 }
 
-export function generateMongoClientForSimpleArray(): MongoClient<
-	SampleEntityWithSimpleArray,
-	null
-> {
-	const collectionName = `test-${Math.ceil(Math.random() * 10000)}-${Date.now()}`;
-	return new MongoClient(collectionName, SampleEntityWithSimpleArray, null, {
+export function generateMongoClientForSimpleArray(
+	t: ExecutionContext<TestContext>,
+): N9MongoDBClient<SampleEntityWithSimpleArray, null> {
+	return new N9MongoDBClient(getOneCollectionName(), SampleEntityWithSimpleArray, null, {
+		...getBaseMongoClientSettings(t),
 		lockFields: {
 			arrayWithReferences: {
 				'parameters.items': [],
@@ -56,46 +76,63 @@ export function generateMongoClientForSimpleArray(): MongoClient<
 	});
 }
 
-export function init(): void {
+export interface InitOptions {
+	avoidToStartMongodb?: boolean;
+}
+
+export function init(initOptions?: InitOptions): void {
 	let mongod: MongoMemoryServer;
 	let isInMemory: boolean;
 
-	test.before(async () => {
-		let mongoConnectionString: string;
-		try {
-			await MongoUtils.connect('mongodb://127.0.0.1:27017', {
-				serverSelectionTimeoutMS: 650, // 650ms, default is 30000ms
-			});
-			global.log.warn(`Using local MongoDB`);
-		} catch (err) {
-			if (err.name === 'MongoServerSelectionError') {
-				global.log.warn(`Using MongoDB in memory`);
-				isInMemory = true;
-
-				// no classic mongodb available, so use one in memory
-				mongod = await MongoMemoryServer.create({
-					binary: {
-						version: '6.0.4',
+	test.before(async (t: ExecutionContext<TestContext>) => {
+		const logger = new N9Log('test-logger', { formatJSON: false });
+		t.context.logger = logger;
+		if (!initOptions?.avoidToStartMongodb) {
+			let mongoConnectionString: string;
+			try {
+				const { db, mongodbClient } = await MongoUtils.CONNECT('mongodb://127.0.0.1:27017', {
+					logger,
+					nativeDriverOptions: {
+						serverSelectionTimeoutMS: 650, // 650ms, default is 30000ms
 					},
 				});
+				logger.warn(`Using local MongoDB`);
+				t.context.db = db;
+				t.context.mongodbClient = mongodbClient;
+			} catch (err) {
+				if (err.name === 'MongoServerSelectionError') {
+					logger.warn(`Using MongoDB in memory`);
+					isInMemory = true;
 
-				mongoConnectionString = mongod.getUri();
-				await MongoUtils.connect(mongoConnectionString);
-			} else {
-				throw err;
+					// no classic mongodb available, so use one in memory
+					mongod = await MongoMemoryServer.create({
+						binary: {
+							version: '6.0.4',
+						},
+					});
+
+					mongoConnectionString = mongod.getUri();
+					const { db, mongodbClient } = await MongoUtils.CONNECT(mongoConnectionString, {
+						logger,
+					});
+					t.context.db = db;
+					t.context.mongodbClient = mongodbClient;
+				} else {
+					throw err;
+				}
 			}
 		}
 	});
 
-	test.after(async () => {
+	test.after(async (t: ExecutionContext<TestContext>) => {
 		if (isInMemory) {
-			global.log.info(`DROP DB after tests OK`);
-			if (global.db) {
-				await (global.db as mongodb.Db).dropDatabase();
-				await MongoUtils.disconnect();
+			t.context.logger.info(`DROP DB after tests OK`);
+			if (t.context.db) {
+				await t.context.db.dropDatabase();
+				await MongoUtils.DISCONNECT(t.context.mongodbClient, t.context.logger);
 			}
 			await mongod.stop();
-			delete global.dbClient;
+			delete t.context.mongodbClient;
 		}
 	});
 }

@@ -1,4 +1,4 @@
-import * as _ from 'lodash';
+import _ from 'lodash';
 import * as v8 from 'v8';
 
 export class LodashReplacerUtils {

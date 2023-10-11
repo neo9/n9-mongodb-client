@@ -1,9 +1,8 @@
-import { N9Log } from '@neo9/n9-node-log';
-import test, { Assertions } from 'ava';
+import test, { ExecutionContext } from 'ava';
 import { Exclude, Expose } from 'class-transformer';
 
-import { BaseMongoObject, MongoClient } from '../src';
-import { init } from './fixtures/utils';
+import { BaseMongoObject, N9MongoDBClient } from '../src';
+import { getBaseMongoClientSettings, getOneCollectionName, init, TestContext } from './fixtures';
 
 @Exclude()
 class SampleTypeListItem extends BaseMongoObject {
@@ -22,12 +21,15 @@ class SampleTypeEntity2 extends SampleTypeListItem {
 	public fieldListing: string;
 }
 
-global.log = new N9Log('tests');
-
 init();
 
-test('[Listing] List elements', async (t: Assertions) => {
-	const mongoClient = new MongoClient(`test-${Date.now()}`, SampleTypeEntity, SampleTypeListItem);
+test('[Listing] List elements', async (t: ExecutionContext<TestContext>) => {
+	const mongoClient = new N9MongoDBClient(
+		getOneCollectionName(),
+		SampleTypeEntity,
+		SampleTypeListItem,
+		getBaseMongoClientSettings(t),
+	);
 	const size = await mongoClient.count();
 
 	t.true(size === 0, 'collection should be empty');
@@ -56,8 +58,13 @@ test('[Listing] List elements', async (t: Assertions) => {
 	await mongoClient.dropCollection();
 });
 
-test('[Listing] List entities without class-transformer', async (t: Assertions) => {
-	const mongoClient = new MongoClient(`test-${Date.now()}`, SampleTypeEntity, SampleTypeListItem);
+test('[Listing] List entities without class-transformer', async (t: ExecutionContext<TestContext>) => {
+	const mongoClient = new N9MongoDBClient(
+		getOneCollectionName(),
+		SampleTypeEntity,
+		SampleTypeListItem,
+		getBaseMongoClientSettings(t),
+	);
 	const size = await mongoClient.count();
 
 	t.true(size === 0, 'collection should be empty');

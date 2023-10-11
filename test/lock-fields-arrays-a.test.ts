@@ -1,10 +1,7 @@
-import { N9Log } from '@neo9/n9-node-log';
-import test, { Assertions } from 'ava';
-import * as _ from 'lodash';
+import test, { ExecutionContext } from 'ava';
+import _ from 'lodash';
 
-import { generateMongoClient, init, SampleEntityWithArray } from './fixtures/utils';
-
-global.log = new N9Log('tests').module('lock-fields-arrays');
+import { generateMongoClient, init, SampleEntityWithArray, TestContext } from './fixtures';
 
 init();
 
@@ -50,7 +47,7 @@ const d = {
  * Import de A''' => a, b, c toujours présent, ajout de d => [a🔒,b🔒,c,d]
  * Import de A'''' => a, b, d toujours présent, suppression de c => [a🔒,b🔒,d]
  */
-test('[LOCK-FIELDS-ARRAY A] Import, remove one, import others, import new one', async (t: Assertions) => {
+test('[LOCK-FIELDS-ARRAY A] Import, remove one, import others, import new one', async (t: ExecutionContext<TestContext>) => {
 	const aAndbLockPaths = [
 		'parameters.items[code=a].label.en-GB',
 		'parameters.items[code=a].label.fr-FR',
@@ -64,7 +61,7 @@ test('[LOCK-FIELDS-ARRAY A] Import, remove one, import others, import new one', 
 		},
 	};
 
-	const mongoClient = generateMongoClient();
+	const mongoClient = generateMongoClient(t);
 	await mongoClient.initHistoricIndexes();
 
 	// Simulate import

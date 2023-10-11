@@ -1,6 +1,5 @@
-import { N9Log } from '@neo9/n9-node-log';
-import test, { Assertions } from 'ava';
-import * as _ from 'lodash';
+import test, { ExecutionContext } from 'ava';
+import _ from 'lodash';
 
 import {
 	generateMongoClient,
@@ -8,9 +7,8 @@ import {
 	init,
 	SampleEntityWithArray,
 	SampleEntityWithSimpleArray,
-} from './fixtures/utils';
-
-global.log = new N9Log('tests').module('lock-fields-arrays');
+	TestContext,
+} from './fixtures';
 
 init();
 
@@ -43,7 +41,7 @@ const c = {
  * Creation of E by an operator (human) =>  all is locked => [a🔒,b🔒,c🔒]
  * Import E' => nothing should have changed => [a🔒,b🔒,c🔒]
  */
-test('[LOCK-FIELDS-ARRAY E] Lock fields array should not disappear', async (t: Assertions) => {
+test('[LOCK-FIELDS-ARRAY E] Lock fields array should not disappear', async (t: ExecutionContext<TestContext>) => {
 	const vE: SampleEntityWithArray = {
 		code: 'e',
 		parameters: {
@@ -51,7 +49,7 @@ test('[LOCK-FIELDS-ARRAY E] Lock fields array should not disappear', async (t: A
 		},
 	};
 
-	const mongoClient = generateMongoClient();
+	const mongoClient = generateMongoClient(t);
 	await mongoClient.initHistoricIndexes();
 
 	// Simulate user creation
@@ -89,7 +87,7 @@ test('[LOCK-FIELDS-ARRAY E] Lock fields array should not disappear', async (t: A
  * Creation of E by an operator (human) =>  all is locked => [a🔒,b🔒,c🔒]
  * Edit with E' => array should be null => null
  */
-test('[LOCK-FIELDS-ARRAY E] Lock fields array delete array', async (t: Assertions) => {
+test('[LOCK-FIELDS-ARRAY E] Lock fields array delete array', async (t: ExecutionContext<TestContext>) => {
 	const vE: SampleEntityWithArray = {
 		code: 'e',
 		parameters: {
@@ -97,7 +95,7 @@ test('[LOCK-FIELDS-ARRAY E] Lock fields array delete array', async (t: Assertion
 		},
 	};
 
-	const mongoClient = generateMongoClient();
+	const mongoClient = generateMongoClient(t);
 	await mongoClient.initHistoricIndexes();
 
 	// Simulate user creation
@@ -144,7 +142,7 @@ test('[LOCK-FIELDS-ARRAY E] Lock fields array delete array', async (t: Assertion
  * Creation of E by an operator (human) =>  all is locked => [a🔒,b🔒,c🔒]
  * Import E' => nothing should have changed => [a🔒,b🔒,c🔒]
  */
-test('[LOCK-FIELDS-ARRAY E] Lock fields array should not disappear with simple array', async (t: Assertions) => {
+test('[LOCK-FIELDS-ARRAY E] Lock fields array should not disappear with simple array', async (t: ExecutionContext<TestContext>) => {
 	const vE: SampleEntityWithSimpleArray = {
 		code: 'e',
 		parameters: {
@@ -152,7 +150,7 @@ test('[LOCK-FIELDS-ARRAY E] Lock fields array should not disappear with simple a
 		},
 	};
 
-	const mongoClient = generateMongoClientForSimpleArray();
+	const mongoClient = generateMongoClientForSimpleArray(t);
 	await mongoClient.initHistoricIndexes();
 
 	// Simulate user creation

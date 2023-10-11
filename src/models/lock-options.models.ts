@@ -1,4 +1,4 @@
-export class LockOptions {
+export class LockSettings {
 	public timeout?: number;
 	public removeExpired?: boolean;
 	public n9MongoLockOptions?: {

@@ -21,7 +21,9 @@ export class TagManager<U> {
 				// eslint-disable-next-line @typescript-eslint/naming-convention
 				'objectInfos.lastUpdate.date': new Date(),
 				// eslint-disable-next-line @typescript-eslint/naming-convention
-				'objectInfos.lastUpdate.userId': ObjectId.isValid(userId) ? MongoUtils.oid(userId) : userId,
+				'objectInfos.lastUpdate.userId': ObjectId.isValid(userId)
+					? MongoUtils.TO_OBJECT_ID(userId)
+					: userId,
 			};
 		}
 		return update;
@@ -42,7 +44,9 @@ export class TagManager<U> {
 				// eslint-disable-next-line @typescript-eslint/naming-convention
 				'objectInfos.lastUpdate.date': new Date(),
 				// eslint-disable-next-line @typescript-eslint/naming-convention
-				'objectInfos.lastUpdate.userId': ObjectId.isValid(userId) ? MongoUtils.oid(userId) : userId,
+				'objectInfos.lastUpdate.userId': ObjectId.isValid(userId)
+					? MongoUtils.TO_OBJECT_ID(userId)
+					: userId,
 			};
 		}
 		return update;
@@ -92,7 +96,7 @@ export class TagManager<U> {
 		userId: string,
 		options: AddTagOptions,
 	): Promise<string> {
-		return await this.addTagToOne({ _id: MongoUtils.oid(id) }, userId, options);
+		return await this.addTagToOne({ _id: MongoUtils.TO_OBJECT_ID(id) }, userId, options);
 	}
 
 	/**
@@ -161,7 +165,7 @@ export class TagManager<U> {
 		userId: string,
 		options: RemoveTagOptions,
 	): Promise<void> {
-		await this.removeTagFromOne({ _id: MongoUtils.oid(id) }, tag, userId, options);
+		await this.removeTagFromOne({ _id: MongoUtils.TO_OBJECT_ID(id) }, tag, userId, options);
 	}
 
 	/**

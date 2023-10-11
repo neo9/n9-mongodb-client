@@ -16,10 +16,20 @@ Breaking changes (due to [mongodb driver](https://github.com/mongodb/node-mongod
 - Sort param is no more an `object`, it is a proper type `Sort`
 - `global.dbClient.isConnected` should now be replaced by `MongoUtils.isConnected`
 
-Notable Changes
+Other Notable Breaking Changes
 
 - Name changed from `@neo9/n9-mongo-client` to `@neo9/n9-mongodb-client`
 - `Cursor` are now `N9FindCursor` or `N9AggregationCursor`
+- `MongoClient` is renamed to `N9MongoDBClient`
+- `MongoUtils` functions are renamed to the UPPER_CASE equivalent :
+  - `oid` → `TO_OBJECT_ID`
+  - `oids` → `TO_OBJECT_IDS`
+  - `connect` → `CONNECT`
+  - And so on ...
+- We removed all usage of global variable :
+  - `global.log` → A logger is required as parameter of a new `N9MongoDBClient`
+  - `global.db` → `MongoUtils.CONNECT` return it, it has to be pass to the new `N9MongoDBClient` settings
+  - `global.dlClient` → `MongoUtils.CONNECT` return it too now, as `mongodbClient` and is required to call `MongoUtils.DISCONNECT`
 
 Upgrade main steps
 

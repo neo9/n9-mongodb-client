@@ -1,17 +1,18 @@
-import { N9Log } from '@neo9/n9-node-log';
-import test, { Assertions } from 'ava';
+import test, { ExecutionContext } from 'ava';
 
-import { BaseMongoObject, FilterQuery, MongoClient } from '../src';
-import { Db } from '../src/mongodb';
-import { init } from './fixtures/utils';
-
-global.log = new N9Log('tests').module('issues');
+import { BaseMongoObject, FilterQuery, N9MongoDBClient } from '../src';
+import { getBaseMongoClientSettings, getOneCollectionName, init, TestContext } from './fixtures';
 
 init();
 
-test('[INSERT-MANY] Insert many', async (t: Assertions) => {
-	const collectionName = `test-${Date.now()}`;
-	const mongoClient = new MongoClient(collectionName, BaseMongoObject, BaseMongoObject);
+test('[INSERT-MANY] Insert many', async (t: ExecutionContext<TestContext>) => {
+	const collectionName = getOneCollectionName();
+	const mongoClient = new N9MongoDBClient(
+		collectionName,
+		BaseMongoObject,
+		BaseMongoObject,
+		getBaseMongoClientSettings(t),
+	);
 	const startTestTime = Date.now();
 	const value: any = {
 		_id: 'test',
@@ -32,7 +33,7 @@ test('[INSERT-MANY] Insert many', async (t: Assertions) => {
 
 	t.is(insertedValues.length, 50, '50 elements inserted');
 	t.is(typeof insertedValues[0]._id, 'string', '_id inserted is a string throw n9-mongodb-client');
-	const insertedValueFoundWithNativeClient = await (global.db as Db)
+	const insertedValueFoundWithNativeClient = await t.context.db
 		.collection(collectionName)
 		.findOne<any>({ key: 'value2' });
 	t.is(typeof insertedValueFoundWithNativeClient._id, 'object', '_id inserted is an ObjectID');

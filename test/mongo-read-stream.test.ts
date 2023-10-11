@@ -1,21 +1,23 @@
-import { N9Log } from '@neo9/n9-node-log';
 import { waitFor } from '@neo9/n9-node-utils';
-import test, { Assertions } from 'ava';
+import test, { ExecutionContext } from 'ava';
 
-import { BaseMongoObject, FilterQuery, MongoClient, MongoUtils } from '../src';
-import { init } from './fixtures/utils';
+import { BaseMongoObject, FilterQuery, MongoUtils, N9MongoDBClient } from '../src';
+import { getBaseMongoClientSettings, getOneCollectionName, init, TestContext } from './fixtures';
 
 export class TestItem extends BaseMongoObject {
 	public key: string;
 	public i?: number;
 }
 
-global.log = new N9Log('tests').module('mongo-read-stream');
-
 init();
 
-test('[MONGO-READ-STREAM] Read page by page', async (t: Assertions) => {
-	const mongoClient = new MongoClient(`test-${Date.now()}`, TestItem, TestItem);
+test('[MONGO-READ-STREAM] Read page by page', async (t: ExecutionContext<TestContext>) => {
+	const mongoClient = new N9MongoDBClient(
+		getOneCollectionName(),
+		TestItem,
+		TestItem,
+		getBaseMongoClientSettings(t),
+	);
 
 	const collectionSize = 38;
 	const pageSize = 10;
@@ -71,16 +73,26 @@ test('[MONGO-READ-STREAM] Read page by page', async (t: Assertions) => {
 	await mongoClient.dropCollection();
 });
 
-test('[MONGO-READ-STREAM] Create stream with no _id in projection', async (t: Assertions) => {
-	const mongoClient = new MongoClient(`test-${Date.now()}`, TestItem, TestItem);
+test('[MONGO-READ-STREAM] Create stream with no _id in projection', async (t: ExecutionContext<TestContext>) => {
+	const mongoClient = new N9MongoDBClient(
+		getOneCollectionName(),
+		TestItem,
+		TestItem,
+		getBaseMongoClientSettings(t),
+	);
 	await mongoClient.insertOne({ key: `value-${Math.random()}` }, 'userId1', false);
 
 	t.throws(() => mongoClient.stream({}, 1, { _id: 0 }));
 	await mongoClient.dropCollection();
 });
 
-test('[MONGO-READ-STREAM] Create stream with no or empty sort', async (t: Assertions) => {
-	const mongoClient = new MongoClient(`test-${Date.now()}`, TestItem, TestItem);
+test('[MONGO-READ-STREAM] Create stream with no or empty sort', async (t: ExecutionContext<TestContext>) => {
+	const mongoClient = new N9MongoDBClient(
+		getOneCollectionName(),
+		TestItem,
+		TestItem,
+		getBaseMongoClientSettings(t),
+	);
 	await mongoClient.insertOne({ key: `value-${Math.random()}` }, 'userId1', false);
 
 	t.throws(() => mongoClient.stream({}, 1, undefined, undefined, {}));
@@ -89,8 +101,13 @@ test('[MONGO-READ-STREAM] Create stream with no or empty sort', async (t: Assert
 	await mongoClient.dropCollection();
 });
 
-test('[MONGO-READ-STREAM] Create stream with wrong hint', async (t: Assertions) => {
-	const mongoClient = new MongoClient(`test-${Date.now()}`, TestItem, TestItem);
+test('[MONGO-READ-STREAM] Create stream with wrong hint', async (t: ExecutionContext<TestContext>) => {
+	const mongoClient = new N9MongoDBClient(
+		getOneCollectionName(),
+		TestItem,
+		TestItem,
+		getBaseMongoClientSettings(t),
+	);
 	await mongoClient.insertOne({ key: `value-${Math.random()}` }, 'userId1', false);
 
 	// hint KO
@@ -111,8 +128,13 @@ test('[MONGO-READ-STREAM] Create stream with wrong hint', async (t: Assertions) 
 	);
 });
 
-test('[MONGO-READ-STREAM] Create stream with hint OK', async (t: Assertions) => {
-	const mongoClient = new MongoClient(`test-${Date.now()}`, TestItem, TestItem);
+test('[MONGO-READ-STREAM] Create stream with hint OK', async (t: ExecutionContext<TestContext>) => {
+	const mongoClient = new N9MongoDBClient(
+		getOneCollectionName(),
+		TestItem,
+		TestItem,
+		getBaseMongoClientSettings(t),
+	);
 	for (let i = 0; i < 50; i += 1) {
 		await mongoClient.insertOne({ key: `value-${Math.random()}` }, 'userId1', false);
 	}
@@ -128,8 +150,13 @@ test('[MONGO-READ-STREAM] Create stream with hint OK', async (t: Assertions) => 
 	await mongoClient.dropCollection();
 });
 
-test('[MONGO-READ-STREAM] Create stream with sort OK', async (t: Assertions) => {
-	const mongoClient = new MongoClient(`test-${Date.now()}`, TestItem, TestItem);
+test('[MONGO-READ-STREAM] Create stream with sort OK', async (t: ExecutionContext<TestContext>) => {
+	const mongoClient = new N9MongoDBClient(
+		getOneCollectionName(),
+		TestItem,
+		TestItem,
+		getBaseMongoClientSettings(t),
+	);
 
 	for (let i = 0; i < 5; i += 1) {
 		// alternate value for testing sort on i
@@ -203,8 +230,13 @@ test('[MONGO-READ-STREAM] Create stream with sort OK', async (t: Assertions) => 
 	await mongoClient.dropCollection();
 });
 
-test('[MONGO-READ-STREAM] Create stream with limit OK', async (t: Assertions) => {
-	const mongoClient = new MongoClient(`test-${Date.now()}`, TestItem, TestItem);
+test('[MONGO-READ-STREAM] Create stream with limit OK', async (t: ExecutionContext<TestContext>) => {
+	const mongoClient = new N9MongoDBClient(
+		getOneCollectionName(),
+		TestItem,
+		TestItem,
+		getBaseMongoClientSettings(t),
+	);
 	for (let i = 0; i < 20; i += 1) {
 		await mongoClient.insertOne({ key: `value-${Math.random()}` }, 'userId1', false);
 	}
@@ -235,8 +267,13 @@ test('[MONGO-READ-STREAM] Create stream with limit OK', async (t: Assertions) =>
 	await mongoClient.dropCollection();
 });
 
-test('[MONGO-READ-STREAM] Read page by page on empty collection', async (t: Assertions) => {
-	const mongoClient = new MongoClient(`test-${Date.now()}`, TestItem, TestItem);
+test('[MONGO-READ-STREAM] Read page by page on empty collection', async (t: ExecutionContext<TestContext>) => {
+	const mongoClient = new N9MongoDBClient(
+		getOneCollectionName(),
+		TestItem,
+		TestItem,
+		getBaseMongoClientSettings(t),
+	);
 
 	await mongoClient.stream({}, 10).forEachPage(() => {
 		t.fail('should never be called');
@@ -245,8 +282,13 @@ test('[MONGO-READ-STREAM] Read page by page on empty collection', async (t: Asse
 	t.pass('ok');
 });
 
-test('[MONGO-READ-STREAM] Read item by item', async (t: Assertions) => {
-	const mongoClient = new MongoClient(`test-${Date.now()}`, TestItem, TestItem);
+test('[MONGO-READ-STREAM] Read item by item', async (t: ExecutionContext<TestContext>) => {
+	const mongoClient = new N9MongoDBClient(
+		getOneCollectionName(),
+		TestItem,
+		TestItem,
+		getBaseMongoClientSettings(t),
+	);
 
 	const collectionSize = 38;
 	const pageSize = 10;
@@ -280,8 +322,13 @@ test('[MONGO-READ-STREAM] Read item by item', async (t: Assertions) => {
 	await mongoClient.dropCollection();
 });
 
-test('[MONGO-READ-STREAM] Read item by item on empty collection', async (t: Assertions) => {
-	const mongoClient = new MongoClient(`test-${Date.now()}`, TestItem, TestItem);
+test('[MONGO-READ-STREAM] Read item by item on empty collection', async (t: ExecutionContext<TestContext>) => {
+	const mongoClient = new N9MongoDBClient(
+		getOneCollectionName(),
+		TestItem,
+		TestItem,
+		getBaseMongoClientSettings(t),
+	);
 
 	await mongoClient.stream({}, 10).forEach(() => {
 		t.fail('should never be called');
@@ -290,8 +337,13 @@ test('[MONGO-READ-STREAM] Read item by item on empty collection', async (t: Asse
 	t.pass('ok');
 });
 
-test('[MONGO-READ-STREAM] Does not override conditions on _id', async (t: Assertions) => {
-	const mongoClient = new MongoClient(`test-${Date.now()}`, TestItem, TestItem);
+test('[MONGO-READ-STREAM] Does not override conditions on _id', async (t: ExecutionContext<TestContext>) => {
+	const mongoClient = new N9MongoDBClient(
+		getOneCollectionName(),
+		TestItem,
+		TestItem,
+		getBaseMongoClientSettings(t),
+	);
 
 	const collectionSize = 38;
 	const pageSize = 10;
@@ -301,7 +353,7 @@ test('[MONGO-READ-STREAM] Does not override conditions on _id', async (t: Assert
 		const doc = await mongoClient.insertOne({ i, key: `value-${Math.random()}` }, 'userId1', false);
 		// save every even doc
 		if (i % 2 === 0) {
-			ids.push(MongoUtils.oid(doc._id) as any);
+			ids.push(MongoUtils.TO_OBJECT_ID(doc._id) as any);
 		}
 	}
 	let length = 0;
@@ -321,16 +373,21 @@ test('[MONGO-READ-STREAM] Does not override conditions on _id', async (t: Assert
 
 	t.not(query, stream.query, 'query fetched from mongo read stream is a copy');
 	t.deepEqual(
-		MongoUtils.mapObjectIdToStringHex(query),
-		MongoUtils.mapObjectIdToStringHex(stream.query),
+		MongoUtils.MAP_OBJECT_ID_TO_STRING_HEX(query),
+		MongoUtils.MAP_OBJECT_ID_TO_STRING_HEX(stream.query),
 		'query fetched from mongo read stream has the same body',
 	);
 	t.is(length, 11, 'nb elements in collection');
 	await mongoClient.dropCollection();
 });
 
-test('[MONGO-READ-STREAM] Handle errors during query', async (t: Assertions) => {
-	const mongoClient = new MongoClient(`test-${Date.now()}`, TestItem, TestItem);
+test('[MONGO-READ-STREAM] Handle errors during query', async (t: ExecutionContext<TestContext>) => {
+	const mongoClient = new N9MongoDBClient(
+		getOneCollectionName(),
+		TestItem,
+		TestItem,
+		getBaseMongoClientSettings(t),
+	);
 	const pageSize = 10;
 
 	await t.throwsAsync(async () => {

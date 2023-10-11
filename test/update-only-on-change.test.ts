@@ -1,9 +1,8 @@
-import { N9Log } from '@neo9/n9-node-log';
 import { waitFor } from '@neo9/n9-node-utils';
-import test, { Assertions } from 'ava';
+import test, { ExecutionContext } from 'ava';
 
-import { BaseMongoObject, MongoClient, MongoClientConfiguration, MongoUtils } from '../src';
-import { init } from './fixtures/utils';
+import { BaseMongoObject, MongoClientSettings, MongoUtils, N9MongoDBClient } from '../src';
+import { getBaseMongoClientSettings, getOneCollectionName, init, TestContext } from './fixtures';
 
 class SampleType extends BaseMongoObject {
 	public property1?: string;
@@ -23,12 +22,13 @@ export interface FindOneAndUpdateTestCaseAssertions {
  * @param assertions assertions to perform
  */
 async function insertThenUpdateOneFieldToNewValue(
-	t: Assertions,
-	inputParams: Partial<MongoClientConfiguration>,
+	t: ExecutionContext<TestContext>,
+	inputParams: Partial<MongoClientSettings>,
 	userId: string,
 	assertions: FindOneAndUpdateTestCaseAssertions,
 ): Promise<void> {
-	const mongoClient = new MongoClient(`test-${Date.now()}`, SampleType, SampleType, {
+	const mongoClient = new N9MongoDBClient(getOneCollectionName(), SampleType, SampleType, {
+		...getBaseMongoClientSettings(t),
 		...inputParams,
 	});
 
@@ -42,7 +42,7 @@ async function insertThenUpdateOneFieldToNewValue(
 
 	// check returned entity
 	const returnedEntity = await mongoClient.findOneAndUpdate(
-		{ _id: MongoUtils.oid(insertedEntity._id) as any },
+		{ _id: MongoUtils.TO_OBJECT_ID(insertedEntity._id) as any },
 		{ $set: { property1: 'new-value1' } },
 		userId,
 		false,
@@ -78,7 +78,7 @@ async function insertThenUpdateOneFieldToNewValue(
 	}
 
 	// check entity in db
-	const dbEntity = await mongoClient.findOne({ _id: MongoUtils.oid(insertedEntity._id) });
+	const dbEntity = await mongoClient.findOne({ _id: MongoUtils.TO_OBJECT_ID(insertedEntity._id) });
 	const dbLastUpdateDate = dbEntity.objectInfos.lastUpdate.date;
 	const dbLastModificationDate = dbEntity.objectInfos.lastModification.date;
 	t.deepEqual('new-value1', dbEntity.property1, 'Property 1 did change in db');
@@ -100,7 +100,7 @@ async function insertThenUpdateOneFieldToNewValue(
 
 insertThenUpdateOneFieldToNewValue.title = (
 	providedTitle: string,
-	inputParams: Partial<MongoClientConfiguration>,
+	inputParams: Partial<MongoClientSettings>,
 	userId: string,
 	assertions: FindOneAndUpdateTestCaseAssertions,
 ): string => {
@@ -136,12 +136,13 @@ insertThenUpdateOneFieldToNewValue.title = (
  * @param assertions assertions to perform
  */
 async function insertThenUpdateOneFieldToNewValueWithoutReturningNewValue(
-	t: Assertions,
-	inputParams: Partial<MongoClientConfiguration>,
+	t: ExecutionContext<TestContext>,
+	inputParams: Partial<MongoClientSettings>,
 	userId: string,
 	assertions: FindOneAndUpdateTestCaseAssertions,
 ): Promise<void> {
-	const mongoClient = new MongoClient(`test-${Date.now()}`, SampleType, SampleType, {
+	const mongoClient = new N9MongoDBClient(getOneCollectionName(), SampleType, SampleType, {
+		...getBaseMongoClientSettings(t),
 		...inputParams,
 	});
 
@@ -155,7 +156,7 @@ async function insertThenUpdateOneFieldToNewValueWithoutReturningNewValue(
 
 	// check returned entity
 	await mongoClient.findOneAndUpdate(
-		{ _id: MongoUtils.oid(insertedEntity._id) as any },
+		{ _id: MongoUtils.TO_OBJECT_ID(insertedEntity._id) as any },
 		{ $set: { property1: 'new-value1' } },
 		userId,
 		false,
@@ -164,7 +165,7 @@ async function insertThenUpdateOneFieldToNewValueWithoutReturningNewValue(
 	);
 
 	// check entity in db
-	const dbEntity = await mongoClient.findOne({ _id: MongoUtils.oid(insertedEntity._id) });
+	const dbEntity = await mongoClient.findOne({ _id: MongoUtils.TO_OBJECT_ID(insertedEntity._id) });
 	const dbLastUpdateDate = dbEntity.objectInfos.lastUpdate.date;
 	const dbLastModificationDate = dbEntity.objectInfos.lastModification.date;
 	t.deepEqual('new-value1', dbEntity.property1, 'Property 1 did change in db');
@@ -186,7 +187,7 @@ async function insertThenUpdateOneFieldToNewValueWithoutReturningNewValue(
 
 insertThenUpdateOneFieldToNewValueWithoutReturningNewValue.title = (
 	providedTitle: string,
-	inputParams: Partial<MongoClientConfiguration>,
+	inputParams: Partial<MongoClientSettings>,
 	userId: string,
 	assertions: FindOneAndUpdateTestCaseAssertions,
 ): string => {
@@ -222,12 +223,13 @@ insertThenUpdateOneFieldToNewValueWithoutReturningNewValue.title = (
  * @param assertions assertions to perform
  */
 async function insertThenUpdateOneFieldToSameValue(
-	t: Assertions,
-	inputParams: Partial<MongoClientConfiguration>,
+	t: ExecutionContext<TestContext>,
+	inputParams: Partial<MongoClientSettings>,
 	userId: string,
 	assertions: FindOneAndUpdateTestCaseAssertions,
 ): Promise<void> {
-	const mongoClient = new MongoClient(`test-${Date.now()}`, SampleType, SampleType, {
+	const mongoClient = new N9MongoDBClient(getOneCollectionName(), SampleType, SampleType, {
+		...getBaseMongoClientSettings(t),
 		...inputParams,
 	});
 
@@ -241,7 +243,7 @@ async function insertThenUpdateOneFieldToSameValue(
 
 	// check returned entity
 	const returnedEntity = await mongoClient.findOneAndUpdate(
-		{ _id: MongoUtils.oid(insertedEntity._id) as any },
+		{ _id: MongoUtils.TO_OBJECT_ID(insertedEntity._id) as any },
 		{ $set: { property1: 'value1' } },
 		userId,
 		false,
@@ -270,7 +272,7 @@ async function insertThenUpdateOneFieldToSameValue(
 	}
 
 	// check entity in db
-	const dbEntity = await mongoClient.findOne({ _id: MongoUtils.oid(insertedEntity._id) });
+	const dbEntity = await mongoClient.findOne({ _id: MongoUtils.TO_OBJECT_ID(insertedEntity._id) });
 	const dbLastUpdateDate = dbEntity.objectInfos.lastUpdate.date;
 	const dbLastModificationDate = dbEntity.objectInfos.lastModification.date;
 	t.deepEqual('value1', dbEntity.property1, 'Property 1 did not change in db');
@@ -292,7 +294,7 @@ async function insertThenUpdateOneFieldToSameValue(
 
 insertThenUpdateOneFieldToSameValue.title = (
 	providedTitle: string,
-	inputParams: Partial<MongoClientConfiguration>,
+	inputParams: Partial<MongoClientSettings>,
 	userId: string,
 	assertions: FindOneAndUpdateTestCaseAssertions,
 ): string => {
@@ -318,8 +320,6 @@ insertThenUpdateOneFieldToSameValue.title = (
 	}
 	return `${providedTitle} findOneAndUpdate when updating a field to same value with updateOnlyOnChange ${updateOnlyOnChange} and keepHistoric ${keepHistoric}, with userId ${userId}, should result in ${lastModificationDateShouldChange}`;
 };
-
-global.log = new N9Log('tests').module('update-only-on-change');
 
 init();
 
