@@ -76,7 +76,7 @@ test('[MONGO-UTILS] URI connection log', async (t: ExecutionContext<TestContext>
 		nativeDriverOptions: {
 			heartbeatFrequencyMS: 1, // high frequency for tests
 			minHeartbeatFrequencyMS: 1,
-			serverSelectionTimeoutMS: 20, // make tests run faster
+			serverSelectionTimeoutMS: 200, // make tests run faster
 		},
 	});
 	await MongoUtils.DISCONNECT(mongodbClient, t.context.logger);
@@ -108,7 +108,7 @@ test('[MONGO-UTILS] Ensure event logs', async (t: ExecutionContext<TestContext>)
 			// view https://mongodb.github.io/node-mongodb-native/3.6/reference/unified-topology/
 			heartbeatFrequencyMS: 1, // high frequency for tests
 			minHeartbeatFrequencyMS: 1,
-			serverSelectionTimeoutMS: 20, // make tests run faster
+			serverSelectionTimeoutMS: 200, // make tests run faster
 		},
 	});
 	await waitFor(100);
