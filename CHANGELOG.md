@@ -1,5 +1,12 @@
 
 
+# [1.0.0-rc.10](https://github.com/neo9/n9-mongodb-client/compare/1.0.0-rc.9...1.0.0-rc.10) (2023-10-12)
+
+
+### release
+
+* Enable github releases and review release hooks ([abc21a7](https://github.com/neo9/n9-mongodb-client/commit/abc21a777a92cd5bfa0491f5abf73131b1d0c249))
+
 # [1.0.0-rc.9](https://github.com/neo9/n9-node-routing/compare/1.0.0-rc.8...1.0.0-rc.9) (2023-10-12)
 
 
