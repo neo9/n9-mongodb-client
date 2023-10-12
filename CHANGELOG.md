@@ -1,5 +1,21 @@
 
 
+# [1.0.0-rc.9](https://github.com/neo9/n9-node-routing/compare/1.0.0-rc.8...1.0.0-rc.9) (2023-10-12)
+
+
+### github
+
+* Push code coverage only on one nodejs version ([13697b5](https://github.com/neo9/n9-node-routing/commit/13697b5ba109423d9f30e09e1a14d4518d488a5b))
+
+### global
+
+* Remove usage of global variable and upgrade n9-node-log to V 5 #79 ([cdbc823](https://github.com/neo9/n9-node-routing/commit/cdbc823f50276dffc8277417e09ef60f79a176a1)), closes [#79](https://github.com/neo9/n9-node-routing/issues/79)
+
+### yarn
+
+* Add pre-release script ([e6347ee](https://github.com/neo9/n9-node-routing/commit/e6347ee6b275c594a1e8575482d9908f28201b13))
+* Upgrade dependencies and github actions #78 ([966c8f2](https://github.com/neo9/n9-node-routing/commit/966c8f245cc81ad438731d43597b58881fbad498)), closes [#78](https://github.com/neo9/n9-node-routing/issues/78)
+
 # [1.0.0-rc.8](https://github.com/neo9/n9-mongodb-client/compare/1.0.0-rc.7...1.0.0-rc.8) (2023-09-20)
 
 
