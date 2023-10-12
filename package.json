@@ -21,13 +21,9 @@
     "test": "export NODE_ENV=test && TS_NODE_FILES=true nyc ava --no-worker-threads --verbose --color --serial && nyc report --reporter=html",
     "test:one": "export NODE_ENV=test && TS_NODE_FILES=true ava --no-worker-threads --verbose --color --serial",
     "coverage": "nyc report --reporter=text-lcov > coverage.lcov && codecov -f coverage.lcov",
-    "preversion": "npm test",
-    "prepublishOnly": "npm run build",
     "release": "release-it",
     "release:pre-release": "release-it --preRelease",
-    "release:dry": "release-it --dry-run",
-    "benchmark": "node benchmark.js",
-    "benchmark:debug": "node --inspect-brk benchmark.js"
+    "release:dry": "release-it --dry-run"
   },
   "husky": {
     "hooks": {
@@ -41,7 +37,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/neo9/n9-node-routing.git"
+    "url": "https://github.com/neo9/n9-mongodb-client.git"
   },
   "homepage": "https://github.com/neo9/n9-mongodb-client#n9-mongodb-client",
   "tags": [
