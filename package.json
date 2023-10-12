@@ -24,6 +24,7 @@
     "preversion": "npm test",
     "prepublishOnly": "npm run build",
     "release": "release-it",
+    "release:pre-release": "release-it --preRelease",
     "release:dry": "release-it --dry-run",
     "benchmark": "node benchmark.js",
     "benchmark:debug": "node --inspect-brk benchmark.js"
