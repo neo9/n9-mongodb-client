@@ -72,7 +72,7 @@
     "@types/std-mocks": "^1.0.2",
     "ava": "^5.3.1",
     "benny": "^3.7.1",
-    "class-transformer": "0.4.0",
+    "class-transformer": "0.5.1",
     "codecov": "^3.8.3",
     "husky": "^4.3.8",
     "mongodb-memory-server": "^9.0.0",
