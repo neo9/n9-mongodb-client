@@ -1,10 +1,7 @@
-import { N9Log } from '@neo9/n9-node-log';
-import test, { Assertions } from 'ava';
-import * as _ from 'lodash';
+import test, { ExecutionContext } from 'ava';
+import _ from 'lodash';
 
-import { generateMongoClient, init, SampleEntityWithArray } from './fixtures/utils';
-
-global.log = new N9Log('tests').module('lock-fields-arrays');
+import { generateMongoClient, init, SampleEntityWithArray, TestContext } from './fixtures';
 
 init();
 
@@ -44,7 +41,7 @@ const d = {
  * Import de C =>  aucun verrou => [a,b,c]
  * Import de C' => c disparait => [a,b]
  */
-test('[LOCK-FIELDS-ARRAY C] Import twice should remove element', async (t: Assertions) => {
+test('[LOCK-FIELDS-ARRAY C] Import twice should remove element', async (t: ExecutionContext<TestContext>) => {
 	const vC: SampleEntityWithArray = {
 		code: 'c',
 		parameters: {
@@ -52,7 +49,7 @@ test('[LOCK-FIELDS-ARRAY C] Import twice should remove element', async (t: Asser
 		},
 	};
 
-	const mongoClient = generateMongoClient();
+	const mongoClient = generateMongoClient(t);
 	await mongoClient.initHistoricIndexes();
 
 	// Simulate import
@@ -97,7 +94,7 @@ test('[LOCK-FIELDS-ARRAY C] Import twice should remove element', async (t: Asser
  * Creation of D by an operator (human) =>  all is locked => [a🔒,b🔒,c🔒]
  * Import D' => order preserved, addition of d => [a🔒,b🔒,c🔒,d]
  */
-test('[LOCK-FIELDS-ARRAY D] Lock fields order should be keept', async (t: Assertions) => {
+test('[LOCK-FIELDS-ARRAY D] Lock fields order should be keept', async (t: ExecutionContext<TestContext>) => {
 	const vD: SampleEntityWithArray = {
 		code: 'd',
 		parameters: {
@@ -105,7 +102,7 @@ test('[LOCK-FIELDS-ARRAY D] Lock fields order should be keept', async (t: Assert
 		},
 	};
 
-	const mongoClient = generateMongoClient();
+	const mongoClient = generateMongoClient(t);
 	await mongoClient.initHistoricIndexes();
 
 	// Simulate import

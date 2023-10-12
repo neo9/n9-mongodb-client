@@ -1,9 +1,9 @@
 import { N9Error } from '@neo9/n9-node-utils';
-import * as _ from 'lodash';
+import _ from 'lodash';
 import { Sort } from 'mongodb';
 import { Readable, Writable } from 'stream';
 
-import { MongoClient } from './client';
+import { N9MongoDBClient } from './client';
 import { N9FindCursor } from './cursors';
 import { FilterQuery } from './index';
 import { LangUtils } from './lang-utils';
@@ -79,7 +79,7 @@ export class MongoReadStream<
 	private readonly _query: FilterQuery<any>;
 
 	constructor(
-		private readonly mongoClient: MongoClient<U, L>,
+		private readonly mongoClient: N9MongoDBClient<U, L>,
 		_query: FilterQuery<any>,
 		private readonly pageSize: number,
 		private readonly projection: ProjectionQuery<U> = {},
@@ -226,8 +226,8 @@ export class MongoReadStream<
 
 	private getValueFromLastItem(field: string): any {
 		let fieldValue = _.get(this.lastItem, field);
-		if (typeof fieldValue === 'string' && MongoUtils.isMongoId(fieldValue)) {
-			fieldValue = MongoUtils.oid(fieldValue);
+		if (typeof fieldValue === 'string' && MongoUtils.IS_MONGO_ID(fieldValue)) {
+			fieldValue = MongoUtils.TO_OBJECT_ID(fieldValue);
 		}
 
 		return fieldValue;

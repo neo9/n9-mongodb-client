@@ -1,39 +1,22 @@
-import { N9Log } from '@neo9/n9-node-log';
-import test, { Assertions } from 'ava';
-import * as _ from 'lodash';
-import { MongoMemoryServer } from 'mongodb-memory-server';
+import test, { ExecutionContext } from 'ava';
+import _ from 'lodash';
 
-import { BaseMongoObject, MongoClient, MongoUtils } from '../../src';
-import * as mongodb from '../../src/mongodb';
-
-global.log = new N9Log('tests').module('issues');
+import { BaseMongoObject, N9MongoDBClient } from '../../src';
+import { getBaseMongoClientSettings, getOneCollectionName, init, TestContext } from '../fixtures';
 
 class PrimitiveArrayHolder extends BaseMongoObject {
 	public booleanArray: boolean[];
 	public numberArray: number[];
 	public stringArray: string[];
 }
+init();
 
-let mongod: MongoMemoryServer;
-
-test.before(async () => {
-	mongod = await MongoMemoryServer.create();
-	const uri = mongod.getUri();
-	await MongoUtils.connect(uri);
-});
-
-test.after(async () => {
-	global.log.info(`DROP DB after tests OK`);
-	await (global.db as mongodb.Db).dropDatabase();
-	await MongoUtils.disconnect();
-	await mongod.stop();
-});
-
-test('[ISSUE-INVALID-PRIMITIVE-VALUE] Primitive should be mapped correctly', async (t: Assertions) => {
-	const mongoClient = new MongoClient(
-		`test-${Date.now()}`,
+test('[ISSUE-INVALID-PRIMITIVE-VALUE] Primitive should be mapped correctly', async (t: ExecutionContext<TestContext>) => {
+	const mongoClient = new N9MongoDBClient(
+		getOneCollectionName(),
 		PrimitiveArrayHolder,
 		PrimitiveArrayHolder,
+		getBaseMongoClientSettings(t),
 	);
 
 	const initialValue: PrimitiveArrayHolder = {

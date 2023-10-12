@@ -1,10 +1,15 @@
-import { N9Log } from '@neo9/n9-node-log';
-import test, { Assertions } from 'ava';
-import * as _ from 'lodash';
+import test, { ExecutionContext } from 'ava';
+import _ from 'lodash';
 
-import { BaseMongoObject, MongoClient, MongoUtils } from '../src';
+import { BaseMongoObject, MongoUtils, N9MongoDBClient } from '../src';
 import { ObjectId } from '../src/mongodb';
-import { ArrayElement, init } from './fixtures/utils';
+import {
+	ArrayElement,
+	getBaseMongoClientSettings,
+	getOneCollectionName,
+	init,
+	TestContext,
+} from './fixtures';
 
 class SampleComplexType extends BaseMongoObject {
 	public text: string;
@@ -47,13 +52,12 @@ const locksDataSample: SampleComplexType = {
 	dates: [date, date],
 };
 
-global.log = new N9Log('tests').module('lock-fields');
-
 init();
 
-test("[LOCK-FIELDS-DISABLED] Insert one, update it and check undefined values don't change value or types", async (t: Assertions) => {
-	const collection = global.db.collection(`test-${Date.now()}`);
-	const mongoClient = new MongoClient(collection, SampleComplexType, SampleComplexType, {
+test("[LOCK-FIELDS-DISABLED] Insert one, update it and check undefined values don't change value or types", async (t: ExecutionContext<TestContext>) => {
+	const collection = t.context.db.collection(getOneCollectionName());
+	const mongoClient = new N9MongoDBClient(collection, SampleComplexType, SampleComplexType, {
+		...getBaseMongoClientSettings(t),
 		lockFields: {
 			excludedFields: [
 				// exclude all fields
@@ -130,7 +134,7 @@ test("[LOCK-FIELDS-DISABLED] Insert one, update it and check undefined values do
 		expectedValueFromMongo,
 		'undefined fields are not kept and not replaced by null',
 	);
-	const document = await collection.findOne({ _id: MongoUtils.oid(entity._id) });
+	const document = await collection.findOne({ _id: MongoUtils.TO_OBJECT_ID(entity._id) });
 	t.deepEqual(
 		_.omit(document, ['_id', 'objectInfos']),
 		expectedValueFromMongoRaw as any,
@@ -160,7 +164,7 @@ test("[LOCK-FIELDS-DISABLED] Insert one, update it and check undefined values do
 	);
 
 	// check values in mongodb
-	const documentUpdated = await collection.findOne({ _id: MongoUtils.oid(entity._id) });
+	const documentUpdated = await collection.findOne({ _id: MongoUtils.TO_OBJECT_ID(entity._id) });
 	t.deepEqual(
 		_.omit(documentUpdated, ['_id', 'objectInfos']),
 		expectedValueFromMongoRaw as any,
@@ -179,7 +183,7 @@ test("[LOCK-FIELDS-DISABLED] Insert one, update it and check undefined values do
 	);
 
 	// check values in mongodb
-	const documentUpdated2 = await collection.findOne({ _id: MongoUtils.oid(entity._id) });
+	const documentUpdated2 = await collection.findOne({ _id: MongoUtils.TO_OBJECT_ID(entity._id) });
 	t.deepEqual(
 		_.omit(documentUpdated2, ['_id', 'objectInfos']),
 		expectedValueFromMongoRaw as any,

@@ -1,10 +1,8 @@
-import { N9Log } from '@neo9/n9-node-log';
-import test, { Assertions } from 'ava';
-import * as _ from 'lodash';
+import test, { ExecutionContext } from 'ava';
+import _ from 'lodash';
 
-import { BaseMongoObject, MongoClient, MongoUtils } from '../src';
-import { Db } from '../src/mongodb';
-import { init } from './fixtures/utils';
+import { BaseMongoObject, MongoUtils, N9MongoDBClient } from '../src';
+import { getBaseMongoClientSettings, getOneCollectionName, init, TestContext } from './fixtures';
 
 class SampleTypeListing extends BaseMongoObject {
 	public field1String: string;
@@ -14,16 +12,14 @@ class SampleType extends SampleTypeListing {
 	public field2Number: number;
 }
 
-global.log = new N9Log('tests');
-
 init();
 
-test('Create wrong configuration mongodb client', (t: Assertions) => {
-	const db = global.db;
-	delete global.db;
+test('Create wrong configuration mongodb client', (t: ExecutionContext<TestContext>) => {
 	t.throws(
 		() =>
-			new MongoClient(`test-${Date.now()}`, SampleType, SampleTypeListing, {
+			new N9MongoDBClient(getOneCollectionName(), SampleType, SampleTypeListing, {
+				logger: t.context.logger,
+				db: undefined,
 				keepHistoric: true,
 			}),
 		{
@@ -31,11 +27,11 @@ test('Create wrong configuration mongodb client', (t: Assertions) => {
 		},
 		'missing-db',
 	);
-	global.db = db;
 });
 
-test('[CRUD] Insert one update it and remove it', async (t: Assertions) => {
-	const mongoClient = new MongoClient(`test-${Date.now()}`, SampleType, SampleTypeListing, {
+test('[CRUD] Insert one update it and remove it', async (t: ExecutionContext<TestContext>) => {
+	const mongoClient = new N9MongoDBClient(getOneCollectionName(), SampleType, SampleTypeListing, {
+		...getBaseMongoClientSettings(t),
 		keepHistoric: true,
 	});
 	await mongoClient.initHistoricIndexes();
@@ -136,9 +132,10 @@ test('[CRUD] Insert one update it and remove it', async (t: Assertions) => {
 	await mongoClient.dropCollection();
 });
 
-test('Check historic drop', async (t: Assertions) => {
-	const collectionName = `test-${Date.now()}`;
-	const mongoClient = new MongoClient(collectionName, SampleType, SampleTypeListing, {
+test('Check historic drop', async (t: ExecutionContext<TestContext>) => {
+	const collectionName = getOneCollectionName();
+	const mongoClient = new N9MongoDBClient(collectionName, SampleType, SampleTypeListing, {
+		...getBaseMongoClientSettings(t),
 		keepHistoric: true,
 	});
 	await mongoClient.initHistoricIndexes();
@@ -150,7 +147,7 @@ test('Check historic drop', async (t: Assertions) => {
 		'test',
 	);
 
-	let collections = (await (global.db as Db).collections()).map((c) => c.collectionName);
+	let collections = (await t.context.db.collections()).map((c) => c.collectionName);
 	let foundCollection = collections.includes(collectionName);
 	t.truthy(foundCollection, 'collection exists');
 	foundCollection = collections.includes(`${collectionName}Historic`);
@@ -158,16 +155,17 @@ test('Check historic drop', async (t: Assertions) => {
 
 	await mongoClient.dropCollection();
 
-	collections = (await (global.db as Db).collections()).map((c) => c.collectionName);
+	collections = (await t.context.db.collections()).map((c) => c.collectionName);
 	foundCollection = collections.includes(collectionName);
 	t.falsy(foundCollection, "collection doesn't exists anymore");
 	foundCollection = collections.includes(`${collectionName}Historic`);
 	t.falsy(foundCollection, "collection historic doesn't exists anymore");
 });
 
-test('Check historic drop 2', async (t: Assertions) => {
-	const collectionName = `test-${Date.now()}`;
-	const mongoClient = new MongoClient(collectionName, SampleType, SampleTypeListing, {
+test('Check historic drop 2', async (t: ExecutionContext<TestContext>) => {
+	const collectionName = getOneCollectionName();
+	const mongoClient = new N9MongoDBClient(collectionName, SampleType, SampleTypeListing, {
+		...getBaseMongoClientSettings(t),
 		keepHistoric: true,
 	});
 	await mongoClient.initHistoricIndexes();
@@ -179,7 +177,7 @@ test('Check historic drop 2', async (t: Assertions) => {
 		'test',
 	);
 
-	let collections = (await (global.db as Db).collections()).map((c) => c.collectionName);
+	let collections = (await t.context.db.collections()).map((c) => c.collectionName);
 	let foundCollection = collections.includes(collectionName);
 	t.truthy(foundCollection, 'collection exists');
 	foundCollection = collections.includes(`${collectionName}Historic`);
@@ -188,21 +186,22 @@ test('Check historic drop 2', async (t: Assertions) => {
 	await mongoClient.dropCollection(false);
 	await mongoClient.dropHistory();
 
-	collections = (await (global.db as Db).collections()).map((c) => c.collectionName);
+	collections = (await t.context.db.collections()).map((c) => c.collectionName);
 	foundCollection = collections.includes(collectionName);
 	t.falsy(foundCollection, "collection doesn't exists anymore");
 	foundCollection = collections.includes(`${collectionName}Historic`);
 	t.falsy(foundCollection, "collection historic doesn't exists anymore");
 });
 
-test('Check historic indexes', async (t: Assertions) => {
-	const collectionName = `test-${Date.now()}`;
-	const mongoClient = new MongoClient(collectionName, SampleType, SampleTypeListing, {
+test('Check historic indexes', async (t: ExecutionContext<TestContext>) => {
+	const collectionName = getOneCollectionName();
+	const mongoClient = new N9MongoDBClient(collectionName, SampleType, SampleTypeListing, {
+		...getBaseMongoClientSettings(t),
 		keepHistoric: true,
 	});
 	await mongoClient.initHistoricIndexes();
 
-	const collections = await (global.db as Db).collections();
+	const collections = await t.context.db.collections();
 	const historicCollection = collections.find(
 		(collection) => collection.collectionName === `${collectionName}Historic`,
 	);
@@ -227,8 +226,9 @@ test('Check historic indexes', async (t: Assertions) => {
 	await mongoClient.dropCollection();
 });
 
-test('[CRUD] Update many at once check modificationDate and historic', async (t: Assertions) => {
-	const mongoClient = new MongoClient(`test-${Date.now()}`, SampleType, SampleTypeListing, {
+test('[CRUD] Update many at once check modificationDate and historic', async (t: ExecutionContext<TestContext>) => {
+	const mongoClient = new N9MongoDBClient(getOneCollectionName(), SampleType, SampleTypeListing, {
+		...getBaseMongoClientSettings(t),
 		keepHistoric: true,
 	});
 	await mongoClient.initHistoricIndexes();
@@ -256,7 +256,7 @@ test('[CRUD] Update many at once check modificationDate and historic', async (t:
 			insertedDocuments.map((insertedDocument) => ({ ...initialValue, _id: insertedDocument._id })),
 			'userId1',
 			{
-				query: (e) => ({ _id: MongoUtils.oid(e._id) as any }),
+				query: (e) => ({ _id: MongoUtils.TO_OBJECT_ID(e._id) as any }),
 			},
 		)
 	).toArray();

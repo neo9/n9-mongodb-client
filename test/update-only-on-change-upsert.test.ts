@@ -1,8 +1,7 @@
-import { N9Log } from '@neo9/n9-node-log';
-import test, { Assertions } from 'ava';
+import test, { ExecutionContext } from 'ava';
 
-import { BaseMongoObject, MongoClient, MongoUtils } from '../src';
-import { init } from './fixtures/utils';
+import { BaseMongoObject, MongoUtils, N9MongoDBClient } from '../src';
+import { getBaseMongoClientSettings, getOneCollectionName, init, TestContext } from './fixtures';
 
 class SampleType extends BaseMongoObject {
 	public field1Number: number;
@@ -13,16 +12,15 @@ class SampleTypeWithKey extends BaseMongoObject {
 	public field1Number: number;
 }
 
-global.log = new N9Log('tests').module('update-only-on-change-deep');
-
 init();
 
-test('[CRUD] Find one and update with omit', async (t: Assertions) => {
-	const mongoClient = new MongoClient(
-		global.db.collection(`test-${Date.now()}`),
+test('[CRUD] Find one and update with omit', async (t: ExecutionContext<TestContext>) => {
+	const mongoClient = new N9MongoDBClient(
+		t.context.db.collection(getOneCollectionName()),
 		SampleType,
 		SampleType,
 		{
+			...getBaseMongoClientSettings(t),
 			updateOnlyOnChange: {
 				changeFilters: {
 					omit: ['subItem.property1ThatDoesNotAffectChange', 'field1StringThatDoesNotAffectChange'],
@@ -35,7 +33,7 @@ test('[CRUD] Find one and update with omit', async (t: Assertions) => {
 	t.true(size === 0, 'collection should be empty');
 
 	const insertedDocument = await mongoClient.findOneAndUpsert(
-		{ _id: MongoUtils.oid('012345678901234567890123') as any },
+		{ _id: MongoUtils.TO_OBJECT_ID('012345678901234567890123') as any },
 		{
 			$set: {
 				field1Number: 41,
@@ -52,12 +50,13 @@ test('[CRUD] Find one and update with omit', async (t: Assertions) => {
 	await mongoClient.dropCollection();
 });
 
-test('[CRUD] Find one and update with pick', async (t: Assertions) => {
-	const mongoClient = new MongoClient(
-		global.db.collection(`test-${Date.now()}`),
+test('[CRUD] Find one and update with pick', async (t: ExecutionContext<TestContext>) => {
+	const mongoClient = new N9MongoDBClient(
+		t.context.db.collection(getOneCollectionName()),
 		SampleTypeWithKey,
 		SampleTypeWithKey,
 		{
+			...getBaseMongoClientSettings(t),
 			updateOnlyOnChange: {
 				changeFilters: {
 					omit: ['subItem.property1ThatDoesNotAffectChange', 'field1StringThatDoesNotAffectChange'],

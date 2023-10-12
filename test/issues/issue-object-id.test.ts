@@ -1,40 +1,30 @@
-import { N9Log } from '@neo9/n9-node-log';
-import test, { Assertions } from 'ava';
-import { MongoMemoryServer } from 'mongodb-memory-server';
+import test, { ExecutionContext } from 'ava';
 
-import { BaseMongoObject, MongoClient, MongoUtils } from '../../src';
+import { BaseMongoObject, N9MongoDBClient } from '../../src';
 import * as mongodb from '../../src/mongodb';
+import { getBaseMongoClientSettings, getOneCollectionName, init, TestContext } from '../fixtures';
 
-global.log = new N9Log('tests').module('issues');
+init();
 
-let mongod: MongoMemoryServer;
-
-test.before(async () => {
-	mongod = await MongoMemoryServer.create();
-	const uri = mongod.getUri();
-	await MongoUtils.connect(uri);
-});
-
-test.after(async () => {
-	global.log.info(`DROP DB after tests OK`);
-	await (global.db as mongodb.Db).dropDatabase();
-	await MongoUtils.disconnect();
-	await mongod.stop();
-});
-
-test('[ISSUE-OBJECT-ID] Object ID should be well compared', async (t: Assertions) => {
-	const mongoClient = new MongoClient(`test-${Date.now()}`, BaseMongoObject, BaseMongoObject, {
-		lockFields: {
-			excludedFields: ['sku', 'externalReferences'],
-			arrayWithReferences: {
-				'attributes': 'attributeId',
-				'links.bundle': 'productId',
-				'links.upSell': 'productId',
-				'links.crossSell': 'productId',
-				'links.topping': 'productId',
+test('[ISSUE-OBJECT-ID] Object ID should be well compared', async (t: ExecutionContext<TestContext>) => {
+	const mongoClient = new N9MongoDBClient(
+		getOneCollectionName(),
+		BaseMongoObject,
+		BaseMongoObject,
+		{
+			...getBaseMongoClientSettings(t),
+			lockFields: {
+				excludedFields: ['sku', 'externalReferences'],
+				arrayWithReferences: {
+					'attributes': 'attributeId',
+					'links.bundle': 'productId',
+					'links.upSell': 'productId',
+					'links.crossSell': 'productId',
+					'links.topping': 'productId',
+				},
 			},
 		},
-	});
+	);
 
 	const initialValue: any = {
 		attributes: [

@@ -1,33 +1,41 @@
-import { N9Log } from '@neo9/n9-node-log';
 import { N9Error, waitFor } from '@neo9/n9-node-utils';
-import test, { Assertions } from 'ava';
+import test, { ExecutionContext } from 'ava';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 
-import { BaseMongoObject, MongoClient, MongoUtils } from '../src';
+import { BaseMongoObject, MongoUtils, N9MongoDBClient } from '../src';
+import { getOneCollectionName, init, TestContext } from './fixtures';
 
-global.log = new N9Log('tests');
-
-test('[Errors] Check error thrown on every client function', async (t: Assertions) => {
+init({ avoidToStartMongodb: true });
+test('[Errors] Check error thrown on every client function', async (t: ExecutionContext<TestContext>) => {
 	const mongoMemoryServer = await MongoMemoryServer.create();
 	const uri = mongoMemoryServer.getUri();
 
 	await t.notThrowsAsync(mongoMemoryServer.ensureInstance(), 'ensure mongo is up');
 
-	await MongoUtils.connect(uri, {
-		maxIdleTimeMS: 100,
-		connectTimeoutMS: 100,
-		socketTimeoutMS: 100,
-		waitQueueTimeoutMS: 100,
-		writeConcern: {
-			wtimeoutMS: 100,
+	const { db, mongodbClient } = await MongoUtils.CONNECT(uri, {
+		logger: t.context.logger,
+		nativeDriverOptions: {
+			serverSelectionTimeoutMS: 1_000,
+			maxIdleTimeMS: 100,
+			connectTimeoutMS: 100,
+			socketTimeoutMS: 100,
+			waitQueueTimeoutMS: 100,
+			writeConcern: {
+				wtimeoutMS: 100,
+			},
+			// reconnectTries: 0, : https://mongodb.github.io/node-mongodb-native/3.6/reference/unified-topology/
 		},
-		// reconnectTries: 0, : https://mongodb.github.io/node-mongodb-native/3.6/reference/unified-topology/
 	});
 
-	const client = new MongoClient(`test-${Date.now()}`, BaseMongoObject, BaseMongoObject, {
+	const client = new N9MongoDBClient(getOneCollectionName(), BaseMongoObject, BaseMongoObject, {
+		logger: t.context.logger,
+		db,
 		lockFields: {},
 	});
-	const client2 = new MongoClient(`test-${Date.now()}`, BaseMongoObject, BaseMongoObject, {});
+	const client2 = new N9MongoDBClient(getOneCollectionName(), BaseMongoObject, BaseMongoObject, {
+		logger: t.context.logger,
+		db,
+	});
 
 	await t.throwsAsync(
 		client.createIndex('$.test'),
@@ -101,8 +109,8 @@ test('[Errors] Check error thrown on every client function', async (t: Assertion
 	await client.dropCollection();
 	await client2.dropCollection();
 
-	while (MongoUtils.isConnected()) {
-		await MongoUtils.disconnect();
+	while (MongoUtils.IS_CONNECTED()) {
+		await MongoUtils.DISCONNECT(mongodbClient, t.context.logger);
 		await waitFor(50);
 	}
 	await mongoMemoryServer.stop();
@@ -291,5 +299,28 @@ test('[Errors] Check error thrown on every client function', async (t: Assertion
 		client.deleteManyWithTag('test'),
 		{ instanceOf: N9Error, message: 'Client must be connected before running operations' },
 		'deleteManyWithTag error',
+	);
+});
+
+test('[Errors] Check that logger and db missing are clear', (t: ExecutionContext<TestContext>) => {
+	t.throws(
+		() =>
+			new N9MongoDBClient('$collection-name', undefined, undefined, {
+				logger: undefined,
+				db: t.context.db,
+			}),
+		{
+			message: 'missing-logger',
+		},
+	);
+	t.throws(
+		() =>
+			new N9MongoDBClient('$collection-name', undefined, undefined, {
+				logger: t.context.logger,
+				db: undefined,
+			}),
+		{
+			message: 'missing-db',
+		},
 	);
 });

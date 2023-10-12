@@ -1,8 +1,7 @@
-import { N9Log } from '@neo9/n9-node-log';
-import test, { Assertions } from 'ava';
+import test, { ExecutionContext } from 'ava';
 
-import { BaseMongoObject, MongoClient, N9AggregationCursor } from '../src';
-import { init } from './fixtures/utils';
+import { BaseMongoObject, N9AggregationCursor, N9MongoDBClient } from '../src';
+import { getBaseMongoClientSettings, getOneCollectionName, init, TestContext } from './fixtures';
 
 class SampleType extends BaseMongoObject {
 	public field1String: string;
@@ -13,12 +12,15 @@ class AggregationResult {
 	public count: number;
 }
 
-global.log = new N9Log('tests');
-
 init();
 
-test('[AGG] Insert some and aggregate it 2', async (t: Assertions) => {
-	const mongoClient = new MongoClient(`test-${Date.now()}`, SampleType, SampleType);
+test('[AGG] Insert some and aggregate it 2', async (t: ExecutionContext<TestContext>) => {
+	const mongoClient = new N9MongoDBClient(
+		getOneCollectionName(),
+		SampleType,
+		SampleType,
+		getBaseMongoClientSettings(t),
+	);
 	const size = await mongoClient.count();
 
 	t.true(size === 0, 'collection should be empty');
@@ -58,12 +60,23 @@ test('[AGG] Insert some and aggregate it 2', async (t: Assertions) => {
 	await mongoClient.dropCollection();
 });
 
-test('[AGG] Insert some and aggregate with output', async (t: Assertions) => {
-	const aggregationCollectionSourceName = `test-${Math.round(Math.random() * 100000)}${Date.now()}`;
-	const mongoClientRead = new MongoClient(aggregationCollectionSourceName, SampleType, null);
-	const mongoClientOut = new MongoClient(`test-output-${Date.now()}`, SampleType, null, {
-		aggregationCollectionSource: aggregationCollectionSourceName,
-	});
+test('[AGG] Insert some and aggregate with output', async (t: ExecutionContext<TestContext>) => {
+	const aggregationCollectionSourceName = getOneCollectionName();
+	const mongoClientRead = new N9MongoDBClient(
+		aggregationCollectionSourceName,
+		SampleType,
+		null,
+		getBaseMongoClientSettings(t),
+	);
+	const mongoClientOut = new N9MongoDBClient(
+		getOneCollectionName('test-output'),
+		SampleType,
+		null,
+		{
+			...getBaseMongoClientSettings(t),
+			aggregationCollectionSource: aggregationCollectionSourceName,
+		},
+	);
 	const size = await mongoClientRead.count();
 	t.true(size === 0, 'collection should be empty');
 

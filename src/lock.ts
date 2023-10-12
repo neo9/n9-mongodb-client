@@ -1,32 +1,38 @@
 import { N9Error, waitFor } from '@neo9/n9-node-utils';
 import * as crypto from 'crypto';
-import * as _ from 'lodash';
+import _ from 'lodash';
 import * as mongodb from 'mongodb';
-import { CreateIndexesOptions, IndexSpecification } from 'mongodb';
+import { Db } from 'mongodb';
 
 import { LangUtils } from './lang-utils';
-import { LockOptions } from './models/lock-options.models';
+import { LockSettings } from './models/lock-options.models';
 
 export class N9MongoLock {
-	private readonly options: LockOptions;
+	private readonly options: LockSettings;
 	private readonly defaultLock: string;
 	private readonly collection: string;
 	private readonly waitDurationMsRandomPart: number;
 
 	/**
 	 *
+	 * @param db The Db object used to access database. Get one with MongoUtils.CONNECT()
 	 * @param collection Collection name to use to save lock, default : n9MongoLock
 	 * @param defaultLock the default naem for this lock
-	 * @param options timeout default to 30s and removeExpired default to true to avoid duplication keys on expiring
+	 * @param lockSettings timeout default to 30s and removeExpired default to true to avoid duplication keys on expiring
 	 */
 	constructor(
+		private readonly db: Db,
 		collection: string = 'n9MongoLock',
 		defaultLock: string = 'default-lock',
-		options?: LockOptions,
+		lockSettings?: LockSettings,
 	) {
 		this.defaultLock = defaultLock;
 		this.collection = collection;
-		this.options = _.defaultsDeep(options, {
+		if (!this.db) {
+			throw new N9Error('missing-db', 500);
+		}
+
+		this.options = _.defaultsDeep(lockSettings, {
 			timeout: 30 * 1000,
 			removeExpired: true,
 			n9MongoLockOptions: {
@@ -34,10 +40,6 @@ export class N9MongoLock {
 				waitDurationMsMin: 5,
 			},
 		});
-		const db = global.db as mongodb.Db;
-		if (!db) {
-			throw new N9Error('missing-db', 500);
-		}
 		this.waitDurationMsRandomPart =
 			this.options.n9MongoLockOptions.waitDurationMsMax -
 			this.options.n9MongoLockOptions.waitDurationMsMin;
@@ -47,16 +49,17 @@ export class N9MongoLock {
 	 * Function to call at the beginning
 	 */
 	public async ensureIndexes(): Promise<void> {
-		const db = global.db as mongodb.Db;
-		const indexSpecification: IndexSpecification = {
+		const indexSpecification: mongodb.IndexSpecification = {
 			name: 1,
 		};
-		const createIndexesOptions: CreateIndexesOptions = {
+		const createIndexesOptions: mongodb.CreateIndexesOptions = {
 			name: 'name',
 			unique: true,
 		};
 		try {
-			await db.collection(this.collection).createIndex(indexSpecification, createIndexesOptions);
+			await this.db
+				.collection(this.collection)
+				.createIndex(indexSpecification, createIndexesOptions);
 		} catch (error) {
 			LangUtils.throwN9ErrorFromError(error, { indexSpecification, createIndexesOptions });
 		}
@@ -69,7 +72,6 @@ export class N9MongoLock {
 	 */
 	public async acquire(suffix?: string): Promise<string | undefined> {
 		const now = Date.now();
-		const db = global.db as mongodb.Db;
 		const lockName = suffix ? `${this.defaultLock}_${suffix}` : this.defaultLock;
 
 		const query = {
@@ -85,9 +87,9 @@ export class N9MongoLock {
 
 		try {
 			if (this.options.removeExpired) {
-				await db.collection(this.collection).findOneAndDelete(query);
+				await this.db.collection(this.collection).findOneAndDelete(query);
 			} else {
-				await db.collection(this.collection).findOneAndUpdate(query, update);
+				await this.db.collection(this.collection).findOneAndUpdate(query, update);
 			}
 			const code = crypto.randomBytes(16).toString('hex');
 			const doc = {
@@ -97,7 +99,7 @@ export class N9MongoLock {
 				inserted: now,
 			};
 			try {
-				await db.collection(this.collection).insertOne(doc);
+				await this.db.collection(this.collection).insertOne(doc);
 				return code;
 			} catch (error) {
 				if (error.code === 11000) {
@@ -143,7 +145,6 @@ export class N9MongoLock {
 
 	private async releaseLock(code: string, lockName: string): Promise<boolean> {
 		const now = Date.now();
-		const db = global.db as mongodb.Db;
 		const query = {
 			code,
 			expire: { $gt: now },
@@ -158,8 +159,8 @@ export class N9MongoLock {
 
 		try {
 			const oldLock = this.options.removeExpired
-				? await db.collection(this.collection).findOneAndDelete(query)
-				: await db.collection(this.collection).findOneAndUpdate(query, update);
+				? await this.db.collection(this.collection).findOneAndDelete(query)
+				: await this.db.collection(this.collection).findOneAndUpdate(query, update);
 			if (
 				(oldLock && Object.prototype.hasOwnProperty.call(oldLock, 'value') && !oldLock.value) ||
 				!oldLock

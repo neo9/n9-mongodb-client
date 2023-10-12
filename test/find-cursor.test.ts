@@ -1,33 +1,35 @@
-import { N9Log } from '@neo9/n9-node-log';
 import { N9JSONStream, N9JSONStreamResponse } from '@neo9/n9-node-utils';
 import test, { ExecutionContext } from 'ava';
-import * as _ from 'lodash';
+import _ from 'lodash';
 import { pipeline, Transform } from 'stream';
 
-import { BaseMongoObject, MongoClient, MongoUtils, N9FindCursor } from '../src';
+import { BaseMongoObject, MongoUtils, N9FindCursor, N9MongoDBClient } from '../src';
 import {
 	CURSOR_FLAGS,
 	MongoClient as MongodbClient,
 	MongoCursorExhaustedError,
 } from '../src/mongodb';
-import { init } from './fixtures/utils';
+import { getBaseMongoClientSettings, getOneCollectionName, init, TestContext } from './fixtures';
 
 class SampleType extends BaseMongoObject {
 	public field1String: string;
 }
 
-interface ContextContent {
-	mongoClient: MongoClient<SampleType, SampleType>;
+interface ContextContent extends TestContext {
+	mongoClient: N9MongoDBClient<SampleType, SampleType>;
 	collectionName: string;
 	dbClient: MongodbClient;
 }
 
-global.log = new N9Log('tests');
-
 init();
 test.beforeEach(async (t: ExecutionContext<ContextContent>) => {
-	const collectionName = `test-${Date.now()}`;
-	const mongoClient = new MongoClient(collectionName, SampleType, SampleType);
+	const collectionName = getOneCollectionName();
+	const mongoClient = new N9MongoDBClient(
+		collectionName,
+		SampleType,
+		SampleType,
+		getBaseMongoClientSettings(t),
+	);
 
 	// insert items not sorted to avoid case where we rely on the insert order
 	await mongoClient.insertMany(
@@ -42,7 +44,6 @@ test.beforeEach(async (t: ExecutionContext<ContextContent>) => {
 	);
 	t.context.mongoClient = mongoClient;
 	t.context.collectionName = collectionName;
-	t.context.dbClient = global.dbClient;
 });
 
 test.afterEach(async (t: ExecutionContext<ContextContent>) => {
@@ -407,7 +408,9 @@ test('[Cursor] Check cursor project function : inclue only field1String', async 
 
 test('[Cursor] Check cursor returnKey function', async (t: ExecutionContext<ContextContent>) => {
 	const cursor = t.context.mongoClient
-		.find({ _id: { $gte: MongoUtils.oid('000000000000000000000000') } }, 0, 0, { field1String: 1 })
+		.find({ _id: { $gte: MongoUtils.TO_OBJECT_ID('000000000000000000000000') } }, 0, 0, {
+			field1String: 1,
+		})
 		.returnKey(true);
 	const items = await getCursorContent(cursor);
 	t.is(items?.length, 5, 'check length of items');

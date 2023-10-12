@@ -1,9 +1,7 @@
-import { N9Log } from '@neo9/n9-node-log';
-import test, { Assertions } from 'ava';
-import { MongoMemoryServer } from 'mongodb-memory-server';
+import test, { ExecutionContext } from 'ava';
 
-import { BaseMongoObject, MongoClient, MongoUtils } from '../../src';
-import * as mongodb from '../../src/mongodb';
+import { BaseMongoObject, N9MongoDBClient } from '../../src';
+import { getBaseMongoClientSettings, getOneCollectionName, init, TestContext } from '../fixtures';
 
 class SampleTypeListing extends BaseMongoObject {}
 
@@ -18,25 +16,15 @@ class SampleType extends SampleTypeListing {
 	public field5?: string;
 }
 
-global.log = new N9Log('tests').module('issues');
+init();
 
-let mongod: MongoMemoryServer;
-
-test.before(async () => {
-	mongod = await MongoMemoryServer.create();
-	const uri = mongod.getUri();
-	await MongoUtils.connect(uri);
-});
-
-test.after(async () => {
-	global.log.info(`DROP DB after tests OK`);
-	await (global.db as mongodb.Db).dropDatabase();
-	await MongoUtils.disconnect();
-	await mongod.stop();
-});
-
-test('[ISSUE#1] updateManyAtOnce should remove properties if not specified', async (t: Assertions) => {
-	const mongoClient = new MongoClient(`test-${Date.now()}`, SampleType, SampleTypeListing);
+test('[ISSUE#1] updateManyAtOnce should remove properties if not specified', async (t: ExecutionContext<TestContext>) => {
+	const mongoClient = new N9MongoDBClient(
+		getOneCollectionName(),
+		SampleType,
+		SampleTypeListing,
+		getBaseMongoClientSettings(t),
+	);
 	const size = await mongoClient.count();
 
 	t.true(size === 0);
@@ -61,7 +49,7 @@ test('[ISSUE#1] updateManyAtOnce should remove properties if not specified', asy
 	t.is(foundObject.field2, 'string2', 'found right element string2');
 	t.is(foundObject.field5, 'string5', 'found right element string5');
 
-	global.log.debug(`updateManyAtOnce with savedObject without field1String field`);
+	t.context.logger.debug(`updateManyAtOnce with savedObject without field1String field`);
 	const updateArray = await (
 		await mongoClient.updateManyAtOnce([newValue], 'userId1', {
 			upsert: true,
@@ -72,7 +60,7 @@ test('[ISSUE#1] updateManyAtOnce should remove properties if not specified', asy
 
 	const updatedObject = updateArray[0];
 
-	global.log.debug(`Updated object : `, JSON.stringify(updatedObject));
+	t.context.logger.debug(`Updated object : ${JSON.stringify(updatedObject)}`);
 
 	t.is(updatedObject.field2, 'string42', 'after update - found right element string42');
 	t.is(updatedObject.field1, undefined, 'after update - field1 should not exists anymore');
@@ -83,8 +71,13 @@ test('[ISSUE#1] updateManyAtOnce should remove properties if not specified', asy
 	await mongoClient.dropCollection();
 });
 
-test('[ISSUE#1] updateManyAtOnce should remove recursively properties if not specified', async (t: Assertions) => {
-	const mongoClient = new MongoClient(`test-${Date.now()}`, SampleType, SampleTypeListing);
+test('[ISSUE#1] updateManyAtOnce should remove recursively properties if not specified', async (t: ExecutionContext<TestContext>) => {
+	const mongoClient = new N9MongoDBClient(
+		getOneCollectionName(),
+		SampleType,
+		SampleTypeListing,
+		getBaseMongoClientSettings(t),
+	);
 	const size = await mongoClient.count();
 
 	t.true(size === 0);
@@ -115,7 +108,7 @@ test('[ISSUE#1] updateManyAtOnce should remove recursively properties if not spe
 	t.is(foundObject.sub.field3, 'string3', 'found right element string3');
 	t.is(foundObject.sub.field4, 'string4', 'found right element string4');
 
-	global.log.debug(`updateManyAtOnce with savedObject without field1String field`);
+	t.context.logger.debug(`updateManyAtOnce with savedObject without field1String field`);
 	const updateArray = await (
 		await mongoClient.updateManyAtOnce([newValue], 'userId1', {
 			upsert: true,
@@ -126,7 +119,7 @@ test('[ISSUE#1] updateManyAtOnce should remove recursively properties if not spe
 
 	const updatedObject = updateArray[0];
 
-	global.log.debug(`Updated object : `, JSON.stringify(updatedObject));
+	t.context.logger.debug(`Updated object : ${JSON.stringify(updatedObject)}`);
 
 	t.is(updatedObject.field2, 'string42', 'after update - found right element string42');
 	t.is(updatedObject.field1, undefined, 'after update - field1 should not exists anymore');

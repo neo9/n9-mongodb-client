@@ -1,10 +1,7 @@
-import { N9Log } from '@neo9/n9-node-log';
-import test, { Assertions } from 'ava';
-import * as _ from 'lodash';
+import test, { ExecutionContext } from 'ava';
+import _ from 'lodash';
 
-import { generateMongoClient, init, SampleEntityWithArray } from './fixtures/utils';
-
-global.log = new N9Log('tests').module('lock-fields-arrays');
+import { generateMongoClient, init, SampleEntityWithArray, TestContext } from './fixtures';
 
 init();
 
@@ -61,7 +58,7 @@ const c = {
  * Unlock F''' => a1 is unlocked => [a1,a2🔒,b1]
  * Update F'''' => a1, a2 and c are locked => [a2🔒,a1🔒,c🔒]
  */
-test('[LOCK-FIELDS-ARRAY F] Lock fields array should handle multiple unicity keys', async (t: Assertions) => {
+test('[LOCK-FIELDS-ARRAY F] Lock fields array should handle multiple unicity keys', async (t: ExecutionContext<TestContext>) => {
 	const a1AndA2LockPaths = [
 		'parameters.items[code=a&otherCode=a1].label.en-GB',
 		'parameters.items[code=a&otherCode=a1].label.fr-FR',
@@ -87,7 +84,7 @@ test('[LOCK-FIELDS-ARRAY F] Lock fields array should handle multiple unicity key
 		},
 	};
 
-	const mongoClient = generateMongoClient();
+	const mongoClient = generateMongoClient(t);
 	await mongoClient.initHistoricIndexes();
 
 	// Simulate import

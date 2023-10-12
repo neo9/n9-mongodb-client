@@ -1,5 +1,5 @@
 import { N9Error } from '@neo9/n9-node-utils';
-import * as _ from 'lodash';
+import _ from 'lodash';
 import { ObjectId } from 'mongodb';
 
 import { LangUtils } from './lang-utils';
@@ -337,7 +337,6 @@ export class LockFieldsManager<U extends BaseMongoObject> {
 									keys.push(...this.generateAllLockFields(element, arrayPath, arrayKeys));
 								}
 							} else {
-								// TODO: if Array.isArray(newEntity[key])
 								keys.push(arrayPath);
 							}
 						}

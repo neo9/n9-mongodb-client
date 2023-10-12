@@ -1,6 +1,5 @@
-import { N9Log } from '@neo9/n9-node-log';
-import test, { Assertions } from 'ava';
-import * as _ from 'lodash';
+import test, { ExecutionContext } from 'ava';
+import _ from 'lodash';
 
 import {
 	generateMongoClient,
@@ -8,9 +7,8 @@ import {
 	init,
 	SampleEntityWithArray,
 	SampleEntityWithSimpleArray,
-} from './fixtures/utils';
-
-global.log = new N9Log('tests').module('lock-fields-arrays');
+	TestContext,
+} from './fixtures';
 
 init();
 
@@ -72,7 +70,7 @@ const f = {
  * Modification opérateur de B par B' => b verrouillés et vaut b', c et a varrouillé pat changement de place => [c🔒,b'🔒,a🔒]
  * Import de B" => a et c toujours présent, b' reste à sa valeur => [c🔒,b'🔒,a🔒]
  */
-test('[LOCK-FIELDS-ARRAY B] Import, edit one, change order, re-import datas', async (t: Assertions) => {
+test('[LOCK-FIELDS-ARRAY B] Import, edit one, change order, re-import datas', async (t: ExecutionContext<TestContext>) => {
 	const bp = _.cloneDeep(b);
 	bp.label['fr-FR'] += ' mis à jour';
 	bp.label['en-GB'] += ' updated';
@@ -95,7 +93,7 @@ test('[LOCK-FIELDS-ARRAY B] Import, edit one, change order, re-import datas', as
 		},
 	};
 
-	const mongoClient = generateMongoClient();
+	const mongoClient = generateMongoClient(t);
 	await mongoClient.initHistoricIndexes();
 
 	// Simulate import
@@ -170,7 +168,7 @@ test('[LOCK-FIELDS-ARRAY B] Import, edit one, change order, re-import datas', as
  * Modification opérateur de B par B' => d, e et f vérouillés par changement de place => [e🔒,f🔒,d🔒]
  * Import de B" => d, e et f toujours vérouillés et ordre n'a pas changé => [e🔒,f🔒,d🔒]
  */
-test('[LOCK-FIELDS-ARRAY B] Import, change all order, re-import datas', async (t: Assertions) => {
+test('[LOCK-FIELDS-ARRAY B] Import, change all order, re-import datas', async (t: ExecutionContext<TestContext>) => {
 	const bLockPaths = [
 		'parameters.items[code=e].label.en-GB',
 		'parameters.items[code=e].label.fr-FR',
@@ -190,7 +188,7 @@ test('[LOCK-FIELDS-ARRAY B] Import, change all order, re-import datas', async (t
 		},
 	};
 
-	const mongoClient = generateMongoClient();
+	const mongoClient = generateMongoClient(t);
 	await mongoClient.initHistoricIndexes();
 
 	// Simulate import
@@ -263,7 +261,7 @@ test('[LOCK-FIELDS-ARRAY B] Import, change all order, re-import datas', async (t
  * Modification opérateur de B par B' => c et a vérrouillés par changement de place => [c🔒,b,a🔒]
  * Import de B" => a, b c toujours vérouillés et ordre conservé => [c🔒,a🔒,b]
  */
-test('[LOCK-FIELDS-ARRAY B] Import, change order, re-import datas with simple array', async (t: Assertions) => {
+test('[LOCK-FIELDS-ARRAY B] Import, change order, re-import datas with simple array', async (t: ExecutionContext<TestContext>) => {
 	const bLockPaths = ['parameters.items["c"]', 'parameters.items["a"]'];
 
 	const vB: SampleEntityWithSimpleArray = {
@@ -272,7 +270,7 @@ test('[LOCK-FIELDS-ARRAY B] Import, change order, re-import datas with simple ar
 			items: ['a', 'b', 'c'],
 		},
 	};
-	const mongoClient = generateMongoClientForSimpleArray();
+	const mongoClient = generateMongoClientForSimpleArray(t);
 	await mongoClient.initHistoricIndexes();
 
 	// Simulate import
@@ -341,7 +339,7 @@ test('[LOCK-FIELDS-ARRAY B] Import, change order, re-import datas with simple ar
  * Modification opérateur de B par B' => a, b et c vérouillés par changement de place => [b🔒,c🔒,a🔒]
  * Import de B" => a, b et c toujours vérouillés et ordre n'a pas changé => [b🔒,c🔒,a🔒]
  */
-test('[LOCK-FIELDS-ARRAY B] Import, change all order, re-import datas with simple array', async (t: Assertions) => {
+test('[LOCK-FIELDS-ARRAY B] Import, change all order, re-import datas with simple array', async (t: ExecutionContext<TestContext>) => {
 	const bLockPaths = ['parameters.items["b"]', 'parameters.items["c"]', 'parameters.items["a"]'];
 
 	const vB: SampleEntityWithSimpleArray = {
@@ -350,7 +348,7 @@ test('[LOCK-FIELDS-ARRAY B] Import, change all order, re-import datas with simpl
 			items: ['a', 'b', 'c'],
 		},
 	};
-	const mongoClient = generateMongoClientForSimpleArray();
+	const mongoClient = generateMongoClientForSimpleArray(t);
 	await mongoClient.initHistoricIndexes();
 
 	// Simulate import

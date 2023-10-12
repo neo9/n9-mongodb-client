@@ -1,9 +1,8 @@
-import { N9Log } from '@neo9/n9-node-log';
-import test, { Assertions } from 'ava';
-import * as _ from 'lodash';
+import test, { ExecutionContext } from 'ava';
+import _ from 'lodash';
 
-import { BaseMongoObject, MongoClient, MongoUtils } from '../src';
-import { init } from './fixtures/utils';
+import { BaseMongoObject, MongoUtils, N9MongoDBClient } from '../src';
+import { getBaseMongoClientSettings, getOneCollectionName, init, TestContext } from './fixtures';
 
 class SampleComplexType extends BaseMongoObject {
 	public property?: {
@@ -12,20 +11,18 @@ class SampleComplexType extends BaseMongoObject {
 }
 
 const getLockFieldsMongoClient = (
-	keepHistoric: boolean = false,
-): MongoClient<SampleComplexType, SampleComplexType> => {
-	return new MongoClient(`test-${Date.now()}`, SampleComplexType, null, {
-		keepHistoric,
+	t: ExecutionContext<TestContext>,
+): N9MongoDBClient<SampleComplexType, SampleComplexType> => {
+	return new N9MongoDBClient(getOneCollectionName(), SampleComplexType, null, {
+		...getBaseMongoClientSettings(t),
 		lockFields: {},
 	});
 };
 
-global.log = new N9Log('tests').module('lock-fields');
-
 init();
 
-test('[LOCK-FIELDS] Update one field with value to null', async (t: Assertions) => {
-	const mongoClient = getLockFieldsMongoClient();
+test('[LOCK-FIELDS] Update one field with value to null', async (t: ExecutionContext<TestContext>) => {
+	const mongoClient = getLockFieldsMongoClient(t);
 
 	const locksDataSample: SampleComplexType = {
 		property: {
@@ -48,8 +45,8 @@ test('[LOCK-FIELDS] Update one field with value to null', async (t: Assertions) 
 	t.deepEqual(entity.property, { value: null }, 'value is deleted');
 });
 
-test('[LOCK-FIELDS] Insert one field with value null', async (t: Assertions) => {
-	const mongoClient = getLockFieldsMongoClient();
+test('[LOCK-FIELDS] Insert one field with value null', async (t: ExecutionContext<TestContext>) => {
+	const mongoClient = getLockFieldsMongoClient(t);
 
 	const locksDataSample: SampleComplexType = {
 		property: {
@@ -100,8 +97,8 @@ test('[LOCK-FIELDS] Insert one field with value null', async (t: Assertions) => 
 	t.deepEqual(entity.property, { value: null }, 'value null again');
 });
 
-test('[LOCK-FIELDS] Update multiple field with value to null', async (t: Assertions) => {
-	const mongoClient = getLockFieldsMongoClient();
+test('[LOCK-FIELDS] Update multiple field with value to null', async (t: ExecutionContext<TestContext>) => {
+	const mongoClient = getLockFieldsMongoClient(t);
 
 	const locksDataSample: SampleComplexType = {
 		property: {
@@ -113,7 +110,7 @@ test('[LOCK-FIELDS] Update multiple field with value to null', async (t: Asserti
 	const entities = await mongoClient.updateManyAtOnce(
 		[
 			{
-				_id: MongoUtils.oid(insertedEntity._id) as any,
+				_id: MongoUtils.TO_OBJECT_ID(insertedEntity._id) as any,
 				property: {
 					value: null,
 				},
@@ -129,8 +126,8 @@ test('[LOCK-FIELDS] Update multiple field with value to null', async (t: Asserti
 	t.deepEqual((await entities.toArray())[0].property, { value: null }, 'value is deleted');
 });
 
-test('[LOCK-FIELDS] Insert multiple entities with one field with value null', async (t: Assertions) => {
-	const mongoClient = getLockFieldsMongoClient();
+test('[LOCK-FIELDS] Insert multiple entities with one field with value null', async (t: ExecutionContext<TestContext>) => {
+	const mongoClient = getLockFieldsMongoClient(t);
 
 	const locksDataSample: SampleComplexType = {
 		property: {
@@ -152,7 +149,7 @@ test('[LOCK-FIELDS] Insert multiple entities with one field with value null', as
 	let entities = await mongoClient.updateManyAtOnce(
 		[
 			{
-				_id: MongoUtils.oid(insertedEntity._id) as any,
+				_id: MongoUtils.TO_OBJECT_ID(insertedEntity._id) as any,
 				property: {
 					value: null,
 				},
@@ -170,7 +167,7 @@ test('[LOCK-FIELDS] Insert multiple entities with one field with value null', as
 	entities = await mongoClient.updateManyAtOnce(
 		[
 			{
-				_id: MongoUtils.oid(insertedEntity._id) as any,
+				_id: MongoUtils.TO_OBJECT_ID(insertedEntity._id) as any,
 				property: {
 					value: 'a value not null',
 				},
@@ -192,7 +189,7 @@ test('[LOCK-FIELDS] Insert multiple entities with one field with value null', as
 	entities = await mongoClient.updateManyAtOnce(
 		[
 			{
-				_id: MongoUtils.oid(insertedEntity._id) as any,
+				_id: MongoUtils.TO_OBJECT_ID(insertedEntity._id) as any,
 				property: {
 					value: null,
 				},

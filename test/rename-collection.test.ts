@@ -1,22 +1,28 @@
-import { N9Log } from '@neo9/n9-node-log';
-import test, { Assertions } from 'ava';
+import test, { ExecutionContext } from 'ava';
 
-import { BaseMongoObject, MongoClient } from '../src';
-import { init } from './fixtures/utils';
+import { BaseMongoObject, N9MongoDBClient } from '../src';
+import { getBaseMongoClientSettings, getOneCollectionName, init, TestContext } from './fixtures';
 
 class SampleType extends BaseMongoObject {
 	public test: string;
 }
 
-global.log = new N9Log('tests');
-
 init();
 
-test('[EXISTS] Create collection and test existence', async (t: Assertions) => {
-	const collectionName1 = `test1-${Date.now()}`;
-	const collectionName2 = `test2-${Date.now()}`;
-	const mongoClient1 = new MongoClient(collectionName1, SampleType, null);
-	const mongoClient2 = new MongoClient(collectionName2, SampleType, null);
+test('[EXISTS] Create collection and test existence', async (t: ExecutionContext<TestContext>) => {
+	const collectionName2 = getOneCollectionName('test2');
+	const mongoClient1 = new N9MongoDBClient(
+		getOneCollectionName('test1'),
+		SampleType,
+		null,
+		getBaseMongoClientSettings(t),
+	);
+	const mongoClient2 = new N9MongoDBClient(
+		collectionName2,
+		SampleType,
+		null,
+		getBaseMongoClientSettings(t),
+	);
 
 	await mongoClient1.insertOne({ test: 'test-1' }, 'userId1');
 	await mongoClient2.insertOne({ test: 'test-2' }, 'userId2');

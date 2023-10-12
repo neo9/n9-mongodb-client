@@ -1,21 +1,22 @@
-import { N9Log } from '@neo9/n9-node-log';
 import { waitFor } from '@neo9/n9-node-utils';
-import test, { Assertions } from 'ava';
+import test, { ExecutionContext } from 'ava';
 
-import { BaseMongoObject, MongoClient } from '../src';
-import { init } from './fixtures/utils';
+import { BaseMongoObject, N9MongoDBClient } from '../src';
+import { getBaseMongoClientSettings, getOneCollectionName, init, TestContext } from './fixtures';
 
 class SampleType extends BaseMongoObject {
 	value: string;
 }
 
-global.log = new N9Log('tests');
-
 init();
 
-test('[UPDATE MANY] Should update only inserted document last modification date', async (t: Assertions) => {
-	const collectionName = `test-${Date.now()}`;
-	const mongoClient = new MongoClient(collectionName, SampleType, SampleType, {});
+test('[UPDATE MANY] Should update only inserted document last modification date', async (t: ExecutionContext<TestContext>) => {
+	const mongoClient = new N9MongoDBClient(
+		getOneCollectionName(),
+		SampleType,
+		SampleType,
+		getBaseMongoClientSettings(t),
+	);
 
 	const userId = 'test';
 	const tag = 'abcde';

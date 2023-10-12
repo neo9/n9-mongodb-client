@@ -1,9 +1,14 @@
-import { N9Log } from '@neo9/n9-node-log';
-import test, { Assertions } from 'ava';
-import * as _ from 'lodash';
+import test, { ExecutionContext } from 'ava';
+import _ from 'lodash';
 
-import { BaseMongoObject, MongoClient } from '../src';
-import { ArrayElement, init } from './fixtures/utils';
+import { BaseMongoObject, N9MongoDBClient } from '../src';
+import {
+	ArrayElement,
+	getBaseMongoClientSettings,
+	getOneCollectionName,
+	init,
+	TestContext,
+} from './fixtures';
 
 class SampleComplexType extends BaseMongoObject {
 	public text: string;
@@ -40,17 +45,19 @@ const locksDataSample: SampleComplexType = {
 	],
 };
 
-const getMongoClient = (): MongoClient<SampleComplexType, SampleComplexType> =>
-	new MongoClient(`test-${Date.now()}`, SampleComplexType, SampleComplexType, {
+const getMongoClient = (
+	t: ExecutionContext<TestContext>,
+): N9MongoDBClient<SampleComplexType, SampleComplexType> =>
+	new N9MongoDBClient(getOneCollectionName(), SampleComplexType, SampleComplexType, {
+		...getBaseMongoClientSettings(t),
+
 		keepHistoric: true,
 	});
 
-global.log = new N9Log('tests').module('lock-fields');
-
 init();
 
-test('[LOCK-FIELDS-DISABLED] Insert one, update it and check undefined values are not replace by null', async (t: Assertions) => {
-	const mongoClient = getMongoClient();
+test('[LOCK-FIELDS-DISABLED] Insert one, update it and check undefined values are not replace by null', async (t: ExecutionContext<TestContext>) => {
+	const mongoClient = getMongoClient(t);
 
 	const insertedEntity = await mongoClient.insertOne(_.cloneDeep(locksDataSample), '');
 	const entity = await mongoClient.findOneById(insertedEntity._id);

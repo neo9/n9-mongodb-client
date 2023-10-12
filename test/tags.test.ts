@@ -1,21 +1,22 @@
-import { N9Log } from '@neo9/n9-node-log';
 import { waitFor } from '@neo9/n9-node-utils';
-import test, { Assertions } from 'ava';
+import test, { ExecutionContext } from 'ava';
 
-import { BaseMongoObject, MongoClient } from '../src';
-import { init } from './fixtures/utils';
+import { BaseMongoObject, N9MongoDBClient } from '../src';
+import { getBaseMongoClientSettings, getOneCollectionName, init, TestContext } from './fixtures';
 
 class SampleType extends BaseMongoObject {
 	public field1String: string;
 }
 
-global.log = new N9Log('tests');
-
 init();
 
-test('[Tags] Add tag to entities then remove them', async (t: Assertions) => {
-	const collection = global.db.collection(`test-${Date.now()}`);
-	const mongoClient = new MongoClient(collection, SampleType, SampleType);
+test('[Tags] Add tag to entities then remove them', async (t: ExecutionContext<TestContext>) => {
+	const mongoClient = new N9MongoDBClient(
+		getOneCollectionName(),
+		SampleType,
+		SampleType,
+		getBaseMongoClientSettings(t),
+	);
 	await mongoClient.initTagsIndex();
 
 	await mongoClient.insertOne({ field1String: 'string1' }, 'userId1');
@@ -44,9 +45,13 @@ test('[Tags] Add tag to entities then remove them', async (t: Assertions) => {
 	await mongoClient.dropCollection();
 });
 
-test('[Tags] Add tag to entities then delete them', async (t: Assertions) => {
-	const collection = global.db.collection(`test-${Date.now()}`);
-	const mongoClient = new MongoClient(collection, SampleType, SampleType);
+test('[Tags] Add tag to entities then delete them', async (t: ExecutionContext<TestContext>) => {
+	const mongoClient = new N9MongoDBClient(
+		getOneCollectionName(),
+		SampleType,
+		SampleType,
+		getBaseMongoClientSettings(t),
+	);
 	await mongoClient.initTagsIndex();
 
 	await mongoClient.insertOne({ field1String: 'string1' }, 'userId1');
@@ -67,9 +72,13 @@ test('[Tags] Add tag to entities then delete them', async (t: Assertions) => {
 	await mongoClient.dropCollection();
 });
 
-test(`[Tags] Add tag to entities then remove them without changing last update date`, async (t: Assertions) => {
-	const collection = global.db.collection(`test-${Date.now()}`);
-	const mongoClient = new MongoClient(collection, SampleType, null);
+test(`[Tags] Add tag to entities then remove them without changing last update date`, async (t: ExecutionContext<TestContext>) => {
+	const mongoClient = new N9MongoDBClient(
+		getOneCollectionName(),
+		SampleType,
+		null,
+		getBaseMongoClientSettings(t),
+	);
 	await mongoClient.initTagsIndex();
 
 	let item1 = await mongoClient.insertOne({ field1String: 'string1' }, 'userId1');
@@ -94,9 +103,13 @@ test(`[Tags] Add tag to entities then remove them without changing last update d
 	await mongoClient.dropCollection();
 });
 for (const userId of ['userId', '012345678901234567890123']) {
-	test(`[Tags] Add tag to entities then remove them with changing last update date  with userId : ${userId}`, async (t: Assertions) => {
-		const collection = global.db.collection(`test-${Date.now()}`);
-		const mongoClient = new MongoClient(collection, SampleType, null);
+	test(`[Tags] Add tag to entities then remove them with changing last update date  with userId : ${userId}`, async (t: ExecutionContext<TestContext>) => {
+		const mongoClient = new N9MongoDBClient(
+			getOneCollectionName(),
+			SampleType,
+			null,
+			getBaseMongoClientSettings(t),
+		);
 		await mongoClient.initTagsIndex();
 
 		let item1 = await mongoClient.insertOne({ field1String: 'string1' }, 'userId1');

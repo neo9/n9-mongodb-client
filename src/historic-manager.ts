@@ -7,7 +7,13 @@ import { N9FindCursor } from './cursors';
 import { IndexManager } from './index-manager';
 import { LangUtils } from './lang-utils';
 import { LodashReplacerUtils } from './lodash-replacer.utils';
-import { BaseMongoObject, EntityHistoric, EntityHistoricStored, StringMap } from './models';
+import {
+	BaseMongoObject,
+	EntityHistoric,
+	EntityHistoricStored,
+	HistoricManagerSettings,
+	StringMap,
+} from './models';
 import { MongoUtils } from './mongo-utils';
 
 /**
@@ -19,9 +25,9 @@ export class HistoricManager<U extends BaseMongoObject> {
 	private readonly db: Db;
 	private readonly indexManager: IndexManager<EntityHistoricStored<U>>;
 
-	constructor(collection: Collection<U>) {
-		this.logger = (global.log as N9Log).module('mongo-client-historic');
-		this.db = global.db as Db; // existence is checked in client.ts
+	constructor(collection: Collection<U>, historicManagerSettings: HistoricManagerSettings) {
+		this.logger = historicManagerSettings.logger.module('mongo-client-historic');
+		this.db = historicManagerSettings.db; // existence is checked in client.ts
 
 		this.collection = this.db.collection<EntityHistoricStored<U>>(
 			`${collection.collectionName}Historic`,
@@ -76,10 +82,10 @@ export class HistoricManager<U extends BaseMongoObject> {
 	): Promise<void> {
 		try {
 			const change: EntityHistoricStored<U> = {
-				entityId: MongoUtils.oid(entityId) as any,
+				entityId: MongoUtils.TO_OBJECT_ID(entityId) as any,
 				date: updateDate,
-				userId: ObjectId.isValid(userId) ? (MongoUtils.oid(userId) as any) : userId,
-				snapshot: MongoUtils.removeSpecialCharactersInKeys(snapshot),
+				userId: ObjectId.isValid(userId) ? (MongoUtils.TO_OBJECT_ID(userId) as any) : userId,
+				snapshot: MongoUtils.REMOVE_SPECIAL_CHARACTERS_IN_KEYS(snapshot),
 			};
 			await this.collection.insertOne(change as any);
 		} catch (e) {
@@ -100,10 +106,10 @@ export class HistoricManager<U extends BaseMongoObject> {
 			const changes: EntityHistoricStored<U>[] = [];
 			for (const snapshot of snapshots) {
 				changes.push({
-					entityId: MongoUtils.oid(snapshot._id) as any,
+					entityId: MongoUtils.TO_OBJECT_ID(snapshot._id) as any,
 					date: updateDate,
-					userId: ObjectId.isValid(userId) ? (MongoUtils.oid(userId) as any) : userId,
-					snapshot: MongoUtils.removeSpecialCharactersInKeys(snapshot),
+					userId: ObjectId.isValid(userId) ? (MongoUtils.TO_OBJECT_ID(userId) as any) : userId,
+					snapshot: MongoUtils.REMOVE_SPECIAL_CHARACTERS_IN_KEYS(snapshot),
 				});
 			}
 			await this.collection.insertMany(changes as any);
@@ -125,7 +131,7 @@ export class HistoricManager<U extends BaseMongoObject> {
 		try {
 			let previousEntityHistoricSnapshot: U = latestEntityVersion;
 			const filterQuery: FilterQuery<EntityHistoric<U>> = {
-				entityId: MongoUtils.oid(entityId) as any,
+				entityId: MongoUtils.TO_OBJECT_ID(entityId) as any,
 			};
 			const findCursor = this.collection
 				.find(filterQuery)
@@ -133,10 +139,10 @@ export class HistoricManager<U extends BaseMongoObject> {
 				.skip(page * size)
 				.limit(size)
 				.map((a: WithId<EntityHistoricStored<U>>) => {
-					const entityHistoric = MongoUtils.mapObjectToClass<EntityHistoric<U>, EntityHistoric<U>>(
-						EntityHistoric,
-						MongoUtils.unRemoveSpecialCharactersInKeys(a),
-					);
+					const entityHistoric = MongoUtils.MAP_OBJECT_TO_CLASS<
+						EntityHistoric<U>,
+						EntityHistoric<U>
+					>(EntityHistoric, MongoUtils.UN_REMOVE_SPECIAL_CHARACTERS_IN_KEYS(a));
 					// old vs new
 					const { oldValue, newValue }: { oldValue: U; newValue: U } = this.cleanObjectInfos(
 						entityHistoric.snapshot,
@@ -165,8 +171,8 @@ export class HistoricManager<U extends BaseMongoObject> {
 		try {
 			const cursor = this.collection
 				.find({
-					entityId: MongoUtils.oid(entityId) as any,
-					userId: ObjectId.isValid(userId) ? (MongoUtils.oid(userId) as any) : userId,
+					entityId: MongoUtils.TO_OBJECT_ID(entityId) as any,
+					userId: ObjectId.isValid(userId) ? (MongoUtils.TO_OBJECT_ID(userId) as any) : userId,
 				})
 				.sort('_id', -1)
 				.limit(1);
@@ -174,9 +180,9 @@ export class HistoricManager<U extends BaseMongoObject> {
 				const entityHistoricRaw = await cursor.next();
 				const oneMoreRecentValueCursor = this.collection
 					.find({
-						entityId: MongoUtils.oid(entityId) as any,
+						entityId: MongoUtils.TO_OBJECT_ID(entityId) as any,
 						_id: {
-							$gt: MongoUtils.oid(entityHistoricRaw._id) as any,
+							$gt: MongoUtils.TO_OBJECT_ID(entityHistoricRaw._id) as any,
 						},
 					})
 					.sort('_id', -1)
@@ -187,9 +193,9 @@ export class HistoricManager<U extends BaseMongoObject> {
 				} else {
 					oneMoreRecentValue = lastestValue;
 				}
-				const entityHistoric = MongoUtils.mapObjectToClass<EntityHistoric<U>, EntityHistoric<U>>(
+				const entityHistoric = MongoUtils.MAP_OBJECT_TO_CLASS<EntityHistoric<U>, EntityHistoric<U>>(
 					EntityHistoric,
-					MongoUtils.unRemoveSpecialCharactersInKeys(entityHistoricRaw),
+					MongoUtils.UN_REMOVE_SPECIAL_CHARACTERS_IN_KEYS(entityHistoricRaw),
 				);
 
 				// old vs new
@@ -211,7 +217,7 @@ export class HistoricManager<U extends BaseMongoObject> {
 
 	public async countByEntityId(id: string): Promise<number> {
 		try {
-			return await this.collection.countDocuments({ entityId: MongoUtils.oid(id) });
+			return await this.collection.countDocuments({ entityId: MongoUtils.TO_OBJECT_ID(id) });
 		} catch (e) {
 			LangUtils.throwN9ErrorFromError(e, { id });
 		}
@@ -220,11 +226,11 @@ export class HistoricManager<U extends BaseMongoObject> {
 	public async countSince(entityId: string, historicIdReference?: string): Promise<number> {
 		try {
 			const query: StringMap<any> = {
-				entityId: MongoUtils.oid(entityId),
+				entityId: MongoUtils.TO_OBJECT_ID(entityId),
 			};
 			if (historicIdReference) {
 				query._id = {
-					$gt: MongoUtils.oid(historicIdReference),
+					$gt: MongoUtils.TO_OBJECT_ID(historicIdReference),
 				};
 			}
 			return await this.collection.countDocuments(query);

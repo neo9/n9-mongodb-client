@@ -19,6 +19,7 @@
     "test:debug": "export NODE_ENV=test && TS_NODE_FILES=true ava debug --no-worker-threads --verbose --color --serial --host 0.0.0.0 --port 9230 --break",
     "test:dev": "export NODE_ENV=test && TS_NODE_FILES=true ava --no-worker-threads --verbose --color --serial --watch",
     "test": "export NODE_ENV=test && TS_NODE_FILES=true nyc ava --no-worker-threads --verbose --color --serial && nyc report --reporter=html",
+    "test:one": "export NODE_ENV=test && TS_NODE_FILES=true ava --no-worker-threads --verbose --color --serial",
     "coverage": "nyc report --reporter=text-lcov > coverage.lcov && codecov -f coverage.lcov",
     "preversion": "npm test",
     "prepublishOnly": "npm run build",
@@ -50,7 +51,7 @@
     "node": ">=16.20.2"
   },
   "dependencies": {
-    "@neo9/n9-node-log": "^4.1.0",
+    "@neo9/n9-node-log": "^5.0.0-rc.5",
     "@neo9/n9-node-utils": "^2.2.1",
     "deep-diff": "^1.0.2",
     "fast-deep-equal": "^3.1.3",

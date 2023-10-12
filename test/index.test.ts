@@ -1,9 +1,7 @@
-import { N9Log } from '@neo9/n9-node-log';
-import test, { Assertions } from 'ava';
+import test, { ExecutionContext } from 'ava';
 
-import { BaseMongoObject, MongoClient } from '../src';
-import { Db } from '../src/mongodb';
-import { init } from './fixtures/utils';
+import { BaseMongoObject, N9MongoDBClient } from '../src';
+import { getBaseMongoClientSettings, getOneCollectionName, init, TestContext } from './fixtures';
 
 class SampleTypeListing extends BaseMongoObject {
 	public field1String: string;
@@ -29,13 +27,16 @@ class SampleArrayType extends BaseMongoObject {
 	public array: ArrayType[];
 }
 
-global.log = new N9Log('tests');
-
 init();
 
-test('[CRUD] Insert one and find it', async (t: Assertions) => {
-	const collection = (global.db as Db).collection<SampleType>(`test-${Date.now()}`);
-	const mongoClient = new MongoClient(collection, SampleType, SampleTypeListing);
+test('[CRUD] Insert one and find it', async (t: ExecutionContext<TestContext>) => {
+	const collection = t.context.db.collection<SampleType>(getOneCollectionName());
+	const mongoClient = new N9MongoDBClient(
+		collection,
+		SampleType,
+		SampleTypeListing,
+		getBaseMongoClientSettings(t),
+	);
 	const size = await mongoClient.count();
 
 	t.true(size === 0, 'collection should be empty');
@@ -70,11 +71,12 @@ test('[CRUD] Insert one and find it', async (t: Assertions) => {
 	await mongoClient.dropCollection();
 });
 
-test('[CRUD] Find one and update', async (t: Assertions) => {
-	const mongoClient = new MongoClient(
-		global.db.collection(`test-${Date.now()}`),
+test('[CRUD] Find one and update', async (t: ExecutionContext<TestContext>) => {
+	const mongoClient = new N9MongoDBClient(
+		t.context.db.collection(getOneCollectionName()),
 		SampleType,
 		SampleTypeListing,
+		getBaseMongoClientSettings(t),
 	);
 	const size = await mongoClient.count();
 
@@ -128,11 +130,12 @@ test('[CRUD] Find one and update', async (t: Assertions) => {
 	await mongoClient.dropCollection();
 });
 
-test('[CRUD] Find one and update with filter', async (t: Assertions) => {
-	const mongoClient = new MongoClient(
-		global.db.collection(`test-${Date.now()}`),
+test('[CRUD] Find one and update with filter', async (t: ExecutionContext<TestContext>) => {
+	const mongoClient = new N9MongoDBClient(
+		t.context.db.collection(getOneCollectionName()),
 		SampleArrayType,
 		SampleTypeListing,
+		getBaseMongoClientSettings(t),
 	);
 	const size = await mongoClient.count();
 
@@ -200,8 +203,13 @@ test('[CRUD] Find one and update with filter', async (t: Assertions) => {
 	await mongoClient.dropCollection();
 });
 
-test('[CRUD] Find one and upsert', async (t: Assertions) => {
-	const mongoClient = new MongoClient(`test-${Date.now()}`, SampleType, SampleTypeListing);
+test('[CRUD] Find one and upsert', async (t: ExecutionContext<TestContext>) => {
+	const mongoClient = new N9MongoDBClient(
+		getOneCollectionName(),
+		SampleType,
+		SampleTypeListing,
+		getBaseMongoClientSettings(t),
+	);
 	const size = await mongoClient.count();
 
 	t.true(size === 0, 'collection should be empty');
