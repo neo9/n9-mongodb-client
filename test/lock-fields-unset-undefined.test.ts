@@ -1,5 +1,5 @@
 import test, { ExecutionContext } from 'ava';
-import _ from 'lodash';
+import * as _ from 'lodash';
 
 import { BaseMongoObject, N9MongoDBClient } from '../src';
 import { getBaseMongoClientSettings, getOneCollectionName, init, TestContext } from './fixtures';

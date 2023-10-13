@@ -1,11 +1,11 @@
 import test, { ExecutionContext } from 'ava';
-import _ from 'lodash';
+import * as _ from 'lodash';
 
 import { LangUtils, MongoUtils } from '../src';
 import { TestContext } from './fixtures';
 
 test('[LANG-UTILS] Test to removeEmptyDeep on object with ObjectIds', (t: ExecutionContext<TestContext>) => {
-	const anObjectToTest = {
+	const anObjectToTest: any = {
 		s: '2019-01-02',
 		n: 5,
 		id: MongoUtils.TO_OBJECT_ID('012345678901234568790123'),

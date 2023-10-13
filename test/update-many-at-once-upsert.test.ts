@@ -1,5 +1,5 @@
 import test, { ExecutionContext } from 'ava';
-import _ from 'lodash';
+import * as _ from 'lodash';
 import { PromisePoolExecutor } from 'promise-pool-executor';
 
 import { BaseMongoObject, MongoUtils, N9MongoDBClient } from '../src';
@@ -484,6 +484,7 @@ test('[UPDATE MANY AT ONCE] Update entity by query on attribut type number', asy
 
 /**
  * This test fail due to a hash computed in `mingo`. This hash is the same for `KNE_OC42-midas` and `KNE_OCS3-midas`.
+ * This is fixed in new mingo versions : https://github.com/kofrasa/mingo/blob/786dd54d2c9c1b14036ca09db1164fbee9c1470e/test/util.test.ts#L300
  */
 test('[UPDATE MANY AT ONCE] Update with mingo hash collision ', async (t: ExecutionContext<TestContext>) => {
 	const mongoClient = new N9MongoDBClient(
