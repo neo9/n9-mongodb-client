@@ -1,5 +1,16 @@
 
 
+# [1.0.0-rc.11](https://github.com/neo9/n9-mongodb-client/compare/1.0.0-rc.10...1.0.0-rc.11) (2023-10-13)
+
+
+### tests
+
+* Adjust serverSelectionTimeoutMS for github actions ([1e07374](https://github.com/neo9/n9-mongodb-client/commit/1e073746516c68538f75e4ed849907e6b77867d2))
+
+### yarn
+
+* Upgrade dependencies and remove codecov #80 ([1fa13d0](https://github.com/neo9/n9-mongodb-client/commit/1fa13d0cce99cca1ef0d0071ba7dd17d799aafd1)), closes [#80](https://github.com/neo9/n9-mongodb-client/issues/80)
+
 # [1.0.0-rc.10](https://github.com/neo9/n9-mongodb-client/compare/1.0.0-rc.9...1.0.0-rc.10) (2023-10-12)
 
 
