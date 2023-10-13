@@ -1,6 +1,6 @@
 import test, { ExecutionContext } from 'ava';
 import { Transform } from 'class-transformer';
-import _ from 'lodash';
+import * as _ from 'lodash';
 
 import { BaseMongoObject, N9MongoDBClient } from '../src';
 import * as DateParser from '../src/transformers/date-parser.transformer';

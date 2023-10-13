@@ -1,6 +1,6 @@
 import { N9JSONStream, N9JSONStreamResponse } from '@neo9/n9-node-utils';
 import test, { ExecutionContext } from 'ava';
-import _ from 'lodash';
+import * as _ from 'lodash';
 import { pipeline, Transform } from 'stream';
 
 import { BaseMongoObject, MongoUtils, N9FindCursor, N9MongoDBClient } from '../src';
@@ -240,7 +240,11 @@ test('[Cursor] sort and hasNext before piping into a stream ', async (t: Executi
 			.pipe(
 				new Transform({
 					writableObjectMode: true,
-					transform: (chunk: SampleType, encoding: string, next: (err, data) => void): void => {
+					transform: (
+						chunk: SampleType,
+						encoding: string,
+						next: (err: Error, data: any) => void,
+					): void => {
 						t.is(Array.isArray(chunk), false, 'The chunk should be an object');
 						items.push(chunk);
 						next(null, JSON.stringify(chunk));
@@ -316,7 +320,7 @@ test('[Cursor] Check forEach function', async (t: ExecutionContext<ContextConten
 	const items = await getCursorContent(cursor);
 	t.is(items?.length, 5, 'check length of items');
 	cursor.rewind();
-	const items2 = [];
+	const items2: any[] = [];
 	await cursor.forEach((item) => {
 		items2.push(item);
 	});
@@ -738,7 +742,11 @@ test('[Cursor] Check events listing functions', async (t: ExecutionContext<Conte
 			.pipe(
 				new Transform({
 					writableObjectMode: true,
-					transform: (chunk: SampleType, encoding: string, next: (err, data) => void): void => {
+					transform: (
+						chunk: SampleType,
+						encoding: string,
+						next: (err: Error, data: any) => void,
+					): void => {
 						items.push(chunk);
 						next(null, undefined);
 					},

@@ -1,7 +1,7 @@
 import { N9Log } from '@neo9/n9-node-log';
 import { N9Error } from '@neo9/n9-node-utils';
 import { ClassTransformOptions, plainToClass } from 'class-transformer';
-import _ from 'lodash';
+import * as _ from 'lodash';
 import * as mongodb from 'mongodb';
 import { ListCollectionsOptions } from 'mongodb';
 

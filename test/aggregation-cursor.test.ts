@@ -1,5 +1,5 @@
 import test, { ExecutionContext } from 'ava';
-import _ from 'lodash';
+import * as _ from 'lodash';
 
 import { BaseMongoObject, N9AggregationCursor, N9MongoDBClient } from '../src';
 import { ObjectId } from '../src/mongodb';

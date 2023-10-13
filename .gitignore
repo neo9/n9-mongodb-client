@@ -33,11 +33,10 @@ $RECYCLE.BIN/
 
 # Optional npm cache directory
 .npm
+# Optional nvm version file
+.nvmrc
 
 # Sonar
 .scannerwork
 sonar-project.properties
 coverage.lcov
-
-# Benchmark
-/benchmark/

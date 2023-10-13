@@ -1,5 +1,5 @@
 import { N9Error } from '@neo9/n9-node-utils';
-import _ from 'lodash';
+import * as _ from 'lodash';
 import { ObjectId } from 'mongodb';
 
 import { LangUtils } from './lang-utils';
@@ -89,7 +89,7 @@ export class LockFieldsManager<U extends BaseMongoObject> {
 	 * Handles arrays defined in arrayWithReferences.
 	 *
 	 * @param newEntity new version of the entity
-	 * @param existingEntity exisitng (old) version of the entity
+	 * @param existingEntity existing (old) version of the entity
 	 * @param basePath base field path to start the merge. Pass empty string to start.
 	 * @param lockFields list of lock fields of the entity
 	 */
@@ -99,7 +99,7 @@ export class LockFieldsManager<U extends BaseMongoObject> {
 		basePath: string,
 		lockFields: LockField[],
 	): any {
-		let ret;
+		let ret: any;
 		if (LangUtils.isClassicObject(newEntity) && LangUtils.isClassicObject(existingEntity)) {
 			const keys = _.uniq([..._.keys(newEntity), ..._.keys(existingEntity)]);
 			for (const key of keys) {
@@ -129,11 +129,11 @@ export class LockFieldsManager<U extends BaseMongoObject> {
 				for (const existingEntityElement of existingEntity) {
 					let elementPath: string;
 					if (!LodashReplacerUtils.IS_NIL(fieldCodeNames)) {
-						const elementUnicity = this.getUnicityStringForArrayElement(
+						const elementUniqueness = this.getUniquenessStringForArrayElement(
 							existingEntityElement,
 							fieldCodeNames,
 						);
-						elementPath = `${basePath}[${elementUnicity}]`;
+						elementPath = `${basePath}[${elementUniqueness}]`;
 					} else {
 						elementPath = `${basePath}["${existingEntityElement}"]`;
 					}
@@ -151,14 +151,14 @@ export class LockFieldsManager<U extends BaseMongoObject> {
 					// merge newEntityElement with associated existingEntityElement
 					if (!LodashReplacerUtils.IS_NIL(fieldCodeNames)) {
 						// array of objects
-						const elementUnicity = this.getUnicityStringForArrayElement(
+						const elementUniqueness = this.getUniquenessStringForArrayElement(
 							newEntityElement,
 							fieldCodeNames,
 						);
-						const elementPath = `${basePath}[${elementUnicity}]`;
+						const elementPath = `${basePath}[${elementUniqueness}]`;
 						const mainUniqKey = fieldCodeNames[0];
 
-						const alreadyAddedElementIndex = mergedArray.findIndex((mergedArrayElement) => {
+						const alreadyAddedElementIndex: number = mergedArray.findIndex((mergedArrayElement) => {
 							return (
 								!LodashReplacerUtils.IS_NIL(mergedArrayElement[mainUniqKey]) &&
 								this.elementsHaveSameReferences(
@@ -241,7 +241,7 @@ export class LockFieldsManager<U extends BaseMongoObject> {
 		const simpleArrayPathRegex = /(?<basePath>.*)\[(?<value>[^\]]+)](?<pathLeft>.*)/;
 		const match = path.match(objectsArrayPathRegex);
 		const matchSimpleArray = path.match(simpleArrayPathRegex);
-		let newPath;
+		let newPath: string;
 		if (match) {
 			const groups = match.groups;
 			const array: any[] = _.get(entity, groups.basePath);
@@ -318,8 +318,8 @@ export class LockFieldsManager<U extends BaseMongoObject> {
 					const arrayKeys = this._arrayWithReferences[joinedPath];
 					for (const element of newEntityElement) {
 						if (!LodashReplacerUtils.IS_NIL(element)) {
-							const elementUnicity = this.getUnicityStringForArrayElement(element, arrayKeys);
-							const arrayPath = `${joinedPath}[${elementUnicity}]`;
+							const elementUniqueness = this.getUniquenessStringForArrayElement(element, arrayKeys);
+							const arrayPath = `${joinedPath}[${elementUniqueness}]`;
 							const mainArrayKey = arrayKeys[0];
 							if (LodashReplacerUtils.IS_NIL(element[mainArrayKey])) {
 								throw new N9Error('wrong-array-definition', 400, {
@@ -383,7 +383,7 @@ export class LockFieldsManager<U extends BaseMongoObject> {
 
 			if (LangUtils.isClassicObject(existingEntityElement)) {
 				ret[key] = this.pickValues(
-					existingEntityElement,
+					existingEntityElement as U,
 					newEntity[key],
 					currentPath,
 					pickOnlyNewValues,
@@ -428,7 +428,7 @@ export class LockFieldsManager<U extends BaseMongoObject> {
 
 		for (const newEntityKey of Object.keys(newEntity)) {
 			if (!existingEntityKeys.includes(newEntityKey)) {
-				ret[newEntityKey] = newEntity[newEntityKey];
+				ret[newEntityKey] = newEntity[newEntityKey as keyof typeof newEntity];
 			}
 		}
 		// console.log(`-- pickOnlyNewValues  --`);
@@ -504,7 +504,7 @@ export class LockFieldsManager<U extends BaseMongoObject> {
 		});
 	}
 
-	private getUnicityStringForArrayElement(
+	private getUniquenessStringForArrayElement(
 		entityElement: any,
 		arrayWithReferences: string[],
 	): string {

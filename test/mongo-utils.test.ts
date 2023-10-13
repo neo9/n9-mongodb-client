@@ -1,7 +1,7 @@
 import { N9Log } from '@neo9/n9-node-log';
 import { waitFor } from '@neo9/n9-node-utils';
 import test, { ExecutionContext } from 'ava';
-import _ from 'lodash';
+import * as _ from 'lodash';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import * as stdMocks from 'std-mocks';
 

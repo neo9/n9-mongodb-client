@@ -1,6 +1,6 @@
 import { N9Error, waitFor } from '@neo9/n9-node-utils';
 import * as crypto from 'crypto';
-import _ from 'lodash';
+import * as _ from 'lodash';
 import * as mongodb from 'mongodb';
 import { Db } from 'mongodb';
 

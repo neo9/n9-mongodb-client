@@ -1,5 +1,5 @@
 import { N9Error } from '@neo9/n9-node-utils';
-import _ from 'lodash';
+import * as _ from 'lodash';
 import { Sort } from 'mongodb';
 import { Readable, Writable } from 'stream';
 

@@ -1,8 +1,8 @@
 import { N9Log } from '@neo9/n9-node-log';
 import { N9Error } from '@neo9/n9-node-utils';
 import * as fastDeepEqual from 'fast-deep-equal/es6';
-import _ from 'lodash';
-import * as mingo from 'mingo-fork-no-hash';
+import * as _ from 'lodash';
+import * as mingo from 'mingo';
 import {
 	ClientSession,
 	Collection,
@@ -1544,7 +1544,7 @@ export class N9MongoDBClient<U extends BaseMongoObject, L extends BaseMongoObjec
 				).toArray();
 				for (const [index, query] of Object.entries(queries)) {
 					// mingo all use to find in the array like mongo search in collection
-					const matchElements = mingo.find(
+					const matchElements = mingo.find<U>(
 						allEntities,
 						MongoUtils.MAP_OBJECT_ID_TO_STRING_HEX(query),
 					);
@@ -1851,7 +1851,7 @@ export class N9MongoDBClient<U extends BaseMongoObject, L extends BaseMongoObjec
 			newEntityFiltered = newEntityOmitted;
 		}
 
-		return fastDeepEqual.default(snapshotFiltered, newEntityFiltered);
+		return fastDeepEqual(snapshotFiltered, newEntityFiltered);
 	}
 
 	// Method is not static to use U and L

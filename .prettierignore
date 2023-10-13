@@ -6,6 +6,8 @@
 .mailmap
 Dockerfile
 Jenkinsfile
+.editorconfig
+
 # scripts
 *.sh
 
@@ -53,6 +55,3 @@ coverage.lcov
 # Sonar
 .scannerwork
 sonar-project.properties
-
-#local conf
-*local.ts
