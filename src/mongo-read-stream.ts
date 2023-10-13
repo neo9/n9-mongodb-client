@@ -1,7 +1,8 @@
+import { Readable, Writable } from 'node:stream';
+
 import { N9Error } from '@neo9/n9-node-utils';
 import * as _ from 'lodash';
 import { Sort } from 'mongodb';
-import { Readable, Writable } from 'stream';
 
 import { N9MongoDBClient } from './client';
 import { N9FindCursor } from './cursors';

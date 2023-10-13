@@ -1,3 +1,5 @@
+import { Readable } from 'node:stream';
+
 import { N9Error } from '@neo9/n9-node-utils';
 import * as _ from 'lodash';
 import {
@@ -14,7 +16,6 @@ import {
 	ReadPreference,
 	ReadPreferenceLike,
 } from 'mongodb';
-import { Readable } from 'stream';
 
 export abstract class N9AbstractCursor<E>
 	extends Readable
