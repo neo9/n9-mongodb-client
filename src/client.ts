@@ -4,6 +4,7 @@ import * as fastDeepEqual from 'fast-deep-equal/es6';
 import * as _ from 'lodash';
 import * as mingo from 'mingo';
 import {
+	AggregationCursor,
 	ClientSession,
 	Collection,
 	Db,
@@ -1062,16 +1063,24 @@ export class N9MongoDBClient<U extends BaseMongoObject, L extends BaseMongoObjec
 		options?: CollectionAggregationOptions,
 		readInOutputCollection: boolean = false,
 	): N9AggregationCursor<T> {
+		let nativeCursor: AggregationCursor;
+		let collection: Collection<U>;
 		if (readInOutputCollection) {
-			const nativeCursor = this.collection.aggregate<T>(aggregateSteps, options);
-			return new N9AggregationCursor<T>(this.collection, nativeCursor, aggregateSteps);
+			nativeCursor = this.collection.aggregate<T>(aggregateSteps, options);
+			collection = this.collection;
+		} else {
+			nativeCursor = this.collectionSourceForAggregation.aggregate<T>(aggregateSteps, options);
+			collection = this.collectionSourceForAggregation;
 		}
-		const nativeCursor = this.collectionSourceForAggregation.aggregate<T>(aggregateSteps, options);
-		return new N9AggregationCursor<T>(
-			this.collectionSourceForAggregation,
-			nativeCursor,
-			aggregateSteps,
-		);
+		return new N9AggregationCursor<T>(collection, nativeCursor, aggregateSteps).map((doc: T) => {
+			if (
+				typeof (doc as any)?._id === 'object' &&
+				(doc as any)._id.constructor.name === 'ObjectId' // faster than instanceof check
+			) {
+				(doc as any)._id = (doc as any)._id.toHexString();
+			}
+			return doc;
+		});
 	}
 
 	public aggregateWithBuilder<T = void>(

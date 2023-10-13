@@ -2,7 +2,6 @@ import test, { ExecutionContext } from 'ava';
 import * as _ from 'lodash';
 
 import { BaseMongoObject, N9AggregationCursor, N9MongoDBClient } from '../src';
-import { ObjectId } from '../src/mongodb';
 import { getBaseMongoClientSettings, getOneCollectionName, init, TestContext } from './fixtures';
 
 class SampleType extends BaseMongoObject {
@@ -62,8 +61,7 @@ test('[Cursor] iterate using while hasNext ... next', async (t: ExecutionContext
 		items2.push(item);
 	}
 	t.is(items2.length, 5, 'cursor contains 5 items read with hasNext and next');
-	t.is(typeof items[0]._id, 'object', '_id is an object, aggregation results are not mapped');
-	t.true((items[0]._id as any) instanceof ObjectId, '_id is an ObjectId');
+	t.is(typeof items[0]._id, 'string', '_id is a string, aggregation results are mapped');
 
 	t.deepEqual(items2, items, 'compare two arrays');
 });
@@ -119,7 +117,7 @@ test('[Cursor] Check cursor map function : should change data', async (t: Execut
 		.aggregate<SampleType>([{ $sort: { field1String: 1 } }])
 		.map((sampleType) => ({
 			// type of sampleType should be deduced automatically
-			_id: sampleType._id.toString(),
+			_id: sampleType._id,
 			somethingElse: sampleType.field1String,
 		}));
 	const items: { somethingElse: string; _id: string }[] = [];
@@ -138,6 +136,44 @@ test('[Cursor] Check cursor map function : should change data', async (t: Execut
 			`item ${i + 1} is 'string${i + 1}'`,
 		);
 	}
+});
+
+test('[Cursor] Check _id automatic mapping, should leave objects', async (t: ExecutionContext<ContextContent>) => {
+	const cursor: N9AggregationCursor<{
+		_id: {
+			value: number;
+			prop2: number;
+		};
+	}> = t.context.mongoClient.aggregate<any>([
+		{
+			$group: {
+				_id: 1,
+			},
+		},
+		{
+			$project: {
+				_id: {
+					value: '$_id',
+					prop2: {
+						$sum: ['$_id', '$_id'],
+					},
+				},
+			},
+		},
+	]);
+
+	t.is(await cursor.count(), 1, 'check cursor length');
+	const doc = await cursor.next();
+	t.deepEqual(
+		doc,
+		{
+			_id: {
+				value: 1,
+				prop2: 2,
+			},
+		},
+		'_id is an object',
+	);
 });
 
 test('[Cursor] Check cursor map function : should be chainable', async (t: ExecutionContext<ContextContent>) => {
