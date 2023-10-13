@@ -1,5 +1,16 @@
 
 
+# [1.0.0-rc.12](https://github.com/neo9/n9-mongodb-client/compare/1.0.0-rc.11...1.0.0-rc.12) (2023-10-13)
+
+
+### aggregation
+
+* Add automatic _id mapping in aggregation cursors #81 ([b0adcfd](https://github.com/neo9/n9-mongodb-client/commit/b0adcfddee02eb314dc5bd90ab08dcf22bc8fac8)), closes [#81](https://github.com/neo9/n9-mongodb-client/issues/81)
+
+### imports
+
+* Use new node module notation ([6ce7899](https://github.com/neo9/n9-mongodb-client/commit/6ce789948e148811bb51fde3f08002e4ee9b930d))
+
 # [1.0.0-rc.11](https://github.com/neo9/n9-mongodb-client/compare/1.0.0-rc.10...1.0.0-rc.11) (2023-10-13)
 
 
