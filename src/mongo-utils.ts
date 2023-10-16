@@ -32,6 +32,7 @@ export class MongoUtils {
 		}
 
 		const optionsWithDefaultValuesApplied: mongodb.MongoClientOptions = {
+			readPreference: 'primary', // https://www.mongodb.com/docs/manual/core/read-preference/
 			heartbeatFrequencyMS: 3_000,
 			driverInfo: {
 				name: '@neo9/n9-mongodb-client',
