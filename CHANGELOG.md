@@ -1,5 +1,12 @@
 
 
+# [1.0.0-rc.13](https://github.com/neo9/n9-mongodb-client/compare/1.0.0-rc.12...1.0.0-rc.13) (2023-10-16)
+
+
+### mongo
+
+* Force readPreference default value to primary ([7154b41](https://github.com/neo9/n9-mongodb-client/commit/7154b412d8d75d4ceab6e6dfa83d368f82183c49))
+
 # [1.0.0-rc.12](https://github.com/neo9/n9-mongodb-client/compare/1.0.0-rc.11...1.0.0-rc.12) (2023-10-13)
 
 
