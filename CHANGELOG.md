@@ -1,5 +1,12 @@
 
 
+# [1.0.0-rc.14](https://github.com/neo9/n9-mongodb-client/compare/1.0.0-rc.13...1.0.0-rc.14) (2023-10-19)
+
+
+### yarn
+
+* Upgrade n9-node-log ([cec8120](https://github.com/neo9/n9-mongodb-client/commit/cec8120ed3ff21412997092ff5bf145cc90aebb8))
+
 # [1.0.0-rc.13](https://github.com/neo9/n9-mongodb-client/compare/1.0.0-rc.12...1.0.0-rc.13) (2023-10-16)
 
 
