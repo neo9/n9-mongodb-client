@@ -520,14 +520,15 @@
     eslint-plugin-rxjs "^5.0.3"
     eslint-plugin-simple-import-sort "^10.0.0"
 
-"@neo9/n9-node-log@^5.0.0-rc.6":
-  version "5.0.0-rc.6"
-  resolved "https://registry.npmjs.org/@neo9/n9-node-log/-/n9-node-log-5.0.0-rc.6.tgz#bcce306ce7d936a7efe211defd1b687c34d27286"
-  integrity sha512-+QiIIO522Ov8V3/W2FMcycxaaBO6wVqYwaxmtwwGllpmruPgesgS+XBdENo9Ds47cVbZctovytZ35arLe/A2Og==
+"@neo9/n9-node-log@^5.0.0-rc.7":
+  version "5.0.0-rc.7"
+  resolved "https://registry.npmjs.org/@neo9/n9-node-log/-/n9-node-log-5.0.0-rc.7.tgz#51c92a824b45f63abaa58a510ee50e8844528781"
+  integrity sha512-NVlucbuYwHxoVcWjgDHL6kBDi8jQWjfwDbiJnLxwuNll8p3VdAYZjDcLVIeipZPn7mwxuZ+i0Pa/N8u4b5cmEg==
   dependencies:
     chalk "^4.1.2"
     fast-iso-string "^1.0.0"
     fast-safe-stringify "^2.1.1"
+    strip-ansi "^6.0.1"
 
 "@neo9/n9-node-utils@^3.0.0-rc.0":
   version "3.0.0-rc.0"
