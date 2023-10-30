@@ -53,7 +53,7 @@ Upgrade main steps
       - `sed -i 's#node14#node16#g' tsconfig.json`
 - Upgrade MongoDb used for tests to version 6.0+
 - Change MongoDB types imports from `import ... from 'mongodb';` to `import ... from '@neo9/n9-mongodb-client/mongodb';`
-- Use Node.js version 16.20.2 or greater.
+- Use Node.js version 18 or greater.
 - Use new `count` function on `N9AggregationCursor` that wasn't available on `AggregationCursor`
 - It's a good time to use new version of `@neo9/n9-mongodb-migration` V1 : `yarn upgrade @neo9/n9-mongodb-migration@^1.0.0-rc.0`
 
