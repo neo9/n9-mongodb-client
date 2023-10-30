@@ -107,7 +107,7 @@ export function init(initOptions?: InitOptions): void {
 					// no classic mongodb available, so use one in memory
 					mongod = await MongoMemoryServer.create({
 						binary: {
-							version: '6.0.4',
+							version: '6.0.9',
 						},
 					});
 
