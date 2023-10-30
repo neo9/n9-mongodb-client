@@ -42,7 +42,7 @@
   },
   "homepage": "https://github.com/neo9/n9-mongodb-client#readme",
   "engines": {
-    "node": ">= 16.20"
+    "node": ">= 18"
   },
   "dependencies": {
     "@neo9/n9-node-log": "^5.0.0-rc.7",

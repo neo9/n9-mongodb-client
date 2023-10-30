@@ -519,7 +519,7 @@ test('[LOCKS] Try ensuring index with wrong collection name', async (t: Executio
 			result = await lock.ensureIndexes();
 		},
 		{
-			message: "Collection names must not contain '$'",
+			message: 'Invalid collection name: $collection-name',
 		},
 	);
 	t.truthy(!result, "The lock can't be ensured due to invalid collection name (contains $)");
@@ -534,7 +534,7 @@ test('[LOCKS] Try acquiring lock with wrong collection name', async (t: Executio
 			code = await lock.acquire();
 		},
 		{
-			message: "Collection names must not contain '$'",
+			message: 'Invalid collection name: $collection-name',
 		},
 	);
 	t.truthy(!code, "The lock can't be acquired due to invalid collection name (contains $)");
@@ -569,7 +569,7 @@ test('[LOCKS] Try releasing lock with wrong collection name', async (t: Executio
 			ok = await lock.release('a-fake-lock-id');
 		},
 		{
-			message: "Collection names must not contain '$'",
+			message: 'Invalid collection name: $collection-name',
 		},
 	);
 	t.truthy(!ok, "The lock can't be released due to invalid collection name (contains $)");
