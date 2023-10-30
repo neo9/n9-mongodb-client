@@ -1,6 +1,6 @@
 import { N9Log } from '@neo9/n9-node-log';
 import { N9Error } from '@neo9/n9-node-utils';
-import { ClassTransformOptions, plainToClass } from 'class-transformer';
+import { ClassTransformOptions, plainToInstance } from 'class-transformer';
 import * as _ from 'lodash';
 import * as mongodb from 'mongodb';
 import { ListCollectionsOptions } from 'mongodb';
@@ -210,7 +210,7 @@ export class MongoUtils {
 
 		const newPlain = MongoUtils.MAP_OBJECT_ID_TO_STRING_HEX(plain);
 		// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
-		return plainToClass(cls, newPlain, options) as T;
+		return plainToInstance(cls, newPlain, options) as T;
 	}
 
 	public static REMOVE_SPECIAL_CHARACTERS_IN_KEYS(obj: any): any {

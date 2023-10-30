@@ -1,6 +1,6 @@
 import { N9Log } from '@neo9/n9-node-log';
 import { N9Error } from '@neo9/n9-node-utils';
-import * as fastDeepEqual from 'fast-deep-equal/es6';
+import * as FastDeepEqual from 'fast-deep-equal/es6';
 import * as _ from 'lodash';
 import * as mingo from 'mingo';
 import {
@@ -1860,7 +1860,7 @@ export class N9MongoDBClient<U extends BaseMongoObject, L extends BaseMongoObjec
 			newEntityFiltered = newEntityOmitted;
 		}
 
-		return fastDeepEqual(snapshotFiltered, newEntityFiltered);
+		return FastDeepEqual(snapshotFiltered, newEntityFiltered);
 	}
 
 	// Method is not static to use U and L
