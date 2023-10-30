@@ -90,6 +90,13 @@ test('[Cursor] Check count function', async (t: ExecutionContext<ContextContent>
 		t.context.mongoClient.newAggregationBuilder().match(filterQuery).group({ _id: 1 }),
 	);
 	t.is(await cursor.count(), 1, 'cursor only contains the group result');
+
+	cursor = t.context.mongoClient.aggregateWithBuilder<SampleType>(
+		t.context.mongoClient
+			.newAggregationBuilder()
+			.match({ $and: [{ _id: { $eq: '1' } }, { _id: { $ne: '1' } }] }),
+	);
+	t.is(await cursor.count(), 0, 'empty cursor count is 0');
 });
 
 test('[Cursor] Check cursor clone function', async (t: ExecutionContext<ContextContent>) => {
