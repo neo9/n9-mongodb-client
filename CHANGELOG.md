@@ -1,5 +1,24 @@
 
 
+# [1.0.0-rc.15](https://github.com/neo9/n9-mongodb-client/compare/1.0.0-rc.14...1.0.0-rc.15) (2023-10-30)
+
+
+### aggregation
+
+* Fix empty aggregation cursor count ([a806892](https://github.com/neo9/n9-mongodb-client/commit/a8068923f9d00fbfdf093cdb112d67478fdd384c))
+
+### doc
+
+* Add drop node 16 support to readme ([20878f8](https://github.com/neo9/n9-mongodb-client/commit/20878f868aa053e363ee43349438c3548bd1a151))
+
+### node
+
+* Drop node 16 support due to commitlint ([84226e9](https://github.com/neo9/n9-mongodb-client/commit/84226e9773515e81adef81cc7326813e6ab5443c))
+
+### yarn
+
+* Upgrade class-transformer mongodb and transitive dependencies ([6be9e0f](https://github.com/neo9/n9-mongodb-client/commit/6be9e0f2077d3e309e2f879b361da9519f7e1b44))
+
 # [1.0.0-rc.14](https://github.com/neo9/n9-mongodb-client/compare/1.0.0-rc.13...1.0.0-rc.14) (2023-10-19)
 
 
