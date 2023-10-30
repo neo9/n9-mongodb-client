@@ -47,6 +47,7 @@ export class N9AggregationCursor<E> extends N9AbstractCursor<E> {
 				},
 			])
 			.toArray();
-		return countResult[0].n;
+		if (countResult.length > 0) return countResult[0].n;
+		return 0; // empty cursor
 	}
 }
