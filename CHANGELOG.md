@@ -1,5 +1,16 @@
 
 
+# [1.0.0-rc.16](https://github.com/neo9/n9-mongodb-client/compare/1.0.0-rc.15...1.0.0-rc.16) (2023-11-07)
+
+
+### aggregation
+
+* Add optional parameter to aggregation cursor count function to avoid skip and limit stages ([68fdc14](https://github.com/neo9/n9-mongodb-client/commit/68fdc140100e8cef15c52aa15c3cf95ea05ffead))
+
+### yarn
+
+* Upgrade dependencies ([20a3120](https://github.com/neo9/n9-mongodb-client/commit/20a3120494779fc18dee3c7e35e7c7fb3d063167))
+
 # [1.0.0-rc.15](https://github.com/neo9/n9-mongodb-client/compare/1.0.0-rc.14...1.0.0-rc.15) (2023-10-30)
 
 
