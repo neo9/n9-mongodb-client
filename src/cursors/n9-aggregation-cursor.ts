@@ -1,6 +1,7 @@
 import { AggregationCursor, Collection } from 'mongodb';
 
 import { LodashReplacerUtils } from '../lodash-replacer.utils';
+import { GroupPipelineStage, MatchPipelineStage } from '../models';
 import { N9AbstractCursor } from './n9-abstract-cursor';
 
 export class N9AggregationCursor<E> extends N9AbstractCursor<E> {
@@ -32,13 +33,18 @@ export class N9AggregationCursor<E> extends N9AbstractCursor<E> {
 	/**
 	 * Get the count of documents for this cursor.
 	 */
-	public async count(): Promise<number> {
+	public async count(keepOnlyMatchAndGroupSteps: boolean = true): Promise<number> {
 		if (LodashReplacerUtils.IS_ARRAY_EMPTY(this.aggregateSteps)) {
 			return await this.collection.estimatedDocumentCount();
 		}
+		const aggregateStepsFiltered = keepOnlyMatchAndGroupSteps
+			? this.aggregateSteps.filter(
+					(step: MatchPipelineStage & GroupPipelineStage) => step.$match || step.$group,
+			  )
+			: this.aggregateSteps;
 		const countResult = await this.collection
 			.aggregate([
-				...this.aggregateSteps,
+				...aggregateStepsFiltered,
 				{
 					$group: {
 						_id: null,
