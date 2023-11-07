@@ -80,14 +80,15 @@ test('[Cursor] Check count function', async (t: ExecutionContext<ContextContent>
 	let cursor = t.context.mongoClient.aggregate<SampleType>([]);
 	t.is(await cursor.count(), 5, 'cursor contains 5 items');
 
-	const filterQuery = { field1String: { $regex: /[24680]$/ } };
+	const filterQueryOdd = { field1String: { $regex: /[24680]$/ } };
 	cursor = t.context.mongoClient.aggregateWithBuilder<SampleType>(
-		t.context.mongoClient.newAggregationBuilder().match(filterQuery),
+		t.context.mongoClient.newAggregationBuilder().match(filterQueryOdd),
 	);
 	t.is(await cursor.count(), 2, 'cursor contains only odd => 2 elements');
+	t.is(await cursor.count(false), 2, "apply only match, doesn't change anything");
 
 	cursor = t.context.mongoClient.aggregateWithBuilder<SampleType>(
-		t.context.mongoClient.newAggregationBuilder().match(filterQuery).group({ _id: 1 }),
+		t.context.mongoClient.newAggregationBuilder().match(filterQueryOdd).group({ _id: 1 }),
 	);
 	t.is(await cursor.count(), 1, 'cursor only contains the group result');
 
@@ -97,6 +98,23 @@ test('[Cursor] Check count function', async (t: ExecutionContext<ContextContent>
 			.match({ $and: [{ _id: { $eq: '1' } }, { _id: { $ne: '1' } }] }),
 	);
 	t.is(await cursor.count(), 0, 'empty cursor count is 0');
+
+	cursor = t.context.mongoClient.aggregateWithBuilder<SampleType>(
+		t.context.mongoClient.newAggregationBuilder().match(filterQueryOdd).skip(1),
+	);
+	t.is(await cursor.count(), 2, 'avoid skip stage');
+	t.is(await cursor.count(false), 1, 'keep skip stage');
+	cursor = t.context.mongoClient.aggregateWithBuilder<SampleType>(
+		t.context.mongoClient.newAggregationBuilder().match(filterQueryOdd).limit(1),
+	);
+	t.is(await cursor.count(true), 2, 'avoid limit stage');
+	t.is(await cursor.count(false), 1, 'keep limit stage');
+	cursor = t.context.mongoClient.aggregateWithBuilder<SampleType>(
+		t.context.mongoClient.newAggregationBuilder().match(filterQueryOdd).skip(2).limit(1),
+	);
+	t.is(await cursor.count(), 2, 'avoid skip and limit stages');
+	t.is(await cursor.count(true), 2, 'avoid skip and limit stages');
+	t.is(await cursor.count(false), 0, 'keep skip and limit stages (2 match, skip those 2 => 0)');
 });
 
 test('[Cursor] Check cursor clone function', async (t: ExecutionContext<ContextContent>) => {
