@@ -1,6 +1,6 @@
 {
   "name": "@neo9/n9-mongodb-client",
-  "version": "1.0.0-rc.16",
+  "version": "1.0.0",
   "description": "Library to easily start app with routing-controllers",
   "keywords": [
     "mongo",

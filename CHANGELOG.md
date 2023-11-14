@@ -1,5 +1,12 @@
 
 
+# [1.0.0](https://github.com/neo9/n9-mongodb-client/compare/1.0.0-rc.16...1.0.0) (2023-11-14)
+
+
+### yarn
+
+* Upgrade dependencies ([009d25f](https://github.com/neo9/n9-mongodb-client/commit/009d25fadc9e9bb0036a85a91e549bbf010f1885))
+
 # [1.0.0-rc.16](https://github.com/neo9/n9-mongodb-client/compare/1.0.0-rc.15...1.0.0-rc.16) (2023-11-07)
 
 
